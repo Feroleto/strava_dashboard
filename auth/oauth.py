@@ -3,6 +3,8 @@ import webbrowser
 import requests
 from dotenv import load_dotenv
 
+from token_manager import save_tokens
+
 load_dotenv()
 
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
@@ -41,5 +43,5 @@ if __name__ == "__main__":
     authorize()
     code = input("Write here the 'code' from strava: ")
     token_data = exchange_code_for_token(code)
-    print("\nToken received")
-    print(token_data)
+    save_tokens(token_data)
+    print("Tokens saved")
