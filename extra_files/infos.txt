@@ -1,9 +1,0 @@
-libraries:
-requests -> STRAVA api
-pandas -> data analytics
-sqlalchemy -> data base
-streamlit -> dashboard
-python-dotenv -> secrets (tokes, keys, passwords)
-
-acesso api strava
-https://www.strava.com/settings/api
