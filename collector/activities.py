@@ -32,11 +32,29 @@ def get_activities(per_page = 30, page = 1):
     
     return response.json()
 
+def format_seconds(seconds):
+    if pd.isna(seconds):
+        return "00:00:00"
+    
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    seconds = int(seconds % 60)
+    
+    if hours > 0:
+        return f"{hours:02d}:{minutes:02d}:{seconds:02d}"
+    else:
+        return f"{minutes:02d}:{seconds:02d}"
+
+    
 def activities_to_dataframe(activities):
     df = pd.DataFrame(activities)
     
     if df.empty:
         return df
+    
+    df["start_date"] = pd.to_datetime(df["start_date"])
+    df["start_date"] = df["start_date"].dt.tz_convert("America/Sao_Paulo").dt.tz_localize(None)
+    df["start_date_formated"] = df["start_date"].dt.strftime("%d/%m/%Y %H:%M")
     
     df["distance_km"] = df["distance"] / 1000
     df["moving_time_min"] = df["moving_time"] / 60
@@ -51,6 +69,7 @@ def activities_to_dataframe(activities):
         return f"{minutes}:{seconds:02d}"
     
     df["pace_min_km"] = raw_pace.apply(format_pace)
+    df["moving_time"] = df["moving_time"].apply(format_seconds)
     
     extra_columns = {
         "total_elevation_gain": "elevation_gain",
@@ -69,8 +88,9 @@ if __name__ == "__main__":
     columns_for_exhibition = [
         "name",
         "type",
-        "start_date",
+        "start_date_formated",
         "distance_km",
+        "moving_time",
         "pace_min_km",
         "elevation_gain",
         "average_bpm",
