@@ -88,6 +88,7 @@ if __name__ == "__main__":
     columns_for_exhibition = [
         "name",
         "type",
+        #"sport_type",
         "start_date_formated",
         "distance_km",
         "moving_time",
