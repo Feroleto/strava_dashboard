@@ -81,6 +81,20 @@ def activities_to_dataframe(activities):
     
     return df
 
+def get_all_activities(per_page = 200):
+    all_activities = []
+    page = 1
+    
+    while True:
+        activities = get_activities(per_page = per_page, page = page)
+        if not activities:
+            break
+        
+        all_activities.extend(activities)
+        page += 1
+    
+    return all_activities
+
 if __name__ == "__main__":
     activities = get_activities(per_page=10)
     df = activities_to_dataframe(activities)

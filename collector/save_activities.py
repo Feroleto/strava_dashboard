@@ -1,6 +1,6 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from activities import get_activities
+from activities import get_activities, get_all_activities
 
 import sys
 import os
@@ -15,7 +15,7 @@ SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 def save_activities():
     session = SessionLocal()
     
-    activities = get_activities(per_page = 60)
+    activities = get_all_activities()
     saved = 0
     
     for a in activities:
