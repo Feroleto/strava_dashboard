@@ -29,7 +29,8 @@ df = df.set_index("week_start").reindex(all_weeks, fill_value=0).reset_index()
 df.columns = ["week_start", "total_km"]
 
 # use to hide 0 km's weeks
-#df = df[df["total_km"] > 0].copy()
+if "--hide_zero" in sys.argv:
+    df = df[df["total_km"] > 0].copy()
 
 df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
 
