@@ -1,12 +1,18 @@
 from sqlalchemy import func
 import matplotlib.pyplot as plt
 import pandas as pd
+import argparse
 
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.db import SessionLocal, Activity
+
+parser = argparse.ArgumentParser(description="Weekly volume analysis")
+parser.add_argument("--hide_zero", action="store_true", help="Hide weeks with 0 km")
+parser.add_argument("--limit", type=int, default=None, help="Weeks limit")
+args = parser.parse_args()
 
 session = SessionLocal()
 
@@ -28,9 +34,17 @@ all_weeks = pd.date_range(start = df["week_start"].min(), end=df["week_start"].m
 df = df.set_index("week_start").reindex(all_weeks, fill_value=0).reset_index()
 df.columns = ["week_start", "total_km"]
 
+'''
 # use to hide 0 km's weeks
 if "--hide_zero" in sys.argv:
     df = df[df["total_km"] > 0].copy()
+'''
+
+if args.hide_zero:
+    df = df[df["total_km"] > 0].copy()
+    
+if args.limit:
+    df = df.tail(args.limit).copy()
 
 df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
 
@@ -45,7 +59,7 @@ bars = ax.bar(weeks, kms, color = "#1f77b4", alpha = 0.8, edgecolor = "navy", li
 ax.plot(weeks, kms, color = "red", marker = 'o', markersize = 4, linestyle = "--", alpha = 0.4)
 
 ax.set_title("Weekly runs volume", fontsize = 16, fontweight = "bold", pad = 20)
-ax.set_xlabel("Year-Week", fontsize = 12)
+#ax.set_xlabel("Year-Week", fontsize = 12)
 ax.set_ylabel("Distance (km)", fontsize = 12)
 
 for bar in bars:
