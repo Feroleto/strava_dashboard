@@ -1,5 +1,4 @@
 from sqlalchemy import func
-import seaborn as sns
 import matplotlib.pyplot as plt
 
 import sys
