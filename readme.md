@@ -9,3 +9,4 @@ Personal project to collect and analyse running statistics using STRAVA API
 - SQLAlchemy
 - Streamlit
 - Requests
+- matplotlib
