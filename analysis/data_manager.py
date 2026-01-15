@@ -43,7 +43,7 @@ def process_raw_data(raw_data, hide_zero=False, limit=None):
         end=df["week_start"].max(),
         freq="W-MON"
     )
-    df = df.set_index("week_start").reindex(all_weeks).reset_index()
+    df = df.set_index("week_start").reindex(all_weeks, fill_value=0).reset_index()
     df.columns = ["week_start", "total_km", "total_time_sec"]
     
     # pace
