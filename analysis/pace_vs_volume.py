@@ -1,5 +1,6 @@
 import matplotlib.pyplot as plt
 import argparse
+import matplotlib.ticker as ticker
 
 import sys
 import os
@@ -27,6 +28,13 @@ def plot_pace_vs_volume(df):
         s=60,
         edgecolors="black"
     )
+    
+    def format_pace_y(x, pos):
+        minutes = int(x)
+        seconds = int((x - minutes) * 60)
+        return f"{minutes}:{seconds:02d}"
+    
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_pace_y))
     
     ax.set_title("Pace vs Weekly Volume", fontsize=16, fontweight="bold", pad=20)
     ax.set_xlabel("Weekly volume (km)", fontsize=12)
