@@ -85,11 +85,12 @@ def plot_weekly_average_pace(df):
     plt.style.use("seaborn-v0_8-muted")
     fig, ax = plt.subplots(figsize=(12, 6))
     
-    df_plot = df.dropna(subset=["pace_min_km"])
+    weeks = df["label"]
+    pace = df["pace_min_km"]
     
     ax.plot(
-        df_plot["label"], 
-        df_plot["pace_min_km"],
+        weeks,
+        pace,
         color="darkgreen",
         marker='o',
         linewidth=2,

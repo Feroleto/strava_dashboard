@@ -51,11 +51,11 @@ def process_raw_data(raw_data, hide_zero=False, limit=None):
     df["pace_min_km"] = df["pace_min_km"].replace([float("inf")], None)
     
     # filters
-    if limit:
-        df = df.tail(limit).copy()
-        
     if hide_zero:
         df = df[df["total_km"] > 0].copy()
+        
+    if limit:
+        df = df.tail(limit).copy()
         
     df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
     return df
