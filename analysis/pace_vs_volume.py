@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import argparse
 import matplotlib.ticker as ticker
+import numpy as np
 
 import sys
 import os
@@ -28,6 +29,24 @@ def plot_pace_vs_volume(df):
         s=60,
         edgecolors="black"
     )
+    
+    # ==========================
+    # evolution line
+    coef = np.polyfit(dist, pace, 1)
+    trend = np.poly1d(coef)
+    
+    dist_sorted = np.sort(dist)
+    ax.plot(
+        dist_sorted,
+        trend(dist_sorted),
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Trend"
+    )
+    
+    ax.legend()
+    # =======================
     
     def format_pace_y(x, pos):
         minutes = int(x)
