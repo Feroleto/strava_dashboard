@@ -136,13 +136,13 @@ def plot_weekly_pace_vs_distance(df):
     if len(df_plot) > 1:
         coef = np.polyfit(dist, pace, 1)
         trend = np.poly1d(coef)
-        dist_range = np.linspace(dist.min(), dist.max, 100)
+        dist_range = np.linspace(dist.min(), dist.max(), 100)
         
         ax.plot(
             dist_range,
             trend(dist_range),
             color="#E74C3C",
-            license="--",
+            linestyle="--",
             linewidth=2,
             alpha=0.6,
             label="Trend",
