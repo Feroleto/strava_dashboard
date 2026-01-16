@@ -1,6 +1,5 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from activities import get_activities, get_all_activities, fetch_activity_splits
 import time
 
 import sys
@@ -8,8 +7,10 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+from collector.activities import get_activities, get_all_activities, fetch_activity_splits
 from database.db import SessionLocal, Activity, ActivitySplit
 from analysis.data_manager import get_activities_without_splits
+from auth.token_manager import get_valid_access_token
 
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
 
@@ -62,12 +63,21 @@ def save_activities():
     
 def save_splits(session, activity_id, splits):
     for s in splits:
+        dist_raw = s.get("distance", 0)
+        moving_time_sec = s.get("moving_time", 0)
+        dist_km = dist_raw / 1000
+        
+        if dist_km > 0:
+            pace_min_km = (moving_time_sec / 60) / dist_km
+        else:
+            pace_min_km = 0.0
+            
         split = ActivitySplit(
             activity_id=activity_id,
             split_index=s["split"],
-            distance_km=s["distance"] / 1000,
-            moving_time_sec=s["moving_time"],
-            pace_min_km=(s["moving_time"] / 60) / (s["distance"] / 1000)
+            distance_km=dist_km,
+            moving_time_sec=moving_time_sec,
+            pace_min_km=pace_min_km
         )
         session.add(split)
         
@@ -88,10 +98,14 @@ def ingest_splits(access_token):
             time.sleep(1)
     finally:
         session.close()
+        
+def main():
+    token = get_valid_access_token()
+    ingest_splits(token)
     
 if __name__ == "__main__":
     #save_activities()
-    ingest_splits()
+    main()
 
 
     

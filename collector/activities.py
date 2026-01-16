@@ -1,5 +1,6 @@
 import requests
 import pandas as pd
+import time
 
 import sys
 import os
@@ -105,6 +106,11 @@ def fetch_activity_splits(activity_id, access_token):
     if r.status_code == 401:
         print("Error 401: invalid or expired token")
         print(r.json())
+        
+    if r.status_code == 429:
+        print("Rate limit hit. Sleeping for 15 minutes...")
+        time.sleep(15 * 60)
+        return fetch_activity_splits(activity_id, access_token)
         
     r.raise_for_status()
     
