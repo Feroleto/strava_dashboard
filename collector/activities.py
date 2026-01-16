@@ -96,29 +96,6 @@ def get_all_activities(per_page = 200):
     
     return all_activities
 
-'''
-def fetch_activity_splits(activity_id, access_token):
-    url = f"{BASE_URL}/activities/{activity_id}"
-    headers = {
-        "Authorization": f"Bearer {access_token}"
-    }
-    
-    r = requests.get(url, headers=headers)
-    if r.status_code == 401:
-        print("Error 401: invalid or expired token")
-        print(r.json())
-        
-    if r.status_code == 429:
-        print("Rate limit hit. Sleeping for 15 minutes...")
-        time.sleep(15 * 60)
-        return fetch_activity_splits(activity_id, access_token)
-        
-    r.raise_for_status()
-    
-    data = r.json()
-    return data.get("splits_metric", [])
-'''
-
 if __name__ == "__main__":
     activities = get_activities(per_page=10)
     df = activities_to_dataframe(activities)
