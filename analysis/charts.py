@@ -34,6 +34,20 @@ def format_pace(x, pos):
     seconds = int((x - minutes) * 60)
     return f"{minutes}:{seconds:02d}"
 
+def number_up_bars(ax, bars):
+    for bar in bars:
+        height = bar.get_height()
+        if height > 0:
+            ax.annotate(
+                f"{height:.1f}",
+                xy=(bar.get_x() + bar.get_width() / 2, height),
+                xytext=(0, 3),
+                textcoords="offset points",
+                ha="center", 
+                va="bottom", 
+                fontsize=9
+            )
+
 def plot_weekly_running_volume(df):
     plt.style.use("seaborn-v0_8-muted")
     fig, ax = plt.subplots(figsize=(12, 6))
@@ -66,17 +80,7 @@ def plot_weekly_running_volume(df):
     ylabel = "Distance (km)"
     apply_standart_style(ax, title, ylabel)
     
-    # numbers up the bars
-    for bar in bars:
-        height = bar.get_height()
-        if height > 0:
-            ax.annotate(
-                f"{height:.1f}",
-                xy=(bar.get_x() + bar.get_width() / 2, height),
-                xytext=(0, 3),
-                textcoords="offset points",
-                ha="center", va="bottom", fontsize=9
-            )
+    number_up_bars(ax, bars)
             
     plt.tight_layout()
     plt.show()
@@ -181,16 +185,7 @@ def plot_pace_distance_histogram(df):
         linewidth=0.5
     )
     
-    for bar in bars:
-        height = bar.get_height()
-        ax.annotate(
-            f"{height:.1f}",
-            xy=(bar.get_x() + bar.get_width() / 2, height),
-            xytext=(0, 3),
-            textcoords="offset points",
-            ha="center", va="bottom",
-            fontsize=9
-        )
+    number_up_bars(ax, bars)
     
     title = "Pace distribution weighted by distance"
     ylabel = "Total distance (km)"
