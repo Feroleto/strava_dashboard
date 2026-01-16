@@ -7,7 +7,8 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from collector.activities import get_activities, get_all_activities, fetch_activity_splits
+from collector.activities import get_activities, get_all_activities
+from collector.splits import fetch_activity_splits
 from database.models import SessionLocal, Activity, ActivitySplit
 from analysis.data_manager import get_activities_without_splits
 from auth.token_manager import get_valid_access_token

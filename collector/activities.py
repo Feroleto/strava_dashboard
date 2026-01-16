@@ -96,6 +96,7 @@ def get_all_activities(per_page = 200):
     
     return all_activities
 
+'''
 def fetch_activity_splits(activity_id, access_token):
     url = f"{BASE_URL}/activities/{activity_id}"
     headers = {
@@ -116,6 +117,7 @@ def fetch_activity_splits(activity_id, access_token):
     
     data = r.json()
     return data.get("splits_metric", [])
+'''
 
 if __name__ == "__main__":
     activities = get_activities(per_page=10)
