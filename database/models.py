@@ -30,12 +30,3 @@ class ActivitySplit(Base):
     pace_min_km = Column(Float)
     
     activity = relationship("Activity", back_populates="splits")
-    
-'''
-def create_tables():
-    Base.metadata.create_all(engine)
-    print("creating tables")
-    
-if __name__ == "__main__":
-    create_tables()
-'''
