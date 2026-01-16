@@ -20,8 +20,8 @@ def authorize():
         f"?client_id={CLIENT_ID}"
         f"&response_type=code"
         f"&redirect_uri={REDIRECT_URI}"
-        f"&approval_prompt =force"
-        f"&scope=activity:read_all"
+        f"&approval_prompt=force"
+        f"&scope=read,activity:read_all"
     )
     
     print("opening browser for authorization")
@@ -35,7 +35,7 @@ def exchange_code_for_token(code):
         "grant_type": "authorization_code",
     }
     
-    response = requests.post(TOKEN_URL, data = payload)
+    response = requests.post(TOKEN_URL, data=payload)
     response.raise_for_status()
     return response.json()
 

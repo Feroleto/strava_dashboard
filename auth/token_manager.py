@@ -8,17 +8,19 @@ load_dotenv()
 CLIENT_ID = os.getenv("STRAVA_CLIENT_ID")
 CLIENT_SECRET = os.getenv("STRAVA_CLIENT_SECRET")
 TOKEN_URL = "https://www.strava.com/oauth/token"
-ENV_FILE = ".env"
+
+current_dir = os.path.dirname(os.path.abspath(__file__))
+ENV_FILE = os.path.join(current_dir, "..", ".env")
 
 def save_tokens(token_data):
     set_key(ENV_FILE, "STRAVA_ACCESS_TOKEN", token_data["access_token"])
     set_key(ENV_FILE, "STRAVA_REFRESH_TOKEN", token_data["refresh_token"])
     set_key(ENV_FILE, "STRAVA_EXPIRES_AT", str(token_data["expires_at"]))
     
-    #load_dotenv(override=True)
+    load_dotenv(override=True)
     
 def is_token_expired():
-    #load_dotenv(override=True)
+    load_dotenv(override=True)
     expires_at = os.getenv("STRAVA_EXPIRES_AT")
     if not expires_at:
         return True
