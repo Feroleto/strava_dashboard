@@ -1,5 +1,5 @@
-from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
-from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime, ForeignKey
+from sqlalchemy.orm import declarative_base, sessionmaker, relationship
 
 DATABASE_URL = "sqlite:///strava.db"
 
@@ -28,6 +28,21 @@ class Activity(Base):
     average_bpm = Column(Float)
     max_bpm = Column(Float)
     
+    splits = relationship("ActivitySplit", back_populates="activity")
+    
+class ActivitySplit(Base):
+    __tablename__ = "activity_splits"
+    
+    id = Column(Integer, primary_key=True)
+    
+    activity_id = Column(Integer, ForeignKey("activities.id"), index=True)
+    
+    split_index = Column(Integer)
+    distance_km = Column(Float)
+    moving_time_sec = Column(Integer)
+    pace_min_km = Column(Float)
+    
+    activity = relationship("Activity", back_populates="splits")
     
 def create_tables():
     Base.metadata.create_all(engine)
