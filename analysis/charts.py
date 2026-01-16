@@ -174,12 +174,23 @@ def plot_pace_distance_histogram(df):
     plt.style.use("seaborn-v0_8-muted")
     fig, ax = plt.subplots(figsize=(12, 6))
     
-    ax.bar(
+    bars = ax.bar(
         df["label"],
         df["distance_km"],
         edgecolor="navy",
         linewidth=0.5
     )
+    
+    for bar in bars:
+        height = bar.get_height()
+        ax.annotate(
+            f"{height:.1f}",
+            xy=(bar.get_x() + bar.get_width() / 2, height),
+            xytext=(0, 3),
+            textcoords="offset points",
+            ha="center", va="bottom",
+            fontsize=9
+        )
     
     title = "Pace distribution weighted by distance"
     ylabel = "Total distance (km)"
