@@ -7,7 +7,7 @@ def main():
     
     parser.add_argument(
         "type",
-        choices=["distance", "pace", "pace_vs_dist"],
+        choices=["distance", "pace", "pace_vs_dist", "pace_evolution"],
         help="Graphic type: weekly distance, weekly average pace or pace vs volume"
     )
     
@@ -31,6 +31,11 @@ def main():
         
     elif args.type == "pace_vs_dist":
         charts.plot_weekly_pace_vs_distance(df)
+        
+    elif args.type == "pace_evolution":
+        raw_pace_data = data_manager.fetch_individual_activity_data()
+        df_hist = data_manager.process_pace_histogram_data(raw_pace_data)
+        charts.plot_pace_distance_histogram(df_hist)
         
 if __name__ == "__main__":
     main()

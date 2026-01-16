@@ -166,4 +166,25 @@ def plot_weekly_pace_vs_distance(df):
     plt.tight_layout()
     plt.show()
         
-        
+def plot_pace_distance_histogram(df):
+    if df.empty:
+        print("No pace histogram data found")
+        return
+    
+    plt.style.use("seaborn-v0_8-muted")
+    fig, ax = plt.subplots(figsize=(12, 6))
+    
+    ax.bar(
+        df["label"],
+        df["distance_km"],
+        edgecolor="navy",
+        linewidth=0.5
+    )
+    
+    title = "Pace distribution weighted by distance"
+    ylabel = "Total distance (km)"
+    apply_standart_style(ax, title, ylabel)
+    ax.set_xlabel("Pace (min/km)")
+    
+    plt.tight_layout()
+    plt.show()
