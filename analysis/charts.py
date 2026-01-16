@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import matplotlib.ticker as ticker
 import numpy as np
 
-def apply_standart_style(ax, title, ylabel):
+def apply_standart_style(ax, title, ylabel, xlabel):
     ax.set_title(
         title, 
         fontsize=16, 
@@ -17,11 +17,19 @@ def apply_standart_style(ax, title, ylabel):
         color="#7F8C8D"
     )
     
+    if xlabel:
+        ax.set_xlabel(
+            xlabel,
+            fontsize=12,
+            color="#7F8C8D"
+        )
+    
     ax.yaxis.grid(
         True,
         linestyle='--',
         alpha=0.7
     )
+    
     
     for spine in ["top", "right"]: ax.spines[spine].set_visible(False)
     plt.xticks(rotation=45)
@@ -78,7 +86,7 @@ def plot_weekly_running_volume(df):
     # style
     title = "Weekly runs volume"
     ylabel = "Distance (km)"
-    apply_standart_style(ax, title, ylabel)
+    apply_standart_style(ax, title, ylabel, None)
     
     number_up_bars(ax, bars)
             
@@ -107,7 +115,7 @@ def plot_weekly_average_pace(df):
     
     title = "Weekly average pace"
     ylabel = "Pace (min/km)"
-    apply_standart_style(ax, title, ylabel)
+    apply_standart_style(ax, title, ylabel, None)
     
     plt.tight_layout()
     plt.show()
@@ -158,8 +166,8 @@ def plot_weekly_pace_vs_distance(df):
     
     title = "Pace vs Weekly Volume"
     ylabel = "Pace (min/km)"
-    apply_standart_style(ax, title, ylabel)
-    ax.set_xlabel("Weekly Volume (km)", fontsize=12, color="#7F8C8D")
+    xlabel = "Weekly Volume (km)"
+    apply_standart_style(ax, title, ylabel, xlabel)
     
     # color bar to indicate time evolution
     cbar = plt.colorbar(scatter)
@@ -189,8 +197,8 @@ def plot_pace_distance_histogram(df):
     
     title = "Pace distribution weighted by distance"
     ylabel = "Total distance (km)"
-    apply_standart_style(ax, title, ylabel)
-    ax.set_xlabel("Pace (min/km)")
+    xlabel = "Pace (min/km)"
+    apply_standart_style(ax, title, ylabel, xlabel)
     
     plt.tight_layout()
     plt.show()
