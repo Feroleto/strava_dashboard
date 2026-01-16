@@ -6,7 +6,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from database.db import SessionLocal, Activity
+from database.db import SessionLocal, Activity, ActivitySplit
 
 def fetch_individual_activity_data():
     session = SessionLocal()
@@ -44,6 +44,15 @@ def fetch_weekly_data():
         return query
     finally:
         session.close()
+        
+def get_activities_without_splits(session):
+    return (
+        session.query(Activity)
+        .outerjoin(ActivitySplit)
+        .filter(Activity.type == "Run")
+        .filter(ActivitySplit.id.is_(None))
+        .all()
+    )
         
 def process_pace_histogram_data(raw_data, pace_max=4.0, pace_min=8.0, bin_size=0.25):
     df = pd.DataFrame(

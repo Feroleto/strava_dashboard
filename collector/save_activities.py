@@ -1,16 +1,17 @@
 from datetime import datetime
 from zoneinfo import ZoneInfo
-from activities import get_activities, get_all_activities
+from activities import get_activities, get_all_activities, fetch_activity_splits
+import time
 
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from database.db import SessionLocal, Activity
+from database.db import SessionLocal, Activity, ActivitySplit
+from analysis.data_manager import get_activities_without_splits
 
 SAO_PAULO_TZ = ZoneInfo("America/Sao_Paulo")
-
 
 def save_activities():
     session = SessionLocal()
@@ -58,8 +59,39 @@ def save_activities():
     
     print(f"{saved} new activities saved")
     
+    
+def save_splits(session, activity_id, splits):
+    for s in splits:
+        split = ActivitySplit(
+            activity_id=activity_id,
+            split_index=s["split"],
+            distance_km=s["distance"] / 1000,
+            moving_time_sec=s["moving_time"],
+            pace_min_km=(s["moving_time"] / 60) / (s["distance"] / 1000)
+        )
+        session.add(split)
+        
+        
+def ingest_splits(access_token):
+    session = SessionLocal()
+    
+    try:
+        activities = get_activities_without_splits(session)
+        
+        print(f"Fetching splits for {len(activities)} activities")
+        
+        for activity in activities:
+            splits = fetch_activity_splits(activity.id, access_token)
+            save_splits(session, activity.id, splits)
+            
+            session.commit()
+            time.sleep(1)
+    finally:
+        session.close()
+    
 if __name__ == "__main__":
-    save_activities()
+    #save_activities()
+    ingest_splits()
 
 
     
