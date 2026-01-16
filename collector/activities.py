@@ -96,13 +96,9 @@ def get_all_activities(per_page = 200):
     return all_activities
 
 def fetch_activity_splits(activity_id, access_token):
-    #token = get_valid_access_token()
-    # debug
-    print(f"Using token: {access_token[:10]}...")
-    
     url = f"{BASE_URL}/activities/{activity_id}"
     headers = {
-        "Autorization": f"Bearer {access_token}"
+        "Authorization": f"Bearer {access_token}"
     }
     
     r = requests.get(url, headers=headers)
