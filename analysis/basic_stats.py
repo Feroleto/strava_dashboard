@@ -4,8 +4,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from database.db import SessionLocal
-from database.db import Activity
+from database.models import SessionLocal
+from database.models import Activity
 
 session = SessionLocal()
 
