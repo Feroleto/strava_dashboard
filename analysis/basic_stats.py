@@ -4,7 +4,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from database.models import SessionLocal
+from database.config import SessionLocal
 from database.models import Activity
 
 session = SessionLocal()
