@@ -30,7 +30,6 @@ def apply_standart_style(ax, title, ylabel, xlabel):
         alpha=0.7
     )
     
-    
     for spine in ["top", "right"]: ax.spines[spine].set_visible(False)
     plt.xticks(rotation=45)
     
@@ -41,6 +40,14 @@ def format_pace(x, pos):
     minutes = int(x)
     seconds = int((x - minutes) * 60)
     return f"{minutes}:{seconds:02d}"
+
+def setup_plot(figsize=(12, 6)):
+    plt.style.use("seaborn-v0_8-muted")
+    return plt.subplots(figsize=figsize)
+
+def yaxis_pace_formatter(ax):
+    ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_pace))
+    ax.invert_yaxis()
 
 def number_up_bars(ax, bars):
     for bar in bars:
@@ -57,8 +64,7 @@ def number_up_bars(ax, bars):
             )
 
 def plot_weekly_running_volume(df):
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = setup_plot()
     
     weeks = df["label"]
     kms = df["total_km"]
@@ -94,8 +100,7 @@ def plot_weekly_running_volume(df):
     plt.show()
     
 def plot_weekly_average_pace(df):
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = setup_plot()
     
     weeks = df["label"]
     pace = df["pace_min_km"]
@@ -109,9 +114,7 @@ def plot_weekly_average_pace(df):
         zorder=3
         )
     
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_pace))
-    
-    ax.invert_yaxis()
+    yaxis_pace_formatter(ax)
     
     title = "Weekly average pace"
     ylabel = "Pace (min/km)"
@@ -121,8 +124,7 @@ def plot_weekly_average_pace(df):
     plt.show()
     
 def plot_weekly_pace_vs_distance(df):
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = setup_plot()
     
     df_plot = df.dropna(subset=["pace_min_km"]).copy()
     
@@ -161,8 +163,7 @@ def plot_weekly_pace_vs_distance(df):
             zorder=2
         )
         
-    ax.yaxis.set_major_formatter(ticker.FuncFormatter(format_pace))
-    ax.invert_yaxis()
+    yaxis_pace_formatter(ax)
     
     title = "Pace vs Weekly Volume"
     ylabel = "Pace (min/km)"
@@ -183,8 +184,7 @@ def plot_pace_distance_histogram(df):
         print("No pace histogram data found")
         return
     
-    plt.style.use("seaborn-v0_8-muted")
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = setup_plot()
     
     bars = ax.bar(
         df["label"],
