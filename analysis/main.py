@@ -1,6 +1,12 @@
 import argparse
-import data_manager
 import charts
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+from analysis.processors import process_pace_histogram_data, process_weekly_data
+from database.queries import fetch_individual_activity_data, fetch_weekly_data
 
 def main():
     parser = argparse.ArgumentParser(description="STRAVA Dashboard CLI - Performance Analysis")
@@ -16,8 +22,8 @@ def main():
     
     args = parser.parse_args()
     
-    raw_data = data_manager.fetch_weekly_data()
-    df = data_manager.process_raw_data(raw_data, hide_zero=args.hide_zero, limit=args.limit)
+    raw_data = fetch_weekly_data()
+    df = process_weekly_data(raw_data, hide_zero=args.hide_zero, limit=args.limit)
     
     if df.empty:
         print("None data found with this filters")
@@ -33,8 +39,8 @@ def main():
         charts.plot_weekly_pace_vs_distance(df)
         
     elif args.type == "pace_histogram":
-        raw_pace_data = data_manager.fetch_individual_activity_data()
-        df_hist = data_manager.process_pace_histogram_data(raw_pace_data)
+        raw_pace_data = fetch_individual_activity_data()
+        df_hist = process_pace_histogram_data(raw_pace_data)
         charts.plot_pace_distance_histogram(df_hist)
         
 if __name__ == "__main__":
