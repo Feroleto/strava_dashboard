@@ -47,3 +47,13 @@ def get_activities_without_splits(session):
         .filter(ActivitySplit.id.is_(None))
         .all()
     )
+    
+def get_last_activity_timestamp():
+    session = SessionLocal()
+    try:
+        last_activity = session.query(Activity).order_by(Activity.start_date.desc()).first()
+        if last_activity:
+            return int(last_activity.start_date.timestamp())
+        return None
+    finally:
+        session.close()

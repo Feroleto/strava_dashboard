@@ -8,6 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from collector.activities import get_all_activities
 from database.models import Activity
 from database.config import SessionLocal
+from database.queries import get_last_activity_timestamp
     
 def map_strava_to_model(activity):
     distance_km = activity["distance"] / 1000 if activity["distance"] else None
@@ -33,22 +34,22 @@ def map_strava_to_model(activity):
 def save_activities_to_db():
     session = SessionLocal()
     
-    try:
-        activities = get_all_activities()
-        saved = 0
+    last_ts = get_last_activity_timestamp()
+    
+    activities = get_all_activities(after=last_ts)
+    
+    saved = 0
+    
+    for a in activities:
+        exists = session.query(Activity).filter_by(id=a["id"]).first()
+        if not exists:
+            activity_obj = map_strava_to_model(a)
+            session.add(activity_obj)
+            saved += 1
         
-        for a in activities:
-            exists = session.query(Activity).filter_by(id=a["id"]).first()
-            if not exists:
-                activity_obj = map_strava_to_model(a)
-                session.add(activity_obj)
-                saved += 1
-        
-        session.commit()
-        print(f"{saved} new activities were saved")
-        
-    finally:
-        session.close()
+    session.commit()
+    session.close()
+    print(f"{saved} new activities were saved")
             
 if __name__ == "__main__":
     save_activities_to_db()

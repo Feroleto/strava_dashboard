@@ -6,8 +6,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.models import ActivitySplit
+from database.queries import get_activities_without_splits
 from collector.splits import fetch_activity_splits
-from analysis.data_manager import get_activities_without_splits
 from auth.token_manager import get_valid_access_token
 
 def save_splits_of_one_activity_to_db(session, activity_id, splits):
