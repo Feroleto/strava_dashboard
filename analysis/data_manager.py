@@ -6,7 +6,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
-from database.models import SessionLocal, Activity, ActivitySplit
+from database.models import Activity, ActivitySplit
+from database.config import SessionLocal
 
 def fetch_individual_activity_data():
     session = SessionLocal()

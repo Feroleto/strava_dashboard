@@ -46,7 +46,7 @@ def format_seconds(seconds):
     else:
         return f"{minutes:02d}:{seconds:02d}"
 
-    
+# used more for tests (will try to refactor that)
 def activities_to_dataframe(activities):
     df = pd.DataFrame(activities)
     

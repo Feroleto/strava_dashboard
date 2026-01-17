@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, Float, String, DateTime, ForeignKey
 from sqlalchemy.orm import relationship
-from config import Base
+from database.config import Base
 
 class Activity(Base):
     __tablename__ = "activities"
