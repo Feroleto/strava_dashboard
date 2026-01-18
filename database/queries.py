@@ -57,3 +57,13 @@ def get_last_activity_timestamp():
         return None
     finally:
         session.close()
+        
+def fetch_split_pace():
+    session = SessionLocal()
+    try:
+        return session.query(
+            ActivitySplit.pace_min_km,
+            ActivitySplit.distance_km
+        ).all()
+    finally:
+        session.close()

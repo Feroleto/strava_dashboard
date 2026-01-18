@@ -5,15 +5,15 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis.processors import process_pace_histogram_data, process_weekly_data
-from database.queries import fetch_individual_activity_data, fetch_weekly_data
+from analysis.processors import process_pace_histogram_data, process_weekly_data, process_splits_pace_histogram, PACE_ZONES
+from database.queries import fetch_individual_activity_data, fetch_weekly_data, fetch_split_pace
 
 def main():
     parser = argparse.ArgumentParser(description="STRAVA Dashboard CLI - Performance Analysis")
     
     parser.add_argument(
         "type",
-        choices=["distance", "pace", "pace_vs_dist", "pace_histogram"],
+        choices=["distance", "pace", "pace_vs_dist", "pace_histogram", "splits_pace_histogram"],
         help="Graphic type: weekly distance, weekly average pace or pace vs volume"
     )
     
@@ -42,6 +42,13 @@ def main():
         raw_pace_data = fetch_individual_activity_data()
         df_hist = process_pace_histogram_data(raw_pace_data)
         charts.plot_pace_distance_histogram(df_hist)
+        
+    elif args.type == "splits_pace_histogram":
+        raw_splits = fetch_split_pace()
+        df_hist = process_splits_pace_histogram(raw_splits, PACE_ZONES)
+        charts.plot_splits_pace_histogram(df_hist)
+        print(df_hist["km"].sum())
+        
         
 if __name__ == "__main__":
     main()

@@ -148,6 +148,40 @@ def process_weekly_data(raw_data, hide_zero=False, limit=None):
         
     df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
     return df
+
+PACE_ZONES = [
+    (0, 4.0, "< 4:00"),
+    (4.0, 4.5, "4:00-4:30"),
+    (4.5, 5.0, "4:30-5:00"),
+    (5.0, 5.5, "5:00-5:30"),
+    (5.5, 6.0, "5:30-6:00"),
+    (6.0, 6.5, "6:00-6:30"),
+    (6.5, 7.0, "6:30-7:00"),
+    (7.0, 20.0, "> 7:00"),
+]
+
+def process_splits_pace_histogram(raw_splits, pace_zones):
+    df = pd.DataFrame(
+        raw_splits,
+        columns=["pace_min_km", "distance_km"]
+    )
+    
+    df.dropna()
+    
+    zone_data = []
+    
+    for low, high, label in pace_zones:
+        km = df[
+            (df["pace_min_km"] >= low) &
+            (df["pace_min_km"] < high)
+        ]["distance_km"].sum()
+        
+        zone_data.append({
+            "zone": label,
+            "km": km
+        })
+        
+    return pd.DataFrame(zone_data)
     
 if __name__ == "__main__":
     activities = fetch_activities(per_page=10)

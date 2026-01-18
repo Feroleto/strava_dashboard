@@ -181,7 +181,7 @@ def plot_weekly_pace_vs_distance(df):
         
 def plot_pace_distance_histogram(df):
     if df.empty:
-        print("No pace histogram data found")
+        print("No pace data found")
         return
     
     fig, ax = setup_plot()
@@ -199,6 +199,30 @@ def plot_pace_distance_histogram(df):
     ylabel = "Total distance (km)"
     xlabel = "Pace (min/km)"
     apply_standart_style(ax, title, ylabel, xlabel)
+    
+    plt.tight_layout()
+    plt.show()
+    
+def plot_splits_pace_histogram(df):
+    if df.empty:
+        print("No split data found")
+        return
+    
+    fig, ax = setup_plot()
+    
+    bars = ax.bar(
+        df["zone"],
+        df["km"],
+        edgecolor="navy",
+        alpha=0.8
+    )
+    
+    title = "Distance distribution by pace zone"
+    ylabel = "Distance (km)"
+    xlabel = "Pace zone"
+    apply_standart_style(ax, title, ylabel, xlabel)
+    
+    number_up_bars(ax, bars)
     
     plt.tight_layout()
     plt.show()
