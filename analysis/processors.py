@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis.formatters import format_pace_bin
+from analysis.formatters import format_pace_bin, PACE_ZONES
 
 def process_weekly_data(raw_data, hide_zero=False, limit=None):
     df = pd.DataFrame(
@@ -76,17 +76,6 @@ def process_pace_histogram_data(raw_data, pace_max=3.0, pace_min=9.0, bin_size=0
     df_grouped["label"] = df_grouped["pace_bin"].apply(format_pace_bin)
     
     return df_grouped
-
-PACE_ZONES = [
-    (0, 4.0, "< 4:00"),
-    (4.0, 4.5, "4:00-4:30"),
-    (4.5, 5.0, "4:30-5:00"),
-    (5.0, 5.5, "5:00-5:30"),
-    (5.5, 6.0, "5:30-6:00"),
-    (6.0, 6.5, "6:00-6:30"),
-    (6.5, 7.0, "6:30-7:00"),
-    (7.0, 20.0, "> 7:00"),
-]
 
 def process_splits_pace_histogram(raw_splits, pace_zones):
     df = pd.DataFrame(
