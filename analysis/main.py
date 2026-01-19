@@ -42,13 +42,13 @@ def main():
         raw_pace_data = fetch_individual_activity_data()
         df_hist = process_pace_histogram_data(raw_pace_data)
         charts.plot_pace_distance_histogram(df_hist)
-        print(df_hist["distance_km"].sum())
+        #print(df_hist["distance_km"].sum())
         
     elif args.type == "splits_pace_histogram":
         raw_splits = fetch_split_pace()
         df_hist = process_splits_pace_histogram(raw_splits, PACE_ZONES)
         charts.plot_splits_pace_histogram(df_hist)
-        print(df_hist["km"].sum())
+        #print(df_hist["km"].sum())
         
         
 if __name__ == "__main__":

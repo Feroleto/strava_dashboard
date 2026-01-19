@@ -7,65 +7,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from analysis.formatters import format_pace_bin
 
-def activities_to_dataframe(activities):
-    df = pd.DataFrame(activities)
-    
-    if df.empty:
-        return df
-    
-    df["start_date"] = pd.to_datetime(df["start_date"])
-    df["start_date"] = df["start_date"].dt.tz_convert("America/Sao_Paulo").dt.tz_localize(None)
-    
-    df["distance_km"] = df["distance"] / 1000
-    df["moving_time_min"] = df["moving_time"] / 60
-    df["raw_pace"] = df["moving_time_min"] / df["distance_km"]
-    
-    extra_columns = {
-        "total_elevation_gain": "elevation_gain",
-        "average_heartrate": "average_bpm",
-        "max_heartrate": "max_bpm"
-    }
-    
-    df = df.rename(columns={k: v for k, v in extra_columns.items() if k in df.columns})
-    
-    return df
-    
-def process_pace_histogram_data(raw_data, pace_max=3.0, pace_min=9.0, bin_size=0.25):
-    df = pd.DataFrame(
-        raw_data,
-        columns=["distance_km", "moving_time_sec"]
-    )
-    
-    if df.empty:
-        return df
-    
-    # pace for activity
-    df["pace_min_km"] = (df["moving_time_sec"] / 60) / df["distance_km"]
-        
-    # filters
-    df = df[
-        (df["pace_min_km"] <= pace_min) &
-        (df["pace_min_km"] >= pace_max)
-    ].copy()
-    
-    bins = np.arange(pace_max, pace_min + bin_size, bin_size)
-    df["pace_bin"] = pd.cut(
-        df["pace_min_km"],
-        bins=bins,
-        right=False
-    )
-    
-    # sum 
-    df_grouped = (
-        df.groupby("pace_bin", observed=True)["distance_km"]
-        .sum()
-        .reset_index()
-    )
-    
-    df_grouped["label"] = df_grouped["pace_bin"].apply(format_pace_bin)
-    
-    return df_grouped
-
 def process_weekly_data(raw_data, hide_zero=False, limit=None):
     df = pd.DataFrame(
         raw_data,
@@ -99,6 +40,42 @@ def process_weekly_data(raw_data, hide_zero=False, limit=None):
         
     df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
     return df
+    
+def process_pace_histogram_data(raw_data, pace_max=3.0, pace_min=9.0, bin_size=0.25):
+    df = pd.DataFrame(
+        raw_data,
+        columns=["distance_km", "moving_time_sec"]
+    )
+    
+    if df.empty:
+        return df
+    
+    # pace per activity
+    df["pace_min_km"] = (df["moving_time_sec"] / 60) / df["distance_km"]
+        
+    # filters
+    df = df[
+        (df["pace_min_km"] <= pace_min) &
+        (df["pace_min_km"] >= pace_max)
+    ].copy()
+    
+    bins = np.arange(pace_max, pace_min + bin_size, bin_size)
+    df["pace_bin"] = pd.cut(
+        df["pace_min_km"],
+        bins=bins,
+        right=False
+    )
+    
+    # sum 
+    df_grouped = (
+        df.groupby("pace_bin", observed=True)["distance_km"]
+        .sum()
+        .reset_index()
+    )
+    
+    df_grouped["label"] = df_grouped["pace_bin"].apply(format_pace_bin)
+    
+    return df_grouped
 
 PACE_ZONES = [
     (0, 4.0, "< 4:00"),
