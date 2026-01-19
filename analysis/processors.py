@@ -5,8 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis.formatters import format_pace, format_pace_bin, format_seconds
-
+from analysis.formatters import format_pace_bin
 
 def activities_to_dataframe(activities):
     df = pd.DataFrame(activities)
