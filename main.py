@@ -4,18 +4,25 @@ from analysis.charts import (
     plot_weekly_average_pace,
     plot_weekly_pace_vs_distance,
     plot_pace_distance_histogram,
-    plot_splits_pace_histogram
+    plot_splits_pace_histogram,
+    plot_z2_percentage
 )
 from analysis.processors import (
     process_pace_histogram_data,
     process_weekly_data,
     process_splits_pace_histogram,
-    PACE_ZONES
+    process_z2_percentage
+)
+from analysis.formatters import (
+    PACE_ZONES,
+    Z2_MIN,
+    Z2_MAX
 )
 from database.queries import (
     fetch_individual_activity_data,
     fetch_weekly_data,
-    fetch_split_pace
+    fetch_split_pace,
+    fetch_weekly_splits,
 )
 from processors.save_activities import save_activities_to_db
 from processors.save_splits import ingest_splits
@@ -50,6 +57,11 @@ def handle_plots(args):
         raw_splits = fetch_split_pace()
         df_hist = process_splits_pace_histogram(raw_splits, PACE_ZONES)
         plot_splits_pace_histogram(df_hist)
+    
+    elif args.chart_type == "z2":
+        raw_weekly_splits = fetch_weekly_splits()
+        df_z2 = process_z2_percentage(raw_weekly_splits, Z2_MIN, Z2_MAX)
+        plot_z2_percentage(df_z2)
         
 def main():
     parser = argparse.ArgumentParser(description="STRAVA Dashboard CLI - Performance Analysis")
@@ -63,7 +75,7 @@ def main():
     plot_parser = subparsers.add_parser("plot", help="Show graphic visualization")
     plot_parser.add_argument(
         "chart_type",
-        choices=["distance", "pace", "pace_vs_dist", "pace_histogram", "splits_pace_histogram"],
+        choices=["distance", "pace", "pace_vs_dist", "pace_histogram", "splits_pace_histogram", "z2"],
         help="Graphic type"
     )
     

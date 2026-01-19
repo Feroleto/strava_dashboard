@@ -67,3 +67,18 @@ def fetch_split_pace():
         ).all()
     finally:
         session.close()
+        
+def fetch_weekly_splits():
+    session = SessionLocal()
+    try:
+        return (
+            session.query(
+                func.date(Activity.start_date, "weekday 0", "-6 days").label("week_start"),
+                ActivitySplit.pace_min_km,
+                ActivitySplit.distance_km
+            )
+            .join(Activity, Activity.id == ActivitySplit.activity_id)
+            .all()
+        )
+    finally:
+        session.close()

@@ -99,4 +99,49 @@ def process_splits_pace_histogram(raw_splits, pace_zones):
         })
         
     return pd.DataFrame(zone_data)
+
+def process_z2_percentage(raw_data, z2_min, z2_max):
+    df = pd.DataFrame(
+        raw_data,
+        columns=["week_start", "pace_min_km", "distance_km"]
+    )
+    
+    if df.empty:
+        return df
+    
+    df["week_start"] = pd.to_datetime(df["week_start"])
+    
+    df["is_z2"] = (
+        (df["pace_min_km"] > z2_min) &
+        (df["pace_min_km"] <= z2_max)
+    )
+    
+    weekly = (
+        df.groupby("week_start")
+        .apply(lambda x: pd.Series({
+            "total_km": x["distance_km"].sum(),
+            "z2_km": x.loc[x["is_z2"], "distance_km"].sum()
+        }))
+        .reset_index()
+    )
+    
+    weekly["z2_percentage"] = 100 * weekly["z2_km"] / weekly["total_km"]
+    
+    all_weeks = pd.date_range(
+        start=weekly["week_start"].min(),
+        end=weekly["week_start"].max(),
+        freq="W-MON"
+    )
+    
+    weekly = (
+        weekly.set_index("week_start")
+              .reindex(all_weeks)
+              .fillna(0)
+              .reset_index()
+    )
+    
+    weekly.rename(columns={"index": "week_start"}, inplace=True)
+    weekly["label"] = weekly["week_start"].dt.strftime("%d/%m/%y")
+    
+    return weekly
     

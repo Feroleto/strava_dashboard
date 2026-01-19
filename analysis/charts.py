@@ -226,3 +226,25 @@ def plot_splits_pace_histogram(df):
     
     plt.tight_layout()
     plt.show()
+    
+def plot_z2_percentage(df):
+    if df.empty:
+        print("No Z2 data found")
+        return
+    
+    fig, ax = setup_plot()
+    
+    ax.plot(
+        df["label"],
+        df["z2_percentage"],
+        color="darkblue",
+        marker='o',
+        linewidth=2
+    )
+    
+    title = "Weekly Z2 percentage"
+    ylabel = "Z2 volume %"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    plt.tight_layout()
+    plt.show()

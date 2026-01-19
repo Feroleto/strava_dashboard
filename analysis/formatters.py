@@ -36,3 +36,6 @@ def format_pace_bin(interval):
         start = interval.left
         end = interval.right
         return f"{int(start)}:{int((start%1)*60):02d}-{int(end)}:{int((end%1)*60):02d}"
+    
+Z2_MIN = 5.50
+Z2_MAX = 9.00
