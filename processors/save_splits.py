@@ -30,7 +30,9 @@ def save_splits_of_one_activity_to_db(session, activity_id, splits):
         )
         session.add(split)
         
-def ingest_splits(access_token):
+def ingest_splits():
+    access_token = get_valid_access_token()
+    
     session = SessionLocal()
     
     try:
