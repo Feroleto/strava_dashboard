@@ -21,16 +21,6 @@ def format_pace(pace_decimal):
     seconds = int((pace_decimal - minutes) * 60)
     return f"{minutes}:{seconds:02d}"
 
-PACE_ZONES = [
-    (0, 4.0, "< 4:00"),
-    (4.0, 4.5, "4:00-4:30"),
-    (4.5, 5.0, "4:30-5:00"),
-    (5.0, 5.5, "5:00-5:30"),
-    (5.5, 6.0, "5:30-6:00"),
-    (6.0, 6.5, "6:00-6:30"),
-    (6.5, 7.0, "6:30-7:00"),
-    (7.0, 20.0, "> 7:00"),
-]
 
 def format_pace_bin(interval):
         start = interval.left

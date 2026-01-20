@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from analysis.formatters import format_pace_bin, PACE_ZONES
+from analysis.formatters import format_pace_bin
 
 def process_weekly_data(raw_data, hide_zero=False, limit=None):
     df = pd.DataFrame(
@@ -77,7 +77,7 @@ def process_pace_histogram_data(raw_data, pace_max=3.0, pace_min=9.0, bin_size=0
     
     return df_grouped
 
-def process_splits_pace_histogram(raw_splits, pace_zones):
+def process_splits_pace_histogram(raw_splits, pace_max=3.0, pace_min=20.0, bin_size=0.25):
     df = pd.DataFrame(
         raw_splits,
         columns=["pace_min_km", "distance_km"]
@@ -85,20 +85,32 @@ def process_splits_pace_histogram(raw_splits, pace_zones):
     
     df.dropna()
     
-    zone_data = []
+    if df.empty:
+        return df
     
-    for low, high, label in pace_zones:
-        km = df[
-            (df["pace_min_km"] >= low) &
-            (df["pace_min_km"] < high)
-        ]["distance_km"].sum()
-        
-        zone_data.append({
-            "zone": label,
-            "km": km
-        })
-        
-    return pd.DataFrame(zone_data)
+    # filters
+    df = df[
+        (df["pace_min_km"] >= pace_max) &
+        (df["pace_min_km"] <= pace_min)
+    ].copy()
+    
+    bins = np.arange(pace_max, pace_min + bin_size, bin_size)
+    
+    df["pace_bin"] = pd.cut(
+        df["pace_min_km"],
+        bins=bins,
+        right=False
+    )
+    
+    df_grouped = (
+        df.groupby("pace_bin", observed=True)["distance_km"]
+        .sum()
+        .reset_index()
+    )
+    
+    df_grouped["label"] = df_grouped["pace_bin"].apply(format_pace_bin)
+    
+    return df_grouped
 
 def process_z2_percentage(raw_data, z2_min, z2_max):
     df = pd.DataFrame(

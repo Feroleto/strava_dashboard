@@ -14,7 +14,6 @@ from analysis.processors import (
     process_z2_percentage
 )
 from analysis.formatters import (
-    PACE_ZONES,
     Z2_MIN,
     Z2_MAX
 )
@@ -55,7 +54,7 @@ def handle_plots(args):
         
     elif args.chart_type == "splits_pace_histogram":
         raw_splits = fetch_split_pace()
-        df_hist = process_splits_pace_histogram(raw_splits, PACE_ZONES)
+        df_hist = process_splits_pace_histogram(raw_splits)
         plot_splits_pace_histogram(df_hist)
     
     elif args.chart_type == "z2":

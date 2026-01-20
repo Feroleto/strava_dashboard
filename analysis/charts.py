@@ -211,8 +211,8 @@ def plot_splits_pace_histogram(df):
     fig, ax = setup_plot()
     
     bars = ax.bar(
-        df["zone"],
-        df["km"],
+        df["label"],
+        df["distance_km"],
         edgecolor="navy",
         alpha=0.8
     )
