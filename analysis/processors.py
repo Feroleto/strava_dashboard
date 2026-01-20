@@ -118,6 +118,8 @@ def process_z2_percentage(raw_data, z2_min, z2_max):
         columns=["week_start", "pace_min_km", "distance_km"]
     )
     
+    df.dropna()
+    
     if df.empty:
         return df
     
@@ -139,21 +141,13 @@ def process_z2_percentage(raw_data, z2_min, z2_max):
     
     weekly["z2_percentage"] = 100 * weekly["z2_km"] / weekly["total_km"]
     
-    all_weeks = pd.date_range(
-        start=weekly["week_start"].min(),
-        end=weekly["week_start"].max(),
-        freq="W-MON"
-    )
-    
     weekly = (
         weekly.set_index("week_start")
-              .reindex(all_weeks)
               .fillna(0)
               .reset_index()
     )
     
     weekly.rename(columns={"index": "week_start"}, inplace=True)
     weekly["label"] = weekly["week_start"].dt.strftime("%d/%m/%y")
-    
     return weekly
     
