@@ -1,4 +1,5 @@
 import time
+from tqdm import tqdm
 
 import sys
 import os
@@ -38,9 +39,11 @@ def ingest_splits():
     try:
         activities = get_activities_without_splits(session)
         
-        print(f"Fetching splits for {len(activities)} activities")
+        if not activities:
+            print("You have already collected all the splits")
+            return
         
-        for activity in activities:
+        for activity in tqdm(activities, desc="Downloading splits", unit="Run"):
             splits = fetch_activity_splits(activity.id, access_token)
             save_splits_of_one_activity_to_db(session, activity.id, splits)
             
