@@ -248,3 +248,26 @@ def plot_z2_percentage(df):
     
     plt.tight_layout()
     plt.show()
+    
+def plot_z2_volume(df):
+    if df.empty:
+        print("No Z2 volume data found")
+        return
+    
+    fig, ax = setup_plot()
+    
+    bars = ax.bar(
+        df["label"],
+        df["z2_km"],
+        alpha=0.85,
+        edgecolor="navy"
+    )
+    
+    title = "Weekly Z2 volume"
+    ylabel = "Z2 distance (km)"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    number_up_bars(ax, bars)
+    
+    plt.tight_layout()
+    plt.show()
