@@ -130,22 +130,14 @@ def process_z2_percentage(raw_data, z2_min, z2_max):
         (df["pace_min_km"] <= z2_max)
     )
     
-    weekly = (
-        df.groupby("week_start")
-        .apply(lambda x: pd.Series({
-            "total_km": x["distance_km"].sum(),
-            "z2_km": x.loc[x["is_z2"], "distance_km"].sum()
-        }))
-        .reset_index()
+    df["z2_km"] = df["distance_km"].where(df["is_z2"], 0)
+    
+    weekly = df.groupby("week_start", as_index=False).agg(
+        total_km=("distance_km", "sum"),
+        z2_km=("z2_km", "sum")
     )
     
     weekly["z2_percentage"] = 100 * weekly["z2_km"] / weekly["total_km"]
-    
-    weekly = (
-        weekly.set_index("week_start")
-              .fillna(0)
-              .reset_index()
-    )
     
     weekly.rename(columns={"index": "week_start"}, inplace=True)
     weekly["label"] = weekly["week_start"].dt.strftime("%d/%m/%y")
@@ -168,19 +160,11 @@ def process_z2_volume(raw_data, z2_min, z2_max):
         (df["pace_min_km"] <= z2_max)
     )
     
-    weekly = (
-        df.groupby("week_start")
-          .apply(lambda x: pd.Series({
-              "total_km": x["distance_km"].sum(),
-              "z2_km": x.loc[x["is_z2"], "distance_km"].sum()
-          }))
-          .reset_index()
-    )
+    df["z2_km"] = df["distance_km"].where(df["is_z2"], 0)
     
-    weekly = (
-        weekly.set_index("week_start")
-              .fillna(0)
-              .reset_index()
+    weekly = df.groupby("week_start", as_index=False).agg(
+        total_km=("distance_km", "sum"),
+        z2_km=("z2_km", "sum")
     )
     
     weekly.rename(columns={"index": "week_start"}, inplace=True)
