@@ -279,6 +279,7 @@ def plot_weekly_z2_stack(merged_df):
     
     merged_df["non_z2_km"] = merged_df["total_km"] - merged_df["z2_km"]
     merged_df["z2_pct"] = (merged_df["z2_km"] / merged_df["total_km"] * 100).fillna(0)
+    #merged_df["rolling_avg"] = merged_df["total_km"].rolling(window=4, min_periods=1).mean()
     
     fig, ax = setup_plot()
     
@@ -300,6 +301,17 @@ def plot_weekly_z2_stack(merged_df):
         edgecolor="red",
         alpha=0.6
     )
+    
+    '''
+    ax.plot(
+        merged_df["label"],
+        merged_df["rolling_avg"],
+        color="#1f77b4",
+        linestyle="--",
+        linewidth=2,
+        label="4 weeks average"
+    )
+    '''
     
     for i, bar in enumerate(bars_z2):
         km = merged_df["z2_km"].iloc[i]
