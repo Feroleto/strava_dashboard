@@ -172,7 +172,7 @@ def process_z2_volume(raw_data, z2_min, z2_max):
     
     return weekly
 
-def merge_data(df_total, df_z2, hide_zero=False, limit=None):
+def process_z2_and_total_distances(df_total, df_z2, hide_zero=False, limit=None):
     df = pd.merge(
         df_total[["week_start", "total_km", "label"]],
         df_z2[["week_start", "z2_km"]],

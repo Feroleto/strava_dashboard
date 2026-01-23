@@ -298,6 +298,8 @@ def plot_weekly_z2_stack(merged_df):
         alpha=0.6
     )
     
+    #number_up_bars(bars_non_z2)
+    
     title = "Weekly volume - Z2 vs non-Z2"
     ylabel = "Distance (km)"
     apply_standart_style(ax, title, ylabel, None)

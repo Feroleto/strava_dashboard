@@ -15,7 +15,7 @@ from analysis.processors import (
     process_splits_pace_histogram,
     process_z2_percentage,
     process_z2_volume,
-    merge_data
+    process_z2_and_total_distances
 )
 from analysis.formatters import (
     Z2_MIN,
@@ -76,7 +76,7 @@ def handle_plots(args):
             raw_weekly_total = fetch_weekly_data()
             df_weekly = process_weekly_data(raw_weekly_total)
             df_z2 = process_z2_volume(raw_weekly_splits, Z2_MIN, Z2_MAX)
-            merged_df = merge_data(df_weekly, df_z2, args.hide_zero, args.limit)
+            merged_df = process_z2_and_total_distances(df_weekly, df_z2, args.hide_zero, args.limit)
             plot_weekly_z2_stack(merged_df)
         
 def main():
