@@ -172,7 +172,7 @@ def process_z2_volume(raw_data, z2_min, z2_max):
     
     return weekly
 
-def merge_data(df_total, df_z2):
+def merge_data(df_total, df_z2, hide_zero=False, limit=None):
     df = pd.merge(
         df_total[["week_start", "total_km", "label"]],
         df_z2[["week_start", "z2_km"]],
@@ -180,4 +180,10 @@ def merge_data(df_total, df_z2):
         how="left"
     ).fillna(0)
     
+    if hide_zero:
+        df = df[df["total_km"] > 0].copy()
+        
+    if limit:
+        df = df.tail(limit).copy()
+        
     return df

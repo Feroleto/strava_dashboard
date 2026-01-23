@@ -76,7 +76,7 @@ def handle_plots(args):
             raw_weekly_total = fetch_weekly_data()
             df_weekly = process_weekly_data(raw_weekly_total)
             df_z2 = process_z2_volume(raw_weekly_splits, Z2_MIN, Z2_MAX)
-            merged_df = merge_data(df_weekly, df_z2)
+            merged_df = merge_data(df_weekly, df_z2, args.hide_zero, args.limit)
             plot_weekly_z2_stack(merged_df)
         
 def main():
