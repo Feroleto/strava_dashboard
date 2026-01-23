@@ -278,6 +278,7 @@ def plot_weekly_z2_stack(merged_df):
         return
     
     merged_df["non_z2_km"] = merged_df["total_km"] - merged_df["z2_km"]
+    merged_df["z2_pct"] = (merged_df["z2_km"] / merged_df["total_km"] * 100).fillna(0)
     
     fig, ax = setup_plot()
     
@@ -300,14 +301,29 @@ def plot_weekly_z2_stack(merged_df):
         alpha=0.6
     )
     
-    ax.bar_label(
-        bars_z2, 
-        label_type="center", 
-        fmt="%.1f",
-        color="white",
-        fontweight="bold",
-        fontsize=6
-    )
+    for i, bar in enumerate(bars_z2):
+        km = merged_df["z2_km"].iloc[i]
+        pct = merged_df["z2_pct"].iloc[i]
+        
+        if km > 1.0:
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                bar.get_height()/2 + 0.5,
+                f"{km:.1f}",
+                ha="center",
+                color="white",
+                fontweight="bold",
+                fontsize=8
+            )
+            ax.text(
+                bar.get_x() + bar.get_width()/2,
+                bar.get_height()/2 - 1.0,
+                f"{pct:.0f}",
+                ha="center",
+                color="white",
+                alpha=0.9,
+                fontsize=7
+            )
     
     labels_non_z2 = [f"{x:.1f}" if x > 2 else '' for x in merged_df["non_z2_km"]]
     ax.bar_label(
@@ -316,7 +332,7 @@ def plot_weekly_z2_stack(merged_df):
         label_type="center",
         color="white",
         fontweight="bold",
-        fontsize=6
+        fontsize=8
     )
     
     for i, total in enumerate(merged_df["total_km"]):
