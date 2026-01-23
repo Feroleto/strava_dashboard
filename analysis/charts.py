@@ -286,6 +286,7 @@ def plot_weekly_z2_stack(merged_df):
         merged_df["z2_km"],
         label="Z2 kms",
         color="#2ca02c",
+        edgecolor= "darkgreen",
         alpha=0.85
     )
     
@@ -295,10 +296,39 @@ def plot_weekly_z2_stack(merged_df):
         bottom=merged_df["z2_km"],
         label="Non-Z2 kms",
         color="#d62728",
+        edgecolor="red",
         alpha=0.6
     )
     
-    #number_up_bars(bars_non_z2)
+    ax.bar_label(
+        bars_z2, 
+        label_type="center", 
+        fmt="%.1f",
+        color="white",
+        fontweight="bold",
+        fontsize=6
+    )
+    
+    labels_non_z2 = [f"{x:.1f}" if x > 2 else '' for x in merged_df["non_z2_km"]]
+    ax.bar_label(
+        bars_non_z2,
+        labels=labels_non_z2,
+        label_type="center",
+        color="white",
+        fontweight="bold",
+        fontsize=6
+    )
+    
+    for i, total in enumerate(merged_df["total_km"]):
+        if total > 0:
+            ax.text(
+                i,
+                total + 0.5,
+                f"{total:.1f}",
+                ha="center",
+                va="bottom",
+                fontsize=9,
+            )
     
     title = "Weekly volume - Z2 vs non-Z2"
     ylabel = "Distance (km)"
