@@ -171,3 +171,13 @@ def process_z2_volume(raw_data, z2_min, z2_max):
     weekly["label"] = weekly["week_start"].dt.strftime("%d/%m/%y")
     
     return weekly
+
+def merge_data(df_total, df_z2):
+    df = pd.merge(
+        df_total[["week_start", "total_km", "label"]],
+        df_z2[["week_start", "z2_km"]],
+        on="week_start",
+        how="left"
+    ).fillna(0)
+    
+    return df

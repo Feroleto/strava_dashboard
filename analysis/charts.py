@@ -271,3 +271,38 @@ def plot_z2_volume(df):
     
     plt.tight_layout()
     plt.show()
+    
+def plot_weekly_z2_stack(merged_df):
+    if merged_df.empty:
+        print("No necessary data was found")
+        return
+    
+    merged_df["non_z2_km"] = merged_df["total_km"] - merged_df["z2_km"]
+    
+    fig, ax = setup_plot()
+    
+    bars_z2 = ax.bar(
+        merged_df["label"],
+        merged_df["z2_km"],
+        label="Z2 kms",
+        color="#2ca02c",
+        alpha=0.85
+    )
+    
+    bars_non_z2 = ax.bar(
+        merged_df["label"],
+        merged_df["non_z2_km"],
+        bottom=merged_df["z2_km"],
+        label="Non-Z2 kms",
+        color="#d62728",
+        alpha=0.6
+    )
+    
+    title = "Weekly volume - Z2 vs non-Z2"
+    ylabel = "Distance (km)"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    ax.legend()
+    
+    plt.tight_layout()
+    plt.show()
