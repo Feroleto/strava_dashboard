@@ -194,6 +194,8 @@ def process_weekly_training_load(raw_data, zones):
         columns=["week_start", "pace_min_km", "distance_km"]
     )
     
+    df = df.drop_duplicates()
+    
     if df.empty:
         return df
     
