@@ -387,3 +387,31 @@ def plot_weekly_training_load(df):
     
     plt.tight_layout()
     plt.show()
+    
+def plot_acwr(df):
+    if df.empty:
+        print("No acwr data found")
+        return
+    
+    fig, ax = setup_plot()
+    
+    ax.plot(
+        df["label"],
+        df["acwr"],
+        marker="o",
+        linewidth=2,
+        label="ACWR"
+    )
+    
+    # safe zone
+    ax.axhspan(0.8, 1.3, alpha=0.2, label="Safe zone")
+    
+    ax.axhline(1.0, linestyle="--", alpha=0.6)
+    
+    title = "Acute: Chronic Workload Ratio (ACWR)"
+    ylabel = "ACWR"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    ax.legend()
+    plt.tight_layout()
+    plt.show()

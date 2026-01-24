@@ -8,7 +8,8 @@ from analysis.charts import (
     plot_z2_percentage,
     plot_z2_volume,
     plot_weekly_z2_stack,
-    plot_weekly_training_load
+    plot_weekly_training_load,
+    plot_acwr
 )
 from analysis.processors import (
     process_pace_histogram_data,
@@ -17,7 +18,8 @@ from analysis.processors import (
     process_z2_percentage,
     process_z2_volume,
     process_z2_and_total_distances,
-    process_weekly_training_load
+    process_weekly_training_load,
+    process_acwr
 )
 from analysis.formatters import (
     Z2_MIN,
@@ -64,7 +66,7 @@ def handle_plots(args):
         df_hist = process_splits_pace_histogram(raw_splits)
         plot_splits_pace_histogram(df_hist)
     
-    elif args.chart_type in ["z2_percentage", "z2_volume", "z2_weeks", "training_load"]:
+    elif args.chart_type in ["z2_percentage", "z2_volume", "z2_weeks", "training_load", "acwr"]:
         raw_weekly_splits = fetch_weekly_splits()
         
         if args.chart_type == "z2_percentage":
@@ -85,6 +87,11 @@ def handle_plots(args):
         elif args.chart_type == "training_load":
             df_load = process_weekly_training_load(raw_weekly_splits, ZONES)
             plot_weekly_training_load(df_load)
+            
+        elif args.chart_type == "acwr":
+            df_load = process_weekly_training_load(raw_weekly_splits, ZONES)
+            df_acwr = process_acwr(df_load)
+            plot_acwr(df_acwr)
         
 def main():
     parser = argparse.ArgumentParser(description="STRAVA Dashboard CLI - Performance Analysis")
@@ -107,7 +114,8 @@ def main():
             "z2_percentage", 
             "z2_volume",
             "z2_weeks",
-            "training_load"
+            "training_load",
+            "acwr"
             ],
         help="Graphic type"
     )

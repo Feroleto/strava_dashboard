@@ -230,3 +230,28 @@ def process_weekly_training_load(raw_data, zones):
     df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
     
     return df
+
+def process_acwr(df_load, acute_window=1, chronic_window=4):
+    if df_load.empty:
+        return df_load
+    
+    df = df_load.copy()
+    df = df.sort_values("week_start")
+    
+    
+    df["acute_load"] = (
+        df["training_load"]
+        .rolling(window=acute_window, min_periods=1)
+        .mean()
+    )
+    
+    df["chronic_load"] = (
+        df["training_load"]
+        .rolling(window=chronic_window, min_periods=1)
+        .mean()
+    )
+    
+    df["acwr"] = df["acute_load"] / df["chronic_load"]
+    df["acwr"] = df["acwr"].replace([float("inf")], None)
+    
+    return df
