@@ -366,3 +366,24 @@ def plot_weekly_z2_stack(merged_df):
     
     plt.tight_layout()
     plt.show()
+    
+def plot_weekly_training_load(df):
+    if df.empty:
+        print("No training load data")
+        return
+    
+    fig, ax = setup_plot()
+    
+    ax.plot(
+        df["label"],
+        df["training_load"],
+        marker="o",
+        linewidth=2
+    )
+    
+    title = "Weekly training load"
+    ylabel = "Training Load (a.u.)"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    plt.tight_layout()
+    plt.show()

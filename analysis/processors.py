@@ -187,3 +187,44 @@ def process_z2_and_total_distances(df_total, df_z2, hide_zero=False, limit=None)
         df = df.tail(limit).copy()
         
     return df
+
+def process_weekly_training_load(raw_data, zones):
+    df = pd.DataFrame(
+        raw_data,
+        columns=["week_start", "pace_min_km", "distance_km"]
+    )
+    
+    if df.empty:
+        return df
+    
+    records = []
+    
+    for week, week_df in df.groupby("week_start"):
+        total_load = 0
+        zone_breakdown = {}
+        
+        for name, z_min, z_max, weight in zones:
+            zone_km = week_df[
+                (week_df["pace_min_km"] >= z_min) &
+                (week_df["pace_min_km"] <= z_max)
+            ]["distance_km"].sum()
+            
+            load = zone_km * weight
+            zone_breakdown[name] = load
+            total_load += load
+            
+        record = {
+            "week_start": week,
+            "training_load": total_load,
+            **zone_breakdown
+        }
+        
+        records.append(record)
+        
+    df = pd.DataFrame(records)
+    df["week_start"] = pd.to_datetime(df["week_start"])
+    df = df.sort_values("week_start")
+    
+    df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
+    
+    return df
