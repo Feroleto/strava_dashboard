@@ -9,7 +9,9 @@ from analysis.charts import (
     plot_z2_volume,
     plot_weekly_z2_stack,
     plot_weekly_training_load,
-    plot_acwr
+    plot_acwr,
+    plot_monotony,
+    plot_strain
 )
 from analysis.processors import (
     process_pace_histogram_data,
@@ -19,7 +21,9 @@ from analysis.processors import (
     process_z2_volume,
     process_z2_and_total_distances,
     process_weekly_training_load,
-    process_acwr
+    process_acwr,
+    process_daily_training_load,
+    process_monotony_strain
 )
 from analysis.formatters import (
     Z2_MIN,
@@ -92,6 +96,17 @@ def handle_plots(args):
             df_load = process_weekly_training_load(raw_weekly_splits, ZONES)
             df_acwr = process_acwr(df_load)
             plot_acwr(df_acwr)
+            
+    elif args.chart_type in ["monotony", "strain"]:
+        raw_splits = fetch_weekly_splits()
+        daily_load = process_daily_training_load(raw_splits, ZONES)
+        df = process_monotony_strain(daily_load)
+        
+        if args.chart_type == "monotony":
+            plot_monotony(df)
+        elif args.chart_type == "strain":
+            plot_strain(df)
+        
         
 def main():
     parser = argparse.ArgumentParser(description="STRAVA Dashboard CLI - Performance Analysis")
@@ -115,7 +130,9 @@ def main():
             "z2_volume",
             "z2_weeks",
             "training_load",
-            "acwr"
+            "acwr",
+            "monotony",
+            "strain"
             ],
         help="Graphic type"
     )

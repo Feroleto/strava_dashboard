@@ -415,3 +415,58 @@ def plot_acwr(df):
     ax.legend()
     plt.tight_layout()
     plt.show()
+    
+def plot_monotony(df):
+    if df.empty:
+        print("No monotony data")
+        return
+    
+    fig, ax = setup_plot()
+    
+    ax.plot(
+        df["label"],
+        df["monotony"],
+        marker="o"
+    )
+    
+    ax.axhline(
+        2.0,
+        linestyle="--",
+        alpha=0.6,
+        label="Warning"
+    )
+    
+    ax.axhline(
+        2.5,
+        linestyle="--",
+        alpha=0.6,
+        label="High risk"
+    )
+    
+    title = "Weekly Training Monotony"
+    ylabel = "Monotony"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    ax.legend()
+    plt.tight_layout()
+    plt.show()
+    
+def plot_strain(df):
+    if df.empty:
+        print("No strain data")
+        return
+    
+    fig, ax = setup_plot()
+    
+    ax.plot(
+        df["label"],
+        df["strain"],
+        marker="o"
+    )
+    
+    title = "Weekly Training Strain"
+    ylabel = "Strain (a.u.)"
+    apply_standart_style(ax, title, ylabel, None)
+    
+    plt.tight_layout()
+    plt.show()

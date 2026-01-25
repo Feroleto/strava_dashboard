@@ -255,3 +255,73 @@ def process_acwr(df_load, acute_window=1, chronic_window=4):
     df["acwr"] = df["acwr"].replace([float("inf")], None)
     
     return df
+
+def process_daily_training_load(raw_splits, zones):
+    df = pd.DataFrame(
+        raw_splits,
+        columns=["start_date", "pace_min_km", "distance_km"])
+    
+    if df.empty:
+        return df
+    
+    df["date"] = pd.to_datetime(df["start_date"]).dt.date
+    
+    df["zone_weight"] = 0.0
+    
+    for _, z_min, z_max, weight in zones:
+        mask = (
+            (df["pace_min_km"] >= z_min) &
+            (df["pace_min_km"] <= z_max)
+        )
+        df.loc[mask, "zone_weight"] = weight
+        
+    df["split_load"] = df["distance_km"] * df["zone_weight"]
+    
+    daily_load = (
+        df.groupby("date")["split_load"]
+        .sum()
+        .reset_index()
+        .rename(columns={"split_load": "training_load"})
+    )
+    
+    return daily_load
+
+def process_monotony_strain(daily_load):
+    if daily_load.empty:
+        return pd.DataFrame()
+    
+    df = daily_load.copy()
+    df["date"] = pd.to_datetime(df["date"])
+    
+    all_days = pd.date_range(
+        start=df["date"].min(),
+        end=df["date"].max(),
+        freq='D'
+    )
+    df = df.set_index("date").reindex(all_days, fill_value=0).reset_index()
+    df.rename(columns={"index": "date"}, inplace=True)
+        
+    df["week_start"] = df["date"] - pd.to_timedelta(df["date"].dt.weekday, unit="d")
+    
+    records = []
+    for week, wdf in df.groupby("week_start"):
+        loads = wdf["training_load"]
+        
+        mean_load = loads.mean()
+        std_load = loads.std()
+        
+        monotony = mean_load / std_load if (std_load > 0 and mean_load > 0) else 1.0
+        weekly_load = loads.sum()
+        strain = weekly_load * monotony
+        
+        records.append({
+            "week_start": week,
+            "weekly_load": weekly_load,
+            "monotony": monotony,
+            "strain": strain
+        })
+        
+    out = pd.DataFrame(records)
+    out["label"] = out["week_start"].dt.strftime("%d/%m/%y")
+    
+    return out
