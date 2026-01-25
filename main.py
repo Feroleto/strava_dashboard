@@ -35,6 +35,7 @@ from database.queries import (
     fetch_weekly_data,
     fetch_split_pace,
     fetch_weekly_splits,
+    fetch_daily_splits
 )
 from processors.save_activities import save_activities_to_db
 from processors.save_splits import ingest_splits
@@ -98,7 +99,7 @@ def handle_plots(args):
             plot_acwr(df_acwr)
             
     elif args.chart_type in ["monotony", "strain"]:
-        raw_splits = fetch_weekly_splits()
+        raw_splits = fetch_daily_splits()
         daily_load = process_daily_training_load(raw_splits, ZONES)
         df = process_monotony_strain(daily_load)
         

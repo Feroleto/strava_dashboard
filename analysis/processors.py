@@ -259,12 +259,12 @@ def process_acwr(df_load, acute_window=1, chronic_window=4):
 def process_daily_training_load(raw_splits, zones):
     df = pd.DataFrame(
         raw_splits,
-        columns=["start_date", "pace_min_km", "distance_km"])
+        columns=["date", "pace_min_km", "distance_km"])
     
     if df.empty:
         return df
     
-    df["date"] = pd.to_datetime(df["start_date"]).dt.date
+    df["date"] = pd.to_datetime(df["date"]).dt.date
     
     df["zone_weight"] = 0.0
     
@@ -321,7 +321,10 @@ def process_monotony_strain(daily_load):
             "strain": strain
         })
         
+        print(f"Semana {week}: Dias com treino = {(wdf['training_load'] > 0).sum()} / Total dias = {len(wdf)}")
+        
     out = pd.DataFrame(records)
+    out = out[out["weekly_load"] > 0].copy()
     out["label"] = out["week_start"].dt.strftime("%d/%m/%y")
     
     return out

@@ -82,3 +82,19 @@ def fetch_weekly_splits():
         )
     finally:
         session.close()
+        
+def fetch_daily_splits():
+    session = SessionLocal()
+    try:
+        return (
+            session.query(
+                func.date(Activity.start_date).label("date"),
+                ActivitySplit.pace_min_km,
+                ActivitySplit.distance_km
+            )
+            .join(Activity, Activity.id == ActivitySplit.activity_id)
+            .filter(Activity.type == "Run")
+            .all()
+        )
+    finally:
+        session.close()
