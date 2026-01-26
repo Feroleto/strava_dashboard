@@ -241,7 +241,7 @@ def process_acwr(df_load, acute_window=1, chronic_window=4, hide_zero=False, lim
     df["week_start"] = pd.to_datetime(df["week_start"])
     #df = df.sort_values("week_start")
     
-    # adding weeks without training more more accurate results
+    # adding weeks without training to have more accurate results
     all_weeks = pd.date_range(
         start=df["week_start"].min(),
         end=df["week_start"].max(),
@@ -333,12 +333,12 @@ def process_monotony_strain(daily_load):
     records = []
     for week, wdf in df.groupby("week_start"):
         loads = wdf["training_load"]
-        print(loads)
         
         mean_load = loads.mean()
         std_load = loads.std()
+        monotony = mean_load / std_load if (std_load > 0 and mean_load > 0) else 0
         
-        monotony = mean_load / std_load if (std_load > 0 and mean_load > 0) else 1.0
+        
         weekly_load = loads.sum()
         strain = weekly_load * monotony
         
@@ -348,8 +348,6 @@ def process_monotony_strain(daily_load):
             "monotony": monotony,
             "strain": strain
         })
-        
-        #print(f"Semana {week}: Dias com treino = {(wdf['training_load'] > 0).sum()} / Total dias = {len(wdf)}")
         
     out = pd.DataFrame(records)
     out = out[out["weekly_load"] > 0].copy()

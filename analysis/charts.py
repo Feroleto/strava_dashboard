@@ -430,15 +430,17 @@ def plot_monotony(df):
     )
     
     ax.axhline(
-        2.0,
+        1.5,
         linestyle="--",
+        color="green",
         alpha=0.6,
         label="Warning"
     )
     
     ax.axhline(
-        2.5,
+        2.0,
         linestyle="--",
+        color="red",
         alpha=0.6,
         label="High risk"
     )
