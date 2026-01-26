@@ -215,6 +215,8 @@ def process_weekly_training_load(raw_data, zones):
             zone_breakdown[name] = load
             total_load += load
             
+        #print(total_load)
+            
         record = {
             "week_start": week,
             "training_load": total_load,
@@ -236,6 +238,19 @@ def process_acwr(df_load, acute_window=1, chronic_window=4):
         return df_load
     
     df = df_load.copy()
+    df["week_start"] = pd.to_datetime(df["week_start"])
+    #df = df.sort_values("week_start")
+    
+    # adding weeks without training more more accurate results
+    all_weeks = pd.date_range(
+        start=df["week_start"].min(),
+        end=df["week_start"].max(),
+        freq="W-MON"
+    )
+    
+    df = df.set_index("week_start").reindex(all_weeks, fill_value=0).reset_index()
+    df.rename(columns={"index": "week_start"}, inplace=True)
+    
     df = df.sort_values("week_start")
     
     
@@ -254,12 +269,17 @@ def process_acwr(df_load, acute_window=1, chronic_window=4):
     df["acwr"] = df["acute_load"] / df["chronic_load"]
     df["acwr"] = df["acwr"].replace([float("inf")], None)
     
+    df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
+    #print(df["acwr"])
+    
     return df
 
 def process_daily_training_load(raw_splits, zones):
     df = pd.DataFrame(
         raw_splits,
         columns=["date", "pace_min_km", "distance_km"])
+    
+    df = df.drop_duplicates()
     
     if df.empty:
         return df
@@ -306,6 +326,7 @@ def process_monotony_strain(daily_load):
     records = []
     for week, wdf in df.groupby("week_start"):
         loads = wdf["training_load"]
+        print(loads)
         
         mean_load = loads.mean()
         std_load = loads.std()
@@ -321,7 +342,7 @@ def process_monotony_strain(daily_load):
             "strain": strain
         })
         
-        print(f"Semana {week}: Dias com treino = {(wdf['training_load'] > 0).sum()} / Total dias = {len(wdf)}")
+        #print(f"Semana {week}: Dias com treino = {(wdf['training_load'] > 0).sum()} / Total dias = {len(wdf)}")
         
     out = pd.DataFrame(records)
     out = out[out["weekly_load"] > 0].copy()
