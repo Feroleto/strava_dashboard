@@ -95,7 +95,7 @@ def handle_plots(args):
             
         elif args.chart_type == "acwr":
             df_load = process_weekly_training_load(raw_weekly_splits, ZONES)
-            df_acwr = process_acwr(df_load)
+            df_acwr = process_acwr(df_load, hide_zero=args.hide_zero, limit=args.limit)
             plot_acwr(df_acwr)
             
     elif args.chart_type in ["monotony", "strain"]:

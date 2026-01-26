@@ -233,7 +233,7 @@ def process_weekly_training_load(raw_data, zones):
     
     return df
 
-def process_acwr(df_load, acute_window=1, chronic_window=4):
+def process_acwr(df_load, acute_window=1, chronic_window=4, hide_zero=False, limit=None):
     if df_load.empty:
         return df_load
     
@@ -271,6 +271,13 @@ def process_acwr(df_load, acute_window=1, chronic_window=4):
     
     df["label"] = df["week_start"].dt.strftime("%d/%m/%y")
     #print(df["acwr"])
+    
+    
+    if hide_zero:
+        df = df[df["training_load"] > 0].copy()
+        
+    if limit:
+        df = df.tail(limit).copy()
     
     return df
 
