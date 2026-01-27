@@ -19,6 +19,7 @@ class Activity(Base):
     max_bpm = Column(Float)
     
     splits = relationship("ActivitySplit", back_populates="activity", cascade="all, delete-orphan")
+    seconds = relationship("ActivitySecond", back_populates="activity", cascade="all, delete-orphan")
     
 class ActivitySplit(Base):
     __tablename__ = "activity_splits"
@@ -31,3 +32,19 @@ class ActivitySplit(Base):
     pace_min_km = Column(Float)
     
     activity = relationship("Activity", back_populates="splits")
+    
+class ActivitySecond(Base):
+    __tablename__ = "activity_seconds"
+    
+    id = Column(Integer, primary_key=True)
+    activity_id = Column(Integer, ForeignKey("activities.id"), index=True)
+    
+    second_index = Column(Integer)
+    
+    distance_m = Column(Float)
+    speed_m_s = Column(Float)
+    pace_sec_km = Column(Float)
+    elevation_m = Column(Float)
+    heart_rate = Column(Integer)
+    
+    activity = relationship("Activity", back_populates="seconds")
