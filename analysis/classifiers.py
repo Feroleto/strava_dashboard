@@ -9,45 +9,26 @@ from auth.token_manager import get_valid_access_token
 from collector.activities import fetch_activities
 
 BASE_URL = "https://www.strava.com/api/v3"
-INTERVAL_DIFFERENCE_LIMIT = 120
-
-def format_pace_from_seconds(total_seconds):
-    minutes = int(total_seconds // 60)
-    seconds = int(total_seconds % 60)
-    return f"{minutes}:{seconds:02d} min/km" 
 
 def is_interval_workout(activity):
-    avg_speed = activity["average_speed"]
-    max_speed = activity["max_speed"]
-    
     description = activity.get("description", "")
     description = description.lower() if description else ""
     
-    if not avg_speed or not max_speed:
-        return False
-    
-    pace_avg = 1000 / avg_speed
-    pace_best = 1000 / max_speed
-    delta_pace = pace_avg - pace_best
-    
-    pace_based = delta_pace > INTERVAL_DIFFERENCE_LIMIT
-    
-    text_based = False
-    
-    KEYWORDS = ["tiro", "interval", "200", "400", "500", "800", "1000"]
-    
+    KEYWORDS = ["tiro", "interval", "splits", "hill", "repeats", "subida"]
     if any(k in description for k in KEYWORDS):
-        text_based = True
-        
-    if pace_based:
-        avg_pace = format_pace_from_seconds(pace_avg)
-        best_pace = format_pace_from_seconds(pace_best)
-        print(f"pace based | avg pace = {avg_pace} | best pace = {best_pace}")
-        
-    if (text_based):
-        print("description")
-        
-    return pace_based or text_based
+        return True
+    
+    # search for: 10x400, 5 x 1000, 8X1km
+    series_pattern = r'\d+\s*[xX*]\s*\d+'
+    if re.search(series_pattern, description):
+        return True
+    
+    # search for: 5x3', 10 x 1:30
+    time_pattern = r'\d+\s*[xX]\s*\d+[:\']'
+    if re.search(time_pattern, description):
+        return True
+    
+    return False
 
 def fetch_activity_detail(activity_id):
     token = get_valid_access_token()
@@ -61,7 +42,7 @@ def fetch_activity_detail(activity_id):
 
 def main():
     print("Searching for activities")
-    activities_list = fetch_activities(per_page=40)
+    activities_list = fetch_activities(per_page=10)
     
     processed_activities = []
     
