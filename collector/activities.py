@@ -1,4 +1,5 @@
 import requests
+import time
 
 import sys
 import os
@@ -8,12 +9,14 @@ from auth.token_manager import get_valid_access_token
 
 BASE_URL = "https://www.strava.com/api/v3"
 
-def fetch_activities(per_page = 30, page = 1, after=None):
+def _get_headers():
     token = get_valid_access_token()
-    
-    headers = {
+    return {
         "Authorization": f"Bearer {token}"
     }
+
+def fetch_activities(per_page = 30, page = 1, after=None):
+    headers = _get_headers()
     
     params = {
         "per_page": per_page,
@@ -38,7 +41,12 @@ def get_all_activities(per_page = 200, after=None):
     page = 1
     
     while True:
-        activities = fetch_activities(per_page=per_page, page=page, after=after)
+        activities = fetch_activities(
+            per_page=per_page, 
+            page=page, 
+            after=after
+        )
+        
         if not activities:
             break
         
@@ -46,3 +54,27 @@ def get_all_activities(per_page = 200, after=None):
         page += 1
     
     return all_activities
+
+def get_activity_by_id(activity_id: int, sleep_sec: float = 0.3):
+    headers = _get_headers()
+    
+    response = requests.get(
+        f"{BASE_URL}/activities/{activity_id}",
+        headers=headers
+    )
+    
+    response.raise_for_status()
+    
+    time.sleep(sleep_sec)
+    
+    return response.json()
+
+'''
+def main():
+    activity_id = 17177704307
+    a = get_activity_by_id(activity_id)
+    print(a["description"])
+    
+if __name__ == "__main__":
+    main()
+'''

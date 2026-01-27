@@ -1,6 +1,9 @@
 import re
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from constants import (
+from utils.constants import (
     WORKOUT_EASY_OR_LONG,
     WORKOUT_INTERVAL,
     WORKOUT_HILL_REPEATS

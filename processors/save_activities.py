@@ -9,11 +9,14 @@ from collector.activities import get_all_activities
 from database.models import Activity
 from database.config import SessionLocal
 from database.queries import get_last_activity_timestamp
+from processors.activity_classifier import classify_workout
     
 def map_strava_to_model(activity):
     distance_km = activity["distance"] / 1000 if activity["distance"] else None
     moving_time_sec = activity["moving_time"]
     pace_sec_per_km = moving_time_sec / distance_km if distance_km else None
+    
+    workout_type = classify_workout(activity)
     
     return Activity(
         id = activity["id"],
@@ -29,6 +32,7 @@ def map_strava_to_model(activity):
         elevation_gain = activity.get("total_elevation_gain"),
         average_bpm = activity.get("average_heartrate"),
         max_bpm = activity.get("max_heartrate"),
+        workout_type=workout_type,
     )
     
 def save_activities_to_db():
