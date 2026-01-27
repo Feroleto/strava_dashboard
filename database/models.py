@@ -7,6 +7,7 @@ class Activity(Base):
     
     id = Column(Integer, primary_key=True)
     name = Column(String)
+    workout_type = Column(String, index=True)
     type = Column(String)
     sport_type = Column(String)
     start_date = Column(DateTime)
