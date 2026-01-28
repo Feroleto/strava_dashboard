@@ -1,6 +1,6 @@
 from sqlalchemy import func
 from database.config import SessionLocal
-from database.models import Activity, ActivitySplit
+from database.models import Activity, ActivitySplit, ActivitySecond
 
 def fetch_individual_activity_data():
     session = SessionLocal()
@@ -98,3 +98,18 @@ def fetch_daily_splits():
         )
     finally:
         session.close()
+        
+def get_activities_requiring_streams(session):
+    return (
+        session.query(Activity)
+        .filter(Activity.workout_type.in_(["interval", "hill_repeats"]))
+        .all()
+    )
+    
+def activity_has_streams(session, activity_id):
+    return (
+        session.query(ActivitySecond.id)
+        .filter(ActivitySecond.activity_id == activity_id)
+        .first()
+        is not None
+    )

@@ -1,9 +1,15 @@
+import time
+from tqdm import tqdm
+
 import sys
 import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.models import ActivitySecond
+from database.config import SessionLocal
+from collector.streams import fetch_activity_streams
+from database.queries import get_activities_requiring_streams, activity_has_streams
 
 def save_activity_streams(session, activity, streams):
     time_stream = streams["time"]["data"]
@@ -25,3 +31,45 @@ def save_activity_streams(session, activity, streams):
         )
         
         session.add(sec)
+        
+def ingest_streams():
+    session = SessionLocal()
+    
+    try:
+        activities = get_activities_requiring_streams(session)
+        
+        for activity in tqdm(activities, desc="Downloading streams", unit="atv"):
+            
+            if activity_has_streams(session, activity.id):
+                continue
+            
+            try:
+                
+                streams = fetch_activity_streams(activity.id)
+                
+                save_activity_streams(
+                    session=session,
+                    activity=activity,
+                    streams=streams
+                )
+                
+                session.commit()
+                time.sleep(1)
+            
+            except Exception as e:
+                print(f"Error in the activity: {activity.id}: {e}")
+                session.rollback()
+                continue
+        
+    except Exception as e:
+        session.rollback()
+        print("Error: ", e)
+        
+    finally:
+        session.close()
+        
+def main():
+    ingest_streams()
+    
+if __name__ == "__main__":
+    main()
