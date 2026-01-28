@@ -17,7 +17,7 @@ def fetch_activity_streams(activity_id, access_token=None):
     }
     
     params = {
-        "keys": "time, distance, velocity_smooth, heartrate, altitude",
+        "keys": "time,distance,velocity_smooth,heartrate,altitude",
         "key_by_type": "true"
     }
     
