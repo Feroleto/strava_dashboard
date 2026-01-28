@@ -5,7 +5,7 @@ import os
 
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from collector.activities import get_all_activities
+from collector.activities import get_all_activities, get_activity_by_id
 from database.models import Activity
 from database.config import SessionLocal
 from database.queries import get_last_activity_timestamp
@@ -40,16 +40,28 @@ def save_activities_to_db():
     
     last_ts = get_last_activity_timestamp()
     
-    activities = get_all_activities(after=last_ts)
+    summary_activities = get_all_activities(after=last_ts)
     
     saved = 0
     
-    for a in activities:
-        exists = session.query(Activity).filter_by(id=a["id"]).first()
-        if not exists:
-            activity_obj = map_strava_to_model(a)
+    for summary in summary_activities:
+        if summary.get("type") != "Run":
+            continue
+    
+    exists = session.query(Activity).filter_by(id=summary["id"]).first()
+    if not exists:
+        try:
+            full_activity_data = get_activity_by_id(summary["id"])
+            activity_obj = map_strava_to_model(full_activity_data)
             session.add(activity_obj)
             saved += 1
+            
+            if saved % 10 == 0:
+                session.commit()
+                
+        except Exception as e:
+            print(f"Error to save activity: {summary["id"]}: {e}")
+            session.rollback()
         
     session.commit()
     session.close()
