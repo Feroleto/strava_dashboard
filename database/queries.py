@@ -6,7 +6,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.models import Activity, ActivitySplit, ActivitySecond
-from utils.constants import STREAM_WORKOUT_TYPES
+from utils.constants import STREAM_WORKOUT_TYPES, WORKOUT_EASY_OR_LONG
 
 def fetch_individual_activity_data():
     session = SessionLocal()
@@ -51,6 +51,7 @@ def get_activities_without_splits(session):
         .outerjoin(ActivitySplit)
         .filter(Activity.type == "Run")
         .filter(ActivitySplit.id.is_(None))
+        .filter(Activity.workout_type == WORKOUT_EASY_OR_LONG)
         .all()
     )
     
@@ -108,7 +109,7 @@ def fetch_daily_splits():
 def get_activities_requiring_streams(session):
     return (
         session.query(Activity)
-        .filter(Activity.workout_type.in_(["interval", "hill_repeats"]))
+        .filter(Activity.workout_type.in_(STREAM_WORKOUT_TYPES))
         .all()
     )
     

@@ -38,13 +38,16 @@ def ingest_streams():
     try:
         activities = get_activities_requiring_streams(session)
         
+        if not activities:
+            print("You have already collected all streams")
+            return
+        
         for activity in tqdm(activities, desc="Downloading streams", unit="atv"):
             
             if activity_has_streams(session, activity.id):
                 continue
             
             try:
-                
                 streams = fetch_activity_streams(activity.id)
                 
                 save_activity_streams(

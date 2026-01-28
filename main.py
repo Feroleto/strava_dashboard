@@ -40,7 +40,9 @@ from database.queries import (
 from processors.save_activities import save_activities_to_db
 from processors.save_splits import ingest_splits
 
-
+def decide_sync():
+    
+    
 def handle_sync():
     save_activities_to_db()
     ingest_splits()
