@@ -39,13 +39,12 @@ from database.queries import (
 )
 from processors.save_activities import save_activities_to_db
 from processors.save_splits import ingest_splits
-
-def decide_sync():
-    
+from processors.sync_new_activities import sync_new_activities
     
 def handle_sync():
-    save_activities_to_db()
-    ingest_splits()
+    #save_activities_to_db()
+    #ingest_splits()
+    sync_new_activities()
     
 def handle_plots(args):
     if args.chart_type in ["distance", "pace", "pace_vs_dist"]:
