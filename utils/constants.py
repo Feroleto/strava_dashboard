@@ -7,3 +7,5 @@ ALL_WORKOUT_TYPES = {
     WORKOUT_INTERVAL,
     WORKOUT_HILL_REPEATS,
 }
+
+STREAM_WORKOUT_TYPES = ["interval", "hill_repeats"]

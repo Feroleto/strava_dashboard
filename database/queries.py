@@ -1,6 +1,12 @@
 from sqlalchemy import func
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from database.config import SessionLocal
 from database.models import Activity, ActivitySplit, ActivitySecond
+from utils.constants import STREAM_WORKOUT_TYPES
 
 def fetch_individual_activity_data():
     session = SessionLocal()
