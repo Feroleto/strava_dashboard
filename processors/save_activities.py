@@ -34,41 +34,6 @@ def map_strava_to_model(activity):
         max_bpm = activity.get("max_heartrate"),
         workout_type=workout_type,
     )
-    
-def save_activities_to_db():
-    session = SessionLocal()
-    
-    last_ts = get_last_activity_timestamp()
-    
-    summary_activities = get_all_activities(after=last_ts)
-    
-    saved = 0
-    
-    for summary in summary_activities:
-        if summary.get("type") != "Run":
-            continue
-    
-    exists = session.query(Activity).filter_by(id=summary["id"]).first()
-    if not exists:
-        try:
-            full_activity_data = get_activity_by_id(summary["id"])
-            activity_obj = map_strava_to_model(full_activity_data)
-            session.add(activity_obj)
-            saved += 1
-            
-            if saved % 10 == 0:
-                session.commit()
-                
-        except Exception as e:
-            print(f"Error to save activity: {summary["id"]}: {e}")
-            session.rollback()
-        
-    session.commit()
-    session.close()
-    print(f"{saved} new activities were saved")
-            
-if __name__ == "__main__":
-    save_activities_to_db()
 
 
     
