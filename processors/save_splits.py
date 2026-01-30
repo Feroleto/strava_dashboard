@@ -30,28 +30,3 @@ def save_splits_of_one_activity_to_db(session, activity_id, splits):
             pace_min_km=pace_min_km
         )
         session.add(split)
-        
-def ingest_splits():
-    access_token = get_valid_access_token()
-    
-    session = SessionLocal()
-    
-    try:
-        activities = get_activities_without_splits(session)
-        
-        if not activities:
-            print("You have already collected all the splits")
-            return
-        
-        for activity in tqdm(activities, desc="Downloading splits", unit="Run"):
-            splits = fetch_activity_splits(activity.id, access_token)
-            save_splits_of_one_activity_to_db(session, activity.id, splits)
-            
-            session.commit()
-            time.sleep(1)
-    finally:
-        session.close()
-        
-if __name__ == "__main__":
-    token = get_valid_access_token()
-    ingest_splits(token)
