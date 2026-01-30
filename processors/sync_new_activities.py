@@ -1,5 +1,6 @@
 from tqdm import tqdm
 import time
+import colorama
 
 import sys
 import os
@@ -17,18 +18,23 @@ from collector.streams import fetch_activity_streams
 from processors.save_streams import save_activity_streams
 from processors.save_splits import save_splits_of_one_activity_to_db
 
+colorama.init(autoreset=True)
 
 def sync_new_activities():
     session = SessionLocal()
     last_ts = get_last_activity_timestamp()
     summary_activities = get_all_activities(after=last_ts)
     
+    runs_to_process = [s for s in summary_activities if s.get("type") == "Run"]
+    
     saved_count = 0
+    errors_count = 0
     access_token = get_valid_access_token()
     
-    for summary in tqdm(summary_activities, desc="syncing"):
-        if summary.get("type") != "Run":
-            continue
+    pbar = tqdm(runs_to_process, desc="Starting synchronization", unit="atv", colour="cyan")
+    
+    for summary in pbar:
+        pbar.set_description(f"Processing: {summary.get("name")[:25]}")
         
         exists = (
             session.query(Activity)
@@ -36,6 +42,7 @@ def sync_new_activities():
             .first()
         )
         if exists:
+            pbar.set_postfix(status="Activity already exists")
             continue
         
         try:
@@ -45,22 +52,25 @@ def sync_new_activities():
             session.flush()
             
             if activity_obj.workout_type in STREAM_WORKOUT_TYPES:
-                print(f"Downloading streams for activity: {activity_obj.name}")
+                pbar.set_postfix(status="Downloading Streams", last_id=summary["id"])
                 streams = fetch_activity_streams(activity_obj.id, access_token)
                 save_activity_streams(session, activity_obj, streams)
             else:
-                print(f"Downloading splits for activity: {activity_obj.name}")
+                pbar.set_postfix(status="Downloading Splits", last_id=summary["id"])
                 splits = full_data.get("splits_metric", [])
-                save_splits_of_one_activity_to_db(session, activity_obj, splits)
+                save_splits_of_one_activity_to_db(session, activity_obj.id, splits)
             
             session.commit()
             saved_count += 1
-            time.sleep(1.5)
+            time.sleep(10)
         
         except Exception as e:
-            print(f"Error to process activity {summary["id"]}: {e}")
+            errors_count += 1
+            pbar.write(f"Error in the activity: {summary["id"]}: {e}")
             session.rollback()
         
+    pbar.colour = "green"
+    pbar.set_description("Sync completed")
     session.close()
-    print(f"{saved_count} new activities were saved")
+    print(f"{saved_count} new activities were saved, {errors_count} errors")
                 
