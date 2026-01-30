@@ -48,23 +48,4 @@ def get_valid_access_token():
         print("Expired token - renewing...")
         return refresh_access_token()
     return os.getenv("STRAVA_ACCESS_TOKEN")
-
-def check_token_scopes():
-    load_dotenv(override=True)
-    token = os.getenv("STRAVA_ACCESS_TOKEN")
-    
-    url = "https://www.strava.com/api/v3/athlete"
-    headers = {"Authorization": f"Bearer {token}"}
-    
-    response = requests.get(url, headers=headers)
-    
-    if response.status_code == 200:
-        print("Token is valid and the conection is active")
-        print("If 401 is only on splits, you need to re-activate with 'activity:read_all'")
-    else:
-        print(f"Error the validate token: {response.status_code}")
-        print(response.json())
-        
-if __name__ == "__main__":
-    check_token_scopes()
     
