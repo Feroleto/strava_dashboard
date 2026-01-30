@@ -147,8 +147,6 @@ def process_z2_volume(raw_data, z2_min, z2_max):
     df = pd.DataFrame(
         raw_data,
         columns=["week_start", "pace_min_km", "distance_km"])
-
-    df = df.drop_duplicates()
     
     if df.empty:
         return df

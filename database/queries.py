@@ -120,3 +120,27 @@ def activity_has_streams(session, activity_id):
         .first()
         is not None
     )
+    
+def removing_activities_complete(activity_id):
+    session = SessionLocal()
+    try:
+        activity = (
+            session.query(Activity)
+            .filter_by(id=activity_id)
+            .first()
+        )
+        
+        if activity:
+            session.delete(activity)
+            session.commit()
+    
+    except Exception as e:
+        session.rollback()
+    finally:
+        session.close()
+        
+def main():
+    removing_activities_complete()
+    
+if __name__ == "__main__":
+    main()
