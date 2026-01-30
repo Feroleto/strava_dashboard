@@ -43,9 +43,7 @@ class ActivitySecond(Base):
     
     id = Column(Integer, primary_key=True)
     activity_id = Column(Integer, ForeignKey("activities.id"), index=True)
-    
     second_index = Column(Integer)
-    
     distance_m = Column(Float)
     speed_m_s = Column(Float)
     pace_sec_km = Column(Float)

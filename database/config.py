@@ -18,7 +18,7 @@ def get_db_info():
     return f"Mode: {mode} | DATABASE: {DATABASE_PATH}"
 
 # to use the TEST database
-# $env:STRAVA_TEST_MODE="1"; python seu_script.py
+# $env:STRAVA_TEST_MODE="1"; python script.py
 
 # to use the MAIN database
-# $env:STRAVA_TEST_MODE="0"; python seu_script.py
+# $env:STRAVA_TEST_MODE="0"; python script.py

@@ -5,8 +5,7 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
-from database.models import Activity, ActivitySplit, ActivitySecond
-from utils.constants import STREAM_WORKOUT_TYPES, WORKOUT_EASY_OR_LONG
+from database.models import Activity, ActivitySplit
 
 def fetch_individual_activity_data():
     session = SessionLocal()
@@ -44,16 +43,6 @@ def fetch_weekly_data():
         return query
     finally:
         session.close()
-        
-def get_activities_without_splits(session):
-    return (
-        session.query(Activity)
-        .outerjoin(ActivitySplit)
-        .filter(Activity.type == "Run")
-        .filter(ActivitySplit.id.is_(None))
-        .filter(Activity.workout_type == WORKOUT_EASY_OR_LONG)
-        .all()
-    )
     
 def get_last_activity_timestamp():
     session = SessionLocal()
@@ -105,42 +94,3 @@ def fetch_daily_splits():
         )
     finally:
         session.close()
-        
-def get_activities_requiring_streams(session):
-    return (
-        session.query(Activity)
-        .filter(Activity.workout_type.in_(STREAM_WORKOUT_TYPES))
-        .all()
-    )
-    
-def activity_has_streams(session, activity_id):
-    return (
-        session.query(ActivitySecond.id)
-        .filter(ActivitySecond.activity_id == activity_id)
-        .first()
-        is not None
-    )
-    
-def removing_activities_complete(activity_id):
-    session = SessionLocal()
-    try:
-        activity = (
-            session.query(Activity)
-            .filter_by(id=activity_id)
-            .first()
-        )
-        
-        if activity:
-            session.delete(activity)
-            session.commit()
-    
-    except Exception as e:
-        session.rollback()
-    finally:
-        session.close()
-        
-def main():
-    removing_activities_complete()
-    
-if __name__ == "__main__":
-    main()
