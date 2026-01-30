@@ -1,17 +1,10 @@
-import time
-from tqdm import tqdm
-
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from database.config import SessionLocal
 from database.models import ActivitySplit
-from database.queries import get_activities_without_splits
-from collector.splits import fetch_activity_splits
-from auth.token_manager import get_valid_access_token
 
-def save_splits_of_one_activity_to_db(session, activity_id, splits):
+def map_splits_to_db_model(activity_id, splits):
     for s in splits:
         dist_raw = s.get("distance", 0)
         moving_time_sec = s.get("moving_time", 0)
@@ -22,11 +15,11 @@ def save_splits_of_one_activity_to_db(session, activity_id, splits):
         else:
             pace_min_km = 0.0
             
-        split = ActivitySplit(
+        yield ActivitySplit(
             activity_id=activity_id,
             split_index=s["split"],
             distance_km=dist_km,
             moving_time_sec=moving_time_sec,
             pace_min_km=pace_min_km
         )
-        session.add(split)
+        

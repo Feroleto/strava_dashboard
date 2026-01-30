@@ -37,8 +37,8 @@ from database.queries import (
     fetch_weekly_splits,
     fetch_daily_splits
 )
-from processors.save_activities import save_activities_to_db
-from processors.save_splits import ingest_splits
+#from processors.activities import save_activities_to_db
+#from processors.splits import ingest_splits
 from processors.sync_new_activities import sync_new_activities
     
 def handle_sync():

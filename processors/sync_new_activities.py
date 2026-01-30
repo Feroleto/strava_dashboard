@@ -8,15 +8,17 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.queries import get_last_activity_timestamp
-from collector.activities import get_all_activities
-from auth.token_manager import get_valid_access_token
 from database.models import Activity
+
+from collector.activities import get_all_activities
 from collector.activities import get_activity_by_id
-from processors.save_activities import map_strava_to_model
-from utils.constants import STREAM_WORKOUT_TYPES
 from collector.streams import fetch_activity_streams
-from processors.save_streams import save_activity_streams
-from processors.save_splits import save_splits_of_one_activity_to_db
+
+from processors.activities import map_activity_to_db_model
+from processors.streams import map_streams_to_db_model
+from processors.splits import map_splits_to_db_model
+
+from utils.constants import STREAM_WORKOUT_TYPES
 
 colorama.init(autoreset=True)
 
@@ -29,7 +31,6 @@ def sync_new_activities():
     
     saved_count = 0
     errors_count = 0
-    access_token = get_valid_access_token()
     
     pbar = tqdm(runs_to_process, desc="Starting synchronization", unit="atv", colour="cyan")
     
@@ -47,18 +48,20 @@ def sync_new_activities():
         
         try:
             full_data = get_activity_by_id(summary["id"])
-            activity_obj = map_strava_to_model(full_data)
+            activity_obj = map_activity_to_db_model(full_data)
             session.add(activity_obj)
             session.flush()
             
             if activity_obj.workout_type in STREAM_WORKOUT_TYPES:
                 pbar.set_postfix(status="Downloading Streams", last_id=summary["id"])
-                streams = fetch_activity_streams(activity_obj.id, access_token)
-                save_activity_streams(session, activity_obj, streams)
+                streams = fetch_activity_streams(activity_obj.id)
+                streams_obj = map_streams_to_db_model(activity_obj.id, streams)
+                session.add_all(streams_obj)
             else:
                 pbar.set_postfix(status="Downloading Splits", last_id=summary["id"])
-                splits = full_data.get("splits_metric", [])
-                save_splits_of_one_activity_to_db(session, activity_obj.id, splits)
+                splits_data = full_data.get("splits_metric", [])
+                splits_obj = map_splits_to_db_model(activity_obj.id, splits_data)
+                session.add_all(splits_obj)
             
             session.commit()
             saved_count += 1
@@ -71,6 +74,7 @@ def sync_new_activities():
         
     pbar.colour = "green"
     pbar.set_description("Sync completed")
+    pbar.refresh()
     session.close()
     print(f"{saved_count} new activities were saved, {errors_count} errors")
                 
