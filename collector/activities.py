@@ -68,13 +68,3 @@ def get_activity_by_id(activity_id: int, sleep_sec: float = 0.3):
     time.sleep(sleep_sec)
     
     return response.json()
-
-'''
-def main():
-    activity_id = 17177704307
-    a = get_activity_by_id(activity_id)
-    print(a["description"])
-    
-if __name__ == "__main__":
-    main()
-'''
