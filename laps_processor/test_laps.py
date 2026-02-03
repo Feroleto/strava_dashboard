@@ -9,14 +9,18 @@ from laps_processor.laps_extractor import filter_speed_laps, extract_laps_from_a
 
 
 ACTIVITY_ID = 16888423217 # 10x400
-#ACTIVITY_ID = 17232025269  # 1km splits
-#ACTIVITY_ID = 14392947474 # just one lap
+#ACTIVITY_ID = 16962023462 # 5x200 + 4x400 + 2x800
+#ACTIVITY_ID = 16848750867 # 5x400 + 1x1km
+#ACTIVITY_ID = 16819680946 # 10x200 + 5x400
+#ACTIVITY_ID = 14392947474 # recorded on strava -> don't find intervals
+#ACTIVITY_ID = 16527840409 # testing
+#ACTIVITY_ID = 16279513590 # strava recorded activity -> find intervals
 
 def test_activity_laps(full_data):
     laps = extract_laps_from_activities(full_data)
     #laps = full_data.get("laps", [])
     
-    #laps = filter_speed_laps(laps)
+    laps = filter_speed_laps(laps)
     
     if not laps:
         print("Laps weren't found for this acitivity")

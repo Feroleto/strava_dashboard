@@ -1,7 +1,7 @@
 from collections import deque
 from typing import Dict, List, Optional
 
-MAX_INTERPOLATION_GAP = 3
+MAX_INTERPOLATION_GAP = 10
 HR_EWMA_ALPHA = 0.2
 SPEED_SMOOTH_WINDOW = 5
 
@@ -12,46 +12,39 @@ def normalize_by_time(seconds) -> Dict[int, object]:
 def interpolate_series(
     time_map: Dict[int, object],
     attr: str,
+    full_streams: List[int],
     max_gap: int = MAX_INTERPOLATION_GAP
 ) -> Dict[int, Optional[float]]:
-    times = sorted(time_map.keys())
-    result = {}
     
-    for i, t in enumerate(times):
-        value = getattr(time_map[t], attr)
-        
+    result = {}
+    known_times = sorted(time_map.keys())
+    
+    for t in full_streams:
+        # if the streams exists and is not null
+        value = getattr(time_map.get(t), attr, None)
         if value is not None:
             result[t] = value
             continue
         
-        prev = next_ = None
+        # if doesn't exist search for the previous neighbor
+        prev_t = next((kt for kt in reversed(known_times) if kt < t), None)
+        next_t = next((kt for kt in known_times if kt > t), None)
         
-        # search previos
-        for j in range(i - 1, -1, -1):
-            v = getattr(time_map[times[j]], attr)
-            if v is not None:
-                prev = (times[j], v)
-                break
-            
-        # search next
-        for j in range(i + 1, len(times)):
-            v = getattr(time_map[times[j]], attr)
-            if v is not None:
-                next_ = (times[j], v)
-                break
-            
-        if not prev or not next_:
+        if prev_t is None or next_t is None:
             result[t] = None
             continue
         
-        if (next_[0] - prev[0]) > max_gap:
+        # verifying gap
+        gap = next_t - prev_t
+        if gap > max_gap:
             result[t] = None
             continue
         
-        t0, v0 = prev
-        t1, v1 = next_
+        v0 = getattr(time_map[prev_t], attr)
+        v1 = getattr(time_map[next_t], attr)
         
-        result[t] = v0 + (v1 - v0) * ((t - t0) / (t1 - t0))
+        interpolated_val = v0 + (v1 - v0) * ((t - prev_t) / (next_t - prev_t))
+        result[t] = interpolated_val
         
     return result
 
@@ -102,16 +95,16 @@ def process_activity_seconds(seconds: List[object]) -> Dict[int, dict]:
         return {}
     
     time_map = normalize_by_time(seconds)
-    
     start_time = min(time_map.keys())
     end_time = max(time_map.keys())
     full_seconds = list(range(start_time, end_time + 1))
     
     # interpolation
-    hr_interp = interpolate_series(time_map, "heart_rate", max_gap=MAX_INTERPOLATION_GAP)
-    alt_interp = interpolate_series(time_map, "elevation_m", max_gap=MAX_INTERPOLATION_GAP)
-    speed_interp = interpolate_series(time_map, "speed_m_s", max_gap=3)
-    dist_interp = interpolate_series(time_map, "distance_total_m", max_gap=10)
+    hr_interp = interpolate_series(time_map, "heart_rate", full_seconds, max_gap=10)
+    alt_interp = interpolate_series(time_map, "elevation_m", full_seconds, max_gap=10)
+    dist_interp = interpolate_series(time_map, "distance_total_m", full_seconds, max_gap=20)
+    
+    speed_interp = interpolate_series(time_map, "speed_m_s", full_seconds, max_gap=5)
     
     # smoothing
     hr_smooth = smooth_hr_ewma(hr_interp)
@@ -121,16 +114,16 @@ def process_activity_seconds(seconds: List[object]) -> Dict[int, dict]:
     last_dist = 0.0
     
     for t in full_seconds:
-        speed = speed_smooth.get(t)
-        current_dist = dist_interp.get(t, last_dist)
-        
+        current_dist = dist_interp.get(t) or last_dist
         delta_m = current_dist - last_dist if t > start_time else 0.0
+        
+        speed = speed_smooth.get(t) or delta_m
         
         result[t] = {
             "speed_m_s": speed,
             "pace_sec_km": compute_pace_from_speed(speed),
-            "heart_rate": hr_smooth.get(t),
-            "elevation_m": alt_interp.get(t),
+            "heart_rate": hr_smooth.get(t) or 0.0,
+            "elevation_m": alt_interp.get(t) or 0.0,
             "distance_total_m": current_dist,
             "distance_delta_m": max(delta_m, 0)
         }

@@ -20,7 +20,7 @@ def validate_processed_streams(processed_dict):
         print("-"*70)
         
         #for t in sorted_seconds:
-        for t in sorted_seconds[:30]:
+        for t in sorted_seconds[:200]:
             data = processed_dict[t]
             pace_raw = data.get("pace_sec_km")
             pace_str = format_seconds(pace_raw) if pace_raw else "0:00"
@@ -28,7 +28,7 @@ def validate_processed_streams(processed_dict):
             dist_total = data.get("distance_total_m", 0)
             dist_delta = data.get("distance_delta_m", 0)
             hr = data.get("heart_rate")
-            elev = data.get("elevation_m")
+            elev = data.get("elevation_m") if data["elevation_m"] else 0
             
             print(f"{t:>4}s   | "
                   f"{dist_total:>10.1f}m | "

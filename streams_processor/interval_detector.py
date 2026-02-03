@@ -8,12 +8,17 @@ from database.config import SessionLocal
 from database.models import ActivitySecond
 from streams_processor.processing_streams import process_activity_seconds
 
-MIN_SPEED = 2.8
+MIN_SPEED = 3.4
 MAX_BREAK_ALLOWED = 5
 MIN_BLOCK_DIST = 150
 
-ACTIVITY_ID = 16888423217
-#ACTIVITY_ID = 16917854494
+ACTIVITY_ID = 16888423217 # 10x400
+#ACTIVITY_ID = 16962023462 # 5x200 + 4x400 + 2x800
+#ACTIVITY_ID = 16848750867 # 5x400 + 1x1km
+#ACTIVITY_ID = 16819680946 # 10x200 + 5x400
+#ACTIVITY_ID = 14392947474 # recorded on strava -> don't find intervals
+#ACTIVITY_ID = 16527840409 # testing
+#ACTIVITY_ID = 16279513590 # strava recorded activity -> find intervals
 
 class IntervalDetector:
     def __init__(
@@ -34,7 +39,6 @@ class IntervalDetector:
         
         for t in times:
             data = processed_dict[t]
-            #speed = data.get("speed_m_s", 0)
             speed = data.get("speed_m_s") or 0.0
             
             if speed >= self.min_speed:
@@ -46,6 +50,7 @@ class IntervalDetector:
                     gap_counter += 1
                 elif current_block:
                     real_block = current_block[:-gap_counter] if gap_counter > 0 else current_block
+                    #real_block = current_block
                     
                     if self._is_valid_block(real_block):
                         blocks.append(self._summarize_block(real_block))
@@ -55,6 +60,7 @@ class IntervalDetector:
         
         if current_block:
             real_block = current_block[:-gap_counter] if gap_counter > 0 else current_block
+            #real_block = current_block
             if self._is_valid_block(real_block):
                 blocks.append(self._summarize_block(real_block))
                 
@@ -105,7 +111,7 @@ def run_interval_analysis(processed_activity):
         print(f"{i:<6} | {interval['start_sec']:>5}s | {interval['duration_sec']:>6}s | "
               f"{interval['distance_m']:8.1f}m | {format_pace(interval['avg_pace'])}")
         
-        print("="*80)
+        #print("="*80)
         
 def get_streams():
     session = SessionLocal()
