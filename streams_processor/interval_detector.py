@@ -6,16 +6,16 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.models import ActivitySecond
-from streams_processor.processing_streams import process_activity_seconds
+from streams_pandas_interpolation.processing_streams import process_activity_streams_pd
 
-MIN_SPEED = 3.4
-MAX_BREAK_ALLOWED = 5
+MIN_SPEED = 3.3
+MAX_BREAK_ALLOWED = 15
 MIN_BLOCK_DIST = 150
 
-ACTIVITY_ID = 16888423217 # 10x400
+#ACTIVITY_ID = 16888423217 # 10x400 -> pd teve melhor precisão, mas diferença foi muito baixa
 #ACTIVITY_ID = 16962023462 # 5x200 + 4x400 + 2x800
 #ACTIVITY_ID = 16848750867 # 5x400 + 1x1km
-#ACTIVITY_ID = 16819680946 # 10x200 + 5x400
+ACTIVITY_ID = 16819680946 # 10x200 + 5x400
 #ACTIVITY_ID = 14392947474 # recorded on strava -> don't find intervals
 #ACTIVITY_ID = 16527840409 # testing
 #ACTIVITY_ID = 16279513590 # strava recorded activity -> find intervals
@@ -127,7 +127,7 @@ def get_streams():
         
 def main():
     streams = get_streams()
-    processed_streams = process_activity_seconds(streams)
+    processed_streams = process_activity_streams_pd(streams)
     run_interval_analysis(processed_streams)
     
 if __name__ == "__main__":

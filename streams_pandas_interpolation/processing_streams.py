@@ -1,13 +1,51 @@
+import pandas as pd
+import numpy as np
+from typing import Dict, List
+
 import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from database.config import SessionLocal
 from database.models import ActivitySecond
-from streams_processor.processing_streams import process_activity_seconds
 from analysis.formatters import format_seconds
 
-ACTIVITY_ID = 16888423217
+#ACTIVITY_ID = 16888423217
+ACTIVITY_ID = 16527840409
+
+SECONDS_TO_SHOW = 30
+
+def process_activity_streams_pd(seconds: List[object]) -> Dict[int, dict]:
+    if not seconds:
+        return {}
+    
+    # create DataFrame from objects
+    df = pd.DataFrame([s.__dict__ for s in seconds])
+    
+    df = df.set_index("second_index")
+    full_range = range(df.index.min(), df.index.max() + 1)
+    df = df.reindex(full_range)
+    
+    # interpolation
+    df["distance_total_m"] = df["distance_total_m"].interpolate(method="linear", limit=20)
+    df["elevation_m"] = df["elevation_m"].interpolate(method="linear", limit=10)
+    df["heart_rate"] = df["heart_rate"].interpolate(method="linear", limit=10)
+    df["speed_m_s"] = df["speed_m_s"].interpolate(method="linear", limit=5)
+    
+    # smoothing
+    df["speed_m_s"] = df["speed_m_s"].rolling(window=5, min_periods=1).mean()
+    df["heart_rate"] = df["heart_rate"].ewm(alpha=0.2, adjust=False).mean()
+    
+    df["speed_m_s"] = df["speed_m_s"].fillna(0.0)
+    df["distance_total_m"] = df["distance_total_m"].ffill()
+    
+    df["distance_delta_m"] = df["distance_total_m"].diff().fillna(0)
+    
+    df["pace_sec_km"] = df["speed_m_s"].apply(lambda x: 1000 / x if x > 0.3 else None)
+    
+    df = df.fillna(0)
+    
+    return df.to_dict(orient="index")
 
 def validate_processed_streams(processed_dict):
     if processed_dict:
@@ -19,8 +57,8 @@ def validate_processed_streams(processed_dict):
         print(f"{'Sec':<6} | {'Dist_Total':<12} | {'Delta':<8} | {'Pace':<8} | {'HR':<5} | {'Elev':<6}")
         print("-"*70)
         
-        #for t in sorted_seconds:
-        for t in sorted_seconds[:200]:
+        for t in sorted_seconds:
+        #for t in sorted_seconds[:SECONDS_TO_SHOW]:
             data = processed_dict[t]
             pace_raw = data.get("pace_sec_km")
             pace_str = format_seconds(pace_raw) if pace_raw else "0:00"
@@ -51,7 +89,7 @@ def main():
         .all()
     )
 
-    processed_activity = process_activity_seconds(seconds)
+    processed_activity = process_activity_streams_pd(seconds)
     validate_processed_streams(processed_activity)
     
 if __name__ == "__main__":
