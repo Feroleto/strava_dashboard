@@ -2,12 +2,14 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
+from collector.activities import get_activity_by_id
+
 from intervals_debug.laps import show_recorded_laps, show_autodetected_laps
 from intervals_debug.streams import show_streams
 from intervals_debug.query_streams import get_streams
-from intervals_processor.streams_processor import process_activity_streams_pd
-from collector.activities import get_activity_by_id
 from intervals_debug.activities_consts import ACTIVITY_ID
+
+from intervals_processor.streams_processor import process_activity_streams_pd
 from intervals_processor.laps_extractor import extract_laps_from_activities, filter_speed_laps
 from intervals_processor.interval_detector import IntervalDetector, MIN_SPEED, MIN_BLOCK_DIST
 
