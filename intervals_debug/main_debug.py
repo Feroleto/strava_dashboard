@@ -23,15 +23,14 @@ def main():
             streams = get_streams(ACTIVITY_ID)
             processed_streams = process_activity_streams_pd(streams)
             detector = IntervalDetector(min_speed=MIN_SPEED, min_block_dist=MIN_BLOCK_DIST)
-            intervals = detector.detect_intervals(processed_streams)
+            intervals = detector.analyze_full_activity(processed_streams)
             show_autodetected_laps(intervals)
         else:
             laps = filter_speed_laps(laps)
             show_recorded_laps(laps)
         
-
     else:
-        streams = get_streams()
+        streams = get_streams(ACTIVITY_ID)
         processed_streams = process_activity_streams_pd(streams)
         show_streams(processed_streams)
         

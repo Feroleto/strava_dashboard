@@ -32,6 +32,3 @@ def show_streams(processed_dict):
               f"{pace_str:<8} | "
               f"{int(hr) if hr else 'N/A':>5} | "
               f"{elev:>6.1f}m")
-                 
-    else:
-        print("No processed streams found")
