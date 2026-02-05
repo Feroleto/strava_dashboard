@@ -52,16 +52,28 @@ class IntervalDetector:
         last_effort_end = effort_blocks[-1][-1][0]
         avg_rest_time = sum(rest_durations) / len(rest_durations) if rest_durations else 60
         
-        # check to not exceed activity total time
-        expected_rest_end = min(last_effort_end + int(avg_rest_time), times[-1])
+        rest_final_data = {}
+        cooldown_start_time = last_effort_end + 1
         
-        # final rest lap
-        rest_final_data = {t: processed_dict[t] for t in times if last_effort_end < t <= expected_rest_end}
+        for t in range(last_effort_end + 1, last_sec + 1):
+            if t not in processed_dict:
+                continue
+            
+            data = processed_dict[t]
+            speed = data.get("speed_m_s", 0)
+            duration_last_rest = t - last_effort_end
+            
+            # still walking or on rest time range
+            if speed < 2.2 or duration_last_rest <= avg_rest_time:
+                rest_final_data[t] = data
+                cooldown_start_time = t + 1
+            else:
+                break
+        
         if rest_final_data:
             full_laps.append(self._summarize_lap(rest_final_data, f"REST_{len(effort_blocks)}"))
         
         # COOLDOWN
-        cooldown_start_time = expected_rest_end + 1
         if cooldown_start_time <= last_sec:
             cooldown_data = {t: processed_dict[t] for t in times if t >= cooldown_start_time}
             full_laps.extend(self._split_into_km(cooldown_data, "COOLDOWN"))
@@ -134,17 +146,24 @@ class IntervalDetector:
     
     def _summarize_lap(self, data_dict, type_label):
         times = sorted(data_dict.keys())
+        
+        # filtering idle time
+        moving_seconds = [t for t, data in data_dict.items() if data.get("speed_m_s", 0) > 0.3]
+        moving_duration = len(moving_seconds)
+        total_duration = times[-1] - times[0] if times else 0
+        
         start_time = times[0]
         end_time = times[-1]
         distance = data_dict[end_time]["distance_total_m"] - data_dict[start_time]["distance_total_m"]
-        duration = end_time - start_time
-        avg_speed = distance / duration if duration > 0 else 0
+        #duration = end_time - start_time
+        avg_speed = distance / moving_duration if moving_duration > 0 else 0
         pace_seconds = 1000 / avg_speed if avg_speed > 0.3 else 0
         
         return {
             "type": type_label,
             "start_sec": start_time,
-            "duration_sec": duration,
+            "total_duration_sec": total_duration,
+            "moving_duration_sec": moving_duration,
             "distance_m": round(distance, 1),
             "avg_pace": pace_seconds,
             "avg_hr": sum(d.get("heart_rate", 0) for d in data_dict.values()) / len(data_dict)
@@ -152,20 +171,25 @@ class IntervalDetector:
     
     
     def _summarize_block(self, block, type_label):
-        start_time, start_data = block[0]
-        end_time, end_data = block[-1]
+        start_time = block[0][0]
+        end_time = block[-1][0]
         
-        duration = end_time - start_time
+        moving_seconds = [d for d in block if d[1].get("speed_m_s", 0) > 0.3]
+        moving_duration = len(moving_seconds)
+        
+        end_data = block[-1][1]
+        start_data = block[0][1]
         distance = end_data["distance_total_m"] - start_data["distance_total_m"]
         
-        avg_speed = distance / duration if duration > 0 else 0
+        avg_speed = distance / moving_duration if moving_duration > 0 else 0
         pace_seconds = 1000 / avg_speed if avg_speed > 0 else 0
         
         return {
             "type": type_label,
             "start_sec": start_time,
             "end_sec": end_time,
-            "duration_sec": duration,
+            "total_duration_sec": end_time - start_time,
+            "moving_duration_sec": moving_duration,
             "distance_m": round(distance, 1),
             "avg_pace": pace_seconds,
             "avg_hr": sum((d[1].get("heart_rate") or 0.0) for d in block) / len(block)

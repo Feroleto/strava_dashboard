@@ -48,5 +48,5 @@ def show_autodetected_laps(laps):
     print("-" * 80)
     
     for i, lap in enumerate(laps, 1):
-        print(f"{i:<6} | {lap['start_sec']:>5}s | {lap['duration_sec']:>6}s | "
+        print(f"{i:<6} | {lap['start_sec']:>5}s | {lap['moving_duration_sec']:>6}s | "
               f"{lap['distance_m']:8.1f}m | {format_seconds(lap['avg_pace'])}")
