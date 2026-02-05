@@ -28,7 +28,7 @@ class IntervalDetector:
         warmup_end_time = effort_blocks[0][0][0]
         if warmup_end_time > first_sec:
             warmup_data = {t: processed_dict[t] for t in times if t < warmup_end_time}
-            full_laps.append(self._summarize_lap(warmup_data, "WARMUP"))
+            full_laps.extend(self._split_into_km(warmup_data, "WARMUP"))
             
         # INTERVALS and REST
         for i, current_effort in enumerate(effort_blocks):
@@ -48,7 +48,7 @@ class IntervalDetector:
         cooldown_start_time = effort_blocks[-1][-1][0] + 1
         if cooldown_start_time <= last_sec:
             cooldown_data = {t: processed_dict[t] for t in times if t >= cooldown_start_time}
-            full_laps.append(self._summarize_lap(cooldown_data, "COOLDOWN"))
+            full_laps.extend(self._split_into_km(cooldown_data, "COOLDOWN"))
         
         return full_laps
     
@@ -91,6 +91,30 @@ class IntervalDetector:
         
         dist = block[-1][1]["distance_total_m"] - block[0][1]["distance_total_m"]
         return dist >= self.min_block_dist
+    
+    # divide seconds dict in 1km laps
+    def _split_into_km(self, data_dict, label_prefix):
+        times = sorted(data_dict.keys())
+        splits = []
+        current_split_data = {}
+        
+        start_distance_offset = data_dict[times[0]]["distance_total_m"]
+        split_count = 1
+        
+        for t in times:
+            current_split_data[t] = data_dict[t]
+            relative_distance = data_dict[t]["distance_total_m"] - start_distance_offset
+            
+            if relative_distance >= 1000:
+                splits.append(self._summarize_lap(current_split_data, f"{label_prefix}_KM_{split_count}"))
+                current_split_data = {}
+                start_distance_offset = data_dict[t]["distance_total_m"]
+                split_count += 1
+            
+        if current_split_data:
+            splits.append(self._summarize_lap(current_split_data, f"{label_prefix}_KM_{split_count}"))
+            
+        return splits
     
     def _summarize_lap(self, data_dict, type_label):
         times = sorted(data_dict.keys())
