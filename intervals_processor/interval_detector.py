@@ -30,7 +30,9 @@ class IntervalDetector:
             warmup_data = {t: processed_dict[t] for t in times if t < warmup_end_time}
             full_laps.extend(self._split_into_km(warmup_data, "WARMUP"))
             
+            
         # INTERVALS and REST
+        rest_durations = []
         for i, current_effort in enumerate(effort_blocks):
             effort_lap = self._summarize_block(current_effort, f"WORKOUT_{i+1}")
             full_laps.append(effort_lap)
@@ -42,10 +44,24 @@ class IntervalDetector:
                 
                 rest_data = {t: processed_dict[t] for t in times if rest_start <= t < next_effort_start}
                 if rest_data:
+                    rest_duration = next_effort_start - rest_start
+                    rest_durations.append(rest_duration)
                     full_laps.append(self._summarize_lap(rest_data, f"REST_{i+1}"))
-                    
+        
+        # last rest using average rest time
+        last_effort_end = effort_blocks[-1][-1][0]
+        avg_rest_time = sum(rest_durations) / len(rest_durations) if rest_durations else 60
+        
+        # check to not exceed activity total time
+        expected_rest_end = min(last_effort_end + int(avg_rest_time), times[-1])
+        
+        # final rest lap
+        rest_final_data = {t: processed_dict[t] for t in times if last_effort_end < t <= expected_rest_end}
+        if rest_final_data:
+            full_laps.append(self._summarize_lap(rest_final_data, f"REST_{len(effort_blocks)}"))
+        
         # COOLDOWN
-        cooldown_start_time = effort_blocks[-1][-1][0] + 1
+        cooldown_start_time = expected_rest_end + 1
         if cooldown_start_time <= last_sec:
             cooldown_data = {t: processed_dict[t] for t in times if t >= cooldown_start_time}
             full_laps.extend(self._split_into_km(cooldown_data, "COOLDOWN"))
