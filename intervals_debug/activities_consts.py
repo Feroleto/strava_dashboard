@@ -4,4 +4,6 @@
 #ACTIVITY_ID = 16819680946 # 10x200 + 5x400
 #ACTIVITY_ID = 14392947474 # recorded on strava -> don't find intervals
 #ACTIVITY_ID = 16527840409 # 6 x (200 + 400)
-ACTIVITY_ID = 16279513590 # strava recorded activity -> find intervals
+#ACTIVITY_ID = 16279513590 # strava recorded activity -> find intervals
+ACTIVITY_ID = 16994178226 # hill repeats
+#ACTIVITY_ID = 16917854494 # hill repeats with lower grade
