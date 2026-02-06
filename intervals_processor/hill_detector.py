@@ -9,16 +9,28 @@ class HillDetector(IntervalDetector):
         self,
         min_elevation_gain=5.0,
         min_grade=3.0,
+        min_warmup_dist_m=1000,
         **kwargs
     ):
         super().__init__(**kwargs)
         self.min_elevation_gain = min_elevation_gain
         self.min_grade = min_grade
+        self.min_warmup_dist_m = min_warmup_dist_m
         
     def analyze_hills(self, processed_dict):
-        effort_blocks = self._detect_hill_blocks(processed_dict)
+        # detect all potencial blocks
+        raw_blocks = self._detect_hill_blocks(processed_dict)
+        
+        # filter blocks that started before the warmup distance
+        effort_blocks = []
+        for block in raw_blocks:
+            start_distance = block[0][1].get("distance_total_m", 0)
+            if start_distance >= self.min_warmup_dist_m:
+                effort_blocks.append(block)
+        
         if not effort_blocks:
-            return []
+            times = sorted(processed_dict.keys())
+            return self._split_into_km(processed_dict, "ACTIVITY")
 
         full_laps = []
         times = sorted(processed_dict.keys())
@@ -47,8 +59,8 @@ class HillDetector(IntervalDetector):
                     
         # last activity rest
         last_hill_end = effort_blocks[-1][-1][0]
-        avg_rest_time = sum(rest_durations) / len(rest_durations) if rest_duration else 60
-                    
+        avg_rest_time = sum(rest_durations) / len(rest_durations) if rest_durations else 60
+        
         rest_final_data = {}
         cooldown_start_time = last_hill_end + 1
         
@@ -68,8 +80,7 @@ class HillDetector(IntervalDetector):
         
         if rest_final_data:
             full_laps.append(self._summarize_lap(rest_final_data, f"REST_{len(effort_blocks)}"))
-            
-        
+
         # COOLDOWN
         if cooldown_start_time <= last_sec:
             cooldown_data = {t: processed_dict[t] for t in times if t >= cooldown_start_time}

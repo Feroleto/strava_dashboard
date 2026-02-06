@@ -32,7 +32,7 @@ def main():
                 interval_detector = IntervalDetector(min_speed=MIN_SPEED, min_block_dist=MIN_BLOCK_DIST)
                 laps = interval_detector.analyze_full_activity(processed_streams)
             elif workout_type == WORKOUT_HILL_REPEATS:
-                hill_detector = HillDetector(min_elevation_gain=5.0, min_grade=3.0)
+                hill_detector = HillDetector(min_elevation_gain=5.0, min_grade=2.0)
                 laps = hill_detector.analyze_hills(processed_streams)
             
             show_autodetected_laps(laps)
