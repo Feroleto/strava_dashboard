@@ -61,6 +61,9 @@ class HillDetector(IntervalDetector):
         last_hill_end = effort_blocks[-1][-1][0]
         avg_rest_time = sum(rest_durations) / len(rest_durations) if rest_durations else 60
         
+        prev_rest_distances = [l["distance_m"] for l in full_laps if "DESC_REST" in l["type"]]
+        avg_rest_distance = sum(prev_rest_distances) / len(prev_rest_distances) if prev_rest_distances else 0
+        
         rest_final_data = {}
         cooldown_start_time = last_hill_end + 1
         
@@ -72,12 +75,30 @@ class HillDetector(IntervalDetector):
             speed = data.get("speed_m_s", 0)
             duration_last_rest = t - last_hill_end
             
-            if speed < 2.2 or duration_last_rest <= avg_rest_time:
+            is_within_time = duration_last_rest <= avg_rest_time
+            is_slow = speed < 2.2
+            
+            if is_within_time or is_slow:
                 rest_final_data[t] = data
                 cooldown_start_time = t + 1
             else:
                 break
         
+        print(avg_rest_distance)
+            
+        # distance last check
+        if avg_rest_distance > 0 and rest_final_data:
+            start_distance = processed_dict[last_hill_end]["distance_total_m"]
+            times_in_rest = sorted(rest_final_data.keys())
+            
+            for t in times_in_rest:
+                current_distance = rest_final_data[t]["distance_total_m"] - start_distance
+                
+                if current_distance > (avg_rest_distance * 1.1):
+                    rest_final_data = {sec: val for sec, val in rest_final_data.items() if sec <= t}
+                    cooldown_start_time = t + 1
+                    break
+                
         if rest_final_data:
             full_laps.append(self._summarize_lap(rest_final_data, f"REST_{len(effort_blocks)}"))
 
