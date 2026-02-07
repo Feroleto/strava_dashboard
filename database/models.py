@@ -25,6 +25,7 @@ class Activity(Base):
     
     splits = relationship("ActivitySplit", back_populates="activity", cascade="all, delete-orphan")
     seconds = relationship("ActivitySecond", back_populates="activity", cascade="all, delete-orphan")
+    laps = relationship("ActivityLap", back_populates="activity", cascade="all, delete-orphan")
     
 class ActivitySplit(Base):
     __tablename__ = "activity_splits"
@@ -52,3 +53,26 @@ class ActivitySecond(Base):
     heart_rate = Column(Integer)
     
     activity = relationship("Activity", back_populates="seconds")
+    
+class ActivityLap(Base):
+    __tablename__ = "activity_laps"
+    
+    id = Column(Integer, primary_key=True)
+    activity_id = Column(Integer, ForeignKey("activities.id"), index=True)
+    lap_index = Column(Integer, index=True)
+    type = Column(String, index=True)
+    
+    start_sec = Column(Integer)
+    end_sec = Column(Integer)
+    total_duration_sec = Column(Integer)
+    moving_duration_sec = Column(Integer)
+    
+    distance_m = Column(Float)
+    avg_pace_sec_km = Column(Float)
+    avg_hr = Column(Float)
+    elev_gain_m = Column(Float)
+    
+    avg_grade_percent = Column(Float, nullable=True)
+    vam = Column(Float, nullable=True)
+    
+    activity = relationship("Activity", back_populates="laps")
