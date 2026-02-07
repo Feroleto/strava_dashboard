@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.queries import get_last_activity_timestamp
-from database.models import Activity
+from database.models import Activity, ActivityLap
 
 from collector.activities import get_all_activities
 from collector.activities import get_activity_by_id
@@ -17,8 +17,14 @@ from collector.streams import fetch_activity_streams
 from processors.activities import map_activity_to_db_model
 from processors.streams import map_streams_to_db_model
 from processors.splits import map_splits_to_db_model
+from processors.laps import map_laps_to_db
 
-from utils.constants import STREAM_WORKOUT_TYPES
+from intervals_processor.laps_extractor import extract_recorded_laps
+from intervals_processor.streams_processor import process_activity_streams_pd
+from intervals_processor.interval_detector import IntervalDetector
+from intervals_processor.hill_detector import HillDetector
+
+from utils.constants import STREAM_WORKOUT_TYPES, WORKOUT_INTERVAL, WORKOUT_HILL_REPEATS
 
 colorama.init(autoreset=True)
 
@@ -62,8 +68,38 @@ def sync_new_activities():
                 streams = fetch_activity_streams(activity_obj.id)
                 api_calls += 1
                 
+                # save activity streams to db
                 streams_obj = map_streams_to_db_model(activity_obj.id, streams)
                 session.add_all(streams_obj)
+                
+                # verify recorded laps
+                laps = extract_recorded_laps(full_data)
+                if len(laps) <= 1: # garmin/strava doesn't recorded laps
+                    pbar.set_postfix(api_reqs=api_calls, status="Automatic Laps Detection")
+                    processed_streams = process_activity_streams_pd(streams)
+                    
+                    detector = None
+                    if activity_obj.workout_type == WORKOUT_INTERVAL:
+                        detector = IntervalDetector()
+                    elif activity_obj.workout_type == WORKOUT_HILL_REPEATS:
+                        detector = HillDetector()
+                        
+                    if detector:
+                        detected_laps = detector.analyze(processed_streams)
+                        if detected_laps:
+                            lap_objs = map_laps_to_db(activity_obj.id, detected_laps)
+                            session.add_all(lap_objs)
+                        else:
+                            splits_data = full_data.get("splits_metric", [])
+                            splits_obj = map_splits_to_db_model(activity_obj.id, splits_data)
+                            session.add_all(splits_obj)
+                
+                # garmin/strava recorded laps
+                else:
+                    pbar.set_postfix(api_reqs=api_calls, status="Using Recorded Laps")
+                    laps_objs = map_laps_to_db(activity_obj.id, laps)
+                    session.add_all(laps_objs)
+                    
             else:
                 pbar.set_postfix(api_reqs = api_calls, status = "Downloading Splits")
                 splits_data = full_data.get("splits_metric", [])
