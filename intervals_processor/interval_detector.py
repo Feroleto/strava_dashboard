@@ -53,4 +53,15 @@ class IntervalDetector(BaseDetector):
         return dist >= self.min_block_dist
     
     def _summarize_effort(self, block, label):
-        return self._summarize_common(block, label)
+        summary = self._summarize_common(block, label)
+        
+        elev_gain = block[-1][1]["elevation_m"] - block[0][1]["elevation_m"]
+        
+        summary.update({
+            "type": label.replace("WORKOUT", "INTERVAL"),
+            "elev_gain_m": round(elev_gain, 1),
+            "avg_grade_percent": 0.0,
+            "vam": 0.0
+        })
+        
+        return summary
