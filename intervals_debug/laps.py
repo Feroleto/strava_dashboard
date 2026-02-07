@@ -10,7 +10,7 @@ def show_recorded_laps(laps):
         return
     
     print(f"\n" + "="*90)
-    print("STRAVA/GARMIN recorded laps:")
+    print(f"STRAVA/GARMIN recorded laps: {len(laps)}")
     print("-" * 90)
     print(f"{'Lap':<4} | {'Start':<8} | {'End':<8} | {'Time':<8} | {'Distance':<10} | {'Pace'}")
     print("-" * 90)
