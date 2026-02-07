@@ -58,7 +58,6 @@ class IntervalDetector(BaseDetector):
         elev_gain = block[-1][1]["elevation_m"] - block[0][1]["elevation_m"]
         
         summary.update({
-            "type": label.replace("WORKOUT", "INTERVAL"),
             "elev_gain_m": round(elev_gain, 1),
             "avg_grade_percent": 0.0,
             "vam": 0.0

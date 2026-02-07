@@ -9,7 +9,7 @@ def map_laps_to_db(activity_id, laps):
     for lap in laps:
         laps_obj.append(ActivityLap(
             activity_id=activity_id,
-            lap_type=lap["tyep"],
+            lap_type=lap["type"],
             lap_index=lap["lap_index"],
             start_sec=lap["start_sec"],
             end_sec=lap["end_sec"],

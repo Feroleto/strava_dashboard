@@ -71,7 +71,6 @@ class HillDetector(BaseDetector):
         vam = (elev_gain / moving_sec * 3600) if moving_sec > 0 else 0
         
         summary.update({
-            "type": label.replace("WORKOUT", "HILL_REPEATS"),
             "elev_gain_m": round(elev_gain, 1),
             "avg_grade_percent": round(avg_grade_percent, 1),
             "vam": round(vam, 0)

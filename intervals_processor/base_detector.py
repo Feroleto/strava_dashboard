@@ -68,14 +68,18 @@ class BaseDetector(ABC):
             relative_distance = data_dict[t]["distance_total_m"] - start_distance_offset
             
             if relative_distance >= 1000:
-                splits.append(self._summarize_common(current_split_data, f"{label_prefix}_KM_{split_count}"))
+                summary = self._summarize_common(current_split_data, label_prefix)
+                summary["lap_index"] = split_count
+                splits.append(summary)
                 current_split_data = {}
                 start_distance_offset = data_dict[t]["distance_total_m"]
                 split_count += 1
             
         if current_split_data:
-            splits.append(self._summarize_common(current_split_data, f"{label_prefix}_KM_{split_count}"))
-            
+            summary = self._summarize_common(current_split_data, label_prefix)
+            summary["lap_index"] = split_count
+            splits.append(summary)
+                        
         return splits
     
     def analyze(self, processed_dict):
@@ -98,7 +102,9 @@ class BaseDetector(ABC):
         rest_durations = []
         rest_distances = []
         for i, current_block in enumerate(effort_blocks):
-            full_laps.append(self._summarize_effort(current_block, f"WORKOUT_{i+1}"))
+            summary = self._summarize_effort(current_block, "WORKOUT")
+            summary["lap_index"] = i + 1
+            full_laps.append(summary)
             
             # rest between laps
             if i < len(effort_blocks) - 1:
@@ -106,7 +112,8 @@ class BaseDetector(ABC):
                 rest_end = effort_blocks[i+1][0][0]
                 rest_data = {t: processed_dict[t] for t in times if rest_start <= t <= rest_end}
                 if rest_data:
-                    lap = self._summarize_common(rest_data, f"REST_{i+1}")
+                    lap = self._summarize_common(rest_data, "REST")
+                    lap["lap_index"] = i + 1
                     full_laps.append(lap)
                     rest_durations.append(rest_end - rest_start)
                     rest_distances.append(lap["distance_m"])
@@ -120,7 +127,9 @@ class BaseDetector(ABC):
         # add last rest
         if cooldown_start > last_end + 1:
             rest_final = {t: processed_dict[t] for t in times if last_end < t < cooldown_start}
-            full_laps.append(self._summarize_common(rest_final, f"REST_{len(effort_blocks)}"))
+            lap = self._summarize_common(rest_final, "REST")
+            lap["lap_index"] = len(effort_blocks)
+            full_laps.append(lap)
         
         # COOLDOWN
         if cooldown_start < times[-1]:
