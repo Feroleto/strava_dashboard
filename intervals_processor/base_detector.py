@@ -40,13 +40,17 @@ class BaseDetector(ABC):
         
         return {
             "type": type_label,
+            "lap_index": None,
             "start_sec": start_time,
             "end_sec": end_time,
-            "total_duration_sec": end_time - start_time,
-            "moving_duration_sec": moving_duration,
+            "total_duration_sec": int(end_time - start_time),
+            "moving_duration_sec": int(moving_duration),
             "distance_m": round(distance, 1),
             "avg_pace": pace_seconds,
-            "avg_hr": round(avg_hr, 1)
+            "avg_hr": round(avg_hr, 1),
+            "elev_gain_m": 0.0,
+            "avg_grade_percent": 0.0,
+            "vam": 0.0
         }
         
     # used to divide warmup and cooldown in 1km blocks
