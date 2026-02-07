@@ -62,14 +62,18 @@ class HillDetector(BaseDetector):
     
     def _summarize_effort(self, block, label):
         summary = self._summarize_common(block, label)
+        
         elev_gain = block[-1][1]["elevation_m"] - block[0][1]["elevation_m"]
-        avg_grade_percent = elev_gain / summary["distance_m"] * 100 if summary["distance_m"] > 0 else 0
-        vam = elev_gain / summary["moving_duration_sec"] * 3600 if summary["moving_duration_sec"] > 0 else 0
+        distance = summary["distance_m"]
+        moving_sec = summary["moving_duration_sec"]
+        
+        avg_grade_percent = (elev_gain / distance * 100) if distance > 0 else 0
+        vam = (elev_gain / moving_sec * 3600) if moving_sec > 0 else 0
         
         summary.update({
             "type": label.replace("WORKOUT", "HILL_REPEATS"),
             "elev_gain_m": round(elev_gain, 1),
             "avg_grade_percent": round(avg_grade_percent, 1),
-            "vam": round(vam)
+            "vam": round(vam, 0)
         })
         return summary
