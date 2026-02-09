@@ -11,6 +11,7 @@ def map_streams_to_db_model(activity_id, streams):
     hr_stream = streams.get("heartrate", {}).get("data", [])
     alt_stream = streams.get("altitude", {}).get("data", [])
     
+    streams_list = []
     prev_distance = None
     
     for i in range(len(time_stream)):
@@ -25,7 +26,7 @@ def map_streams_to_db_model(activity_id, streams):
         
         speed = speed_stream[i] if (speed_stream and i < len(speed_stream)) else None
         
-        yield ActivitySecond(
+        streams_list.append(ActivitySecond(
             activity_id=activity_id,
             second_index=time_stream[i],
             distance_total_m=total_distance,
@@ -34,4 +35,6 @@ def map_streams_to_db_model(activity_id, streams):
             heart_rate=hr_stream[i] if i < len(hr_stream) else None,
             elevation_m=alt_stream[i] if i < len(alt_stream) else None,
             pace_sec_km=(1000 / speed) if (speed and speed > 0) else None
-        )
+        ))
+        
+    return streams_list

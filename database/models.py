@@ -60,7 +60,7 @@ class ActivityLap(Base):
     id = Column(Integer, primary_key=True)
     activity_id = Column(Integer, ForeignKey("activities.id"), index=True)
     lap_index = Column(Integer, index=True)
-    type = Column(String, index=True)
+    lap_type = Column(String, index=True)
     
     start_sec = Column(Integer)
     end_sec = Column(Integer)

@@ -69,14 +69,14 @@ def sync_new_activities():
                 api_calls += 1
                 
                 # save activity streams to db
-                streams_obj = map_streams_to_db_model(activity_obj.id, streams)
-                session.add_all(streams_obj)
+                streams_objs = map_streams_to_db_model(activity_obj.id, streams)
+                session.add_all(streams_objs)
                 
                 # verify recorded laps
                 laps = extract_recorded_laps(full_data)
                 if len(laps) <= 1: # garmin/strava doesn't recorded laps
                     pbar.set_postfix(api_reqs=api_calls, status="Automatic Laps Detection")
-                    processed_streams = process_activity_streams_pd(streams)
+                    processed_streams_dict = process_activity_streams_pd(streams_objs)
                     
                     detector = None
                     if activity_obj.workout_type == WORKOUT_INTERVAL:
@@ -85,14 +85,14 @@ def sync_new_activities():
                         detector = HillDetector()
                         
                     if detector:
-                        detected_laps = detector.analyze(processed_streams)
+                        detected_laps = detector.analyze(processed_streams_dict)
                         if detected_laps:
                             lap_objs = map_laps_to_db(activity_obj.id, detected_laps)
                             session.add_all(lap_objs)
-                        else:
+                        else: # fallback for splits if watch didn't recorded and doesn't find laps
                             splits_data = full_data.get("splits_metric", [])
-                            splits_obj = map_splits_to_db_model(activity_obj.id, splits_data)
-                            session.add_all(splits_obj)
+                            splits_objs = map_splits_to_db_model(activity_obj.id, splits_data)
+                            session.add_all(splits_objs)
                 
                 # garmin/strava recorded laps
                 else:

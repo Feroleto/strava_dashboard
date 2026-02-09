@@ -30,9 +30,12 @@ class IntervalDetector(BaseDetector):
                     current_block.append((t, data))
                     gap_counter += 1
                 elif current_block:
-                    real_block = current_block[:-gap_counter] if gap_counter > 0 else current_block
+                    if gap_counter >= len(current_block):
+                        real_block = []
+                    else:
+                        real_block = current_block[:-gap_counter] if gap_counter > 0 else current_block
                     
-                    if self._is_valid_block(real_block):
+                    if real_block and self._is_valid_block(real_block):
                         blocks.append(real_block)
                         
                     current_block = []
