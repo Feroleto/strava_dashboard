@@ -14,10 +14,10 @@ from collector.activities import get_all_activities
 from collector.activities import get_activity_by_id
 from collector.streams import fetch_activity_streams
 
-from processors.activities import map_activity_to_db_model
-from processors.streams import map_streams_to_db_model
-from processors.splits import map_splits_to_db_model
-from processors.laps import map_laps_to_db
+from processors.db_mappers.activities import map_activity_to_db_model
+from processors.db_mappers.streams import map_streams_to_db_model
+from processors.db_mappers.splits import map_splits_to_db_model
+from processors.db_mappers.laps import map_laps_to_db_model
 
 from intervals_processor.laps_extractor import extract_recorded_laps
 from intervals_processor.streams_processor import process_activity_streams_pd
@@ -88,7 +88,7 @@ def sync_new_activities():
                     if detector:
                         detected_laps = detector.analyze(processed_streams_dict)
                         if detected_laps:
-                            lap_objs = map_laps_to_db(activity_obj.id, detected_laps)
+                            lap_objs = map_laps_to_db_model(activity_obj.id, detected_laps)
                             session.add_all(lap_objs)
                         else: # fallback for splits if watch didn't recorded and doesn't find laps
                             splits_data = full_data.get("splits_metric", [])
@@ -98,7 +98,7 @@ def sync_new_activities():
                 # garmin/strava recorded laps
                 else:
                     pbar.set_postfix(api_reqs=api_calls, status="Using Recorded Laps")
-                    laps_objs = map_laps_to_db(activity_obj.id, laps, activity_obj.workout_type)
+                    laps_objs = map_laps_to_db_model(activity_obj.id, laps, activity_obj.workout_type)
                     session.add_all(laps_objs)
                    
             # download strava splits 

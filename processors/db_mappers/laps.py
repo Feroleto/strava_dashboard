@@ -125,7 +125,7 @@ def classify_hill_laps_type(laps_data: list):
     
     return final_results
 
-def map_laps_to_db(activity_id, laps, workout_type=None):
+def map_laps_to_db_model(activity_id, laps, workout_type=None):
     laps_obj = []
     
     if laps and laps[0]["type"] == "Lap 1":
