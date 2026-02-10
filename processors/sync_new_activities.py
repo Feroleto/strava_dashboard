@@ -63,6 +63,7 @@ def sync_new_activities():
             session.add(activity_obj)
             session.flush()
             
+            # need to download streams and laps
             if activity_obj.workout_type in STREAM_WORKOUT_TYPES:
                 pbar.set_postfix(api_reqs = api_calls, status = "Downloading Streams")
                 streams = fetch_activity_streams(activity_obj.id)
@@ -97,9 +98,10 @@ def sync_new_activities():
                 # garmin/strava recorded laps
                 else:
                     pbar.set_postfix(api_reqs=api_calls, status="Using Recorded Laps")
-                    laps_objs = map_laps_to_db(activity_obj.id, laps)
+                    laps_objs = map_laps_to_db(activity_obj.id, laps, activity_obj.workout_type)
                     session.add_all(laps_objs)
-                    
+                   
+            # download strava splits 
             else:
                 pbar.set_postfix(api_reqs = api_calls, status = "Downloading Splits")
                 splits_data = full_data.get("splits_metric", [])

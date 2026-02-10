@@ -20,6 +20,7 @@ def extract_recorded_laps(full_activity_data):
             "distance_m": round(float(distance), 1),
             "total_duration_sec": int(lap.get("elapsed_time", duration)),
             "moving_duration_sec": int(duration),
+            "avg_speed": avg_speed,
             "avg_pace": avg_pace,
             "avg_hr": round(float(lap.get("average_heartrate", 0)), 1),
             "elev_gain_m": round(elev_gain, 1),
