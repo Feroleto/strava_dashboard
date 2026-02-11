@@ -19,11 +19,11 @@ from processors.db_mappers.streams import map_streams_to_db_model
 from processors.db_mappers.splits import map_splits_to_db_model
 from processors.db_mappers.laps import map_laps_to_db_model
 
-from processors.data_mappers.laps_list import map_recorded_laps_to_list
+from processors.data_mappers.laps_data_to_list import map_recorded_laps_to_list
 
-from intervals_processor.streams_processor import process_activity_streams_pd
-from intervals_processor.interval_detector import IntervalDetector
-from intervals_processor.hill_detector import HillDetector
+from processors.non_recorded_laps_detector.streams_processor import process_activity_streams_pd
+from processors.non_recorded_laps_detector.interval_detector import IntervalDetector
+from processors.non_recorded_laps_detector.hill_detector import HillDetector
 
 from processors.type_classifiers.util_type_classifiers import STREAM_WORKOUT_TYPES, WORKOUT_INTERVAL, WORKOUT_HILL_REPEATS
 

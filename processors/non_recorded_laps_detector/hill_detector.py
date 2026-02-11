@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from intervals_processor.base_detector import BaseDetector
+from processors.non_recorded_laps_detector.base_detector import BaseDetector
 
 class HillDetector(BaseDetector):
     def __init__(self, min_elevation_gain=5.0, min_grade=2.0, min_warmup_dist_m=1000, **kwargs):

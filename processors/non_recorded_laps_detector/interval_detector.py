@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from intervals_processor.base_detector import BaseDetector
+from processors.non_recorded_laps_detector.base_detector import BaseDetector
 
 class IntervalDetector(BaseDetector):
     def __init__(self, min_speed=3.3, max_break_allowed=10, min_block_dist=150, **kwargs):
