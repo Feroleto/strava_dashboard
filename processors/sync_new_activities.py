@@ -8,7 +8,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.config import SessionLocal
 from database.queries import get_last_activity_timestamp
-from database.models import Activity, ActivityLap
+from database.models import Activity
 
 from collector.activities import get_all_activities
 from collector.activities import get_activity_by_id
@@ -19,7 +19,8 @@ from processors.db_mappers.streams import map_streams_to_db_model
 from processors.db_mappers.splits import map_splits_to_db_model
 from processors.db_mappers.laps import map_laps_to_db_model
 
-from intervals_processor.laps_extractor import extract_recorded_laps
+from processors.data_mappers.laps_list import map_recorded_laps_to_list
+
 from intervals_processor.streams_processor import process_activity_streams_pd
 from intervals_processor.interval_detector import IntervalDetector
 from intervals_processor.hill_detector import HillDetector
@@ -74,7 +75,7 @@ def sync_new_activities():
                 session.add_all(streams_objs)
                 
                 # verify recorded laps
-                laps = extract_recorded_laps(full_data)
+                laps = map_recorded_laps_to_list(full_data)
                 if len(laps) <= 1: # garmin/strava doesn't recorded laps
                     pbar.set_postfix(api_reqs=api_calls, status="Automatic Laps Detection")
                     processed_streams_dict = process_activity_streams_pd(streams_objs)

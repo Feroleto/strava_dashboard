@@ -1,4 +1,4 @@
-def extract_recorded_laps(full_activity_data):
+def map_recorded_laps_to_list(full_activity_data):
     laps = full_activity_data.get("laps", [])
     extracted_laps = []
     
