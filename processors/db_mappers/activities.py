@@ -5,14 +5,14 @@ import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from database.models import Activity
-from processors.activity_classifier import classify_workout
+from processors.type_classifiers.activity_type_classifier import classify_workout_type
     
 def map_activity_to_db_model(activity):
     distance_km = activity["distance"] / 1000 if activity["distance"] else None
     moving_time_sec = activity["moving_time"]
     pace_sec_per_km = moving_time_sec / distance_km if distance_km else None
     
-    workout_type = classify_workout(activity)
+    workout_type = classify_workout_type(activity)
     
     return Activity(
         id = activity["id"],

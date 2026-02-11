@@ -3,13 +3,13 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from utils.constants import (
+from processors.type_classifiers.util_type_classifiers import (
     WORKOUT_EASY_OR_LONG,
     WORKOUT_INTERVAL,
     WORKOUT_HILL_REPEATS
 )
 
-def classify_workout(activity):
+def classify_workout_type(activity):
     description = activity.get("description", "")
     description = description.lower() if description else ""
     

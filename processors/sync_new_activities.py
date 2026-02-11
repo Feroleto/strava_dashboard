@@ -24,7 +24,7 @@ from intervals_processor.streams_processor import process_activity_streams_pd
 from intervals_processor.interval_detector import IntervalDetector
 from intervals_processor.hill_detector import HillDetector
 
-from utils.constants import STREAM_WORKOUT_TYPES, WORKOUT_INTERVAL, WORKOUT_HILL_REPEATS
+#from utils.constants import STREAM_WORKOUT_TYPES, WORKOUT_INTERVAL, WORKOUT_HILL_REPEATS
 
 colorama.init(autoreset=True)
 
