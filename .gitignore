@@ -1,6 +1,17 @@
-venv/
 .env
-__pycache__/
-*.pyc
-*.db
-extra_files/
+
+# Python
+python-pipeline/venv/
+python-pipeline/__pycache__/
+python-pipeline/**/__pycache__/
+python-pipeline/**/*.pyc
+python-pipeline/*.db
+python-pipeline/extra_files/
+
+# Node
+server/node_modules/
+server/dist/
+server/.env
+
+# Geral
+.DS_Store
