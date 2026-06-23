@@ -1,0 +1,153 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  activities      Activity[]
+  stravaAccount   StravaAccount?
+
+  @@map("users")
+}
+
+model StravaAccount {
+  id     String @id @default(cuid())
+  userId String @unique
+
+  stravaAthleteId BigInt   @unique
+  accessToken     String
+  refreshToken    String
+  expiresAt       DateTime
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("strava_accounts")
+}
+
+enum WorkoutType {
+  EASY_OR_LONG
+  INTERVAL
+  HILL_REPEATS
+
+  @@map("workout_type")
+}
+
+enum LapType {
+  RUN
+  WORKOUT
+  REST
+  STEADY
+  WARMUP
+  COOLDOWN
+  ACTIVITY
+
+  @@map("lap_type")
+}
+
+model Activity {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name        String
+  type        String // Strava's raw "type" (e.g. "Run")
+  sportType   String? @map("sport_type")
+  workoutType WorkoutType @map("workout_type")
+
+  // Correlation timestamp: this is the "when did this happen" field used to
+  // join across domains (running pace vs diet vs lifting, eventually).
+  startDate DateTime @map("start_date")
+
+  distanceKm    Float? @map("distance_km")
+  movingTimeSec Int    @map("moving_time_sec")
+  paceRawSecKm  Float? @map("pace_raw_sec_km")
+
+  elevationGainM Float? @map("elevation_gain_m")
+  averageBpm     Float? @map("average_bpm")
+  maxBpm         Float? @map("max_bpm")
+  averageCadence Float? @map("average_cadence")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  splits  ActivitySplit[]
+  seconds ActivitySecond[]
+  laps    ActivityLap[]
+
+  @@index([userId, startDate])
+  @@map("activities")
+}
+
+model ActivitySplit {
+  id String @id @default(cuid())
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  splitIndex    Int   @map("split_index")
+  distanceKm    Float @map("distance_km")
+  movingTimeSec Int   @map("moving_time_sec")
+  paceMinKm     Float @map("pace_min_km")
+
+  @@index([activityId])
+  @@map("activity_splits")
+}
+
+model ActivitySecond {
+  id String @id @default(cuid())
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  secondIndex     Int    @map("second_index")
+  distanceTotalM  Float  @map("distance_total_m")
+  distanceDeltaM  Float  @map("distance_delta_m")
+  speedMS         Float? @map("speed_m_s")
+  paceSecKm       Float? @map("pace_sec_km")
+  elevationM      Float? @map("elevation_m")
+  heartRate       Int?   @map("heart_rate")
+  cadence         Float? @map("cadence")
+
+  @@index([activityId, secondIndex])
+  @@map("activity_seconds")
+}
+
+model ActivityLap {
+  id String @id @default(cuid())
+
+  activityId String
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  lapIndex Int     @map("lap_index")
+  lapType  LapType @map("lap_type")
+
+  startSec          Int @map("start_sec")
+  endSec            Int @map("end_sec")
+  totalDurationSec  Int @map("total_duration_sec")
+  movingDurationSec Int @map("moving_duration_sec")
+
+  distanceM    Float @map("distance_m")
+  avgPaceSecKm Float @map("avg_pace_sec_km")
+  avgHr        Float @map("avg_hr")
+  elevGainM    Float @map("elev_gain_m")
+
+  avgGradePercent Float? @map("avg_grade_percent")
+  vam             Float? @map("vam")
+  avgCadence      Float? @map("avg_cadence")
+
+  @@index([activityId, lapIndex])
+  @@index([activityId, lapType])
+  @@map("activity_laps")
+}
