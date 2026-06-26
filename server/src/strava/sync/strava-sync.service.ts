@@ -4,6 +4,32 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { StravaClientService } from '../client/strava-client.service';
+import { IntervalDetector } from './detectors/interval-detector';
+import { HillDetector } from './detectors/hill-detector';
+import { ProcessedDict } from './detectors/base-detector';
+import {
+  classifyIntervalLapsType,
+  classifyHillLapsType,
+} from './detectors/lap-classifier';
+import { StreamProcessor } from './processors/streams-processor';
+
+// ── Streams processing result shape ──────────────────────────────────────────
+
+export interface ProcessedSecond {
+  secondIndex: number;
+  distanceTotalM: number;
+  distanceDeltaM: number;
+  speedRaw: number;
+  speedMs: number;
+  accelerationMs2: number;
+  heartRate: number;
+  elevationM: number;
+  elevationSmooth: number;
+  elevationDelta: number;
+  gradePercent: number;
+  verticalSpeedMs: number;
+  paceSeckm: number | null;
+}
 
 @Injectable()
 export class StravaSyncService {
@@ -20,6 +46,8 @@ export class StravaSyncService {
     });
     this.prisma = new PrismaClient({ adapter });
   }
+
+  // ── Scheduled entry point ─────────────────────────────────────────────────
 
   @Cron(CronExpression.EVERY_6_HOURS)
   async scheduledSync() {
@@ -49,14 +77,15 @@ export class StravaSyncService {
         try {
           await this.processActivity(userId, summary);
           synced++;
-          // Basic rate limit guard — Strava allows 100 req/15min
-          await this.sleep(1000);
+          await this.sleep(9000);
         } catch (err: any) {
           if (err.message === 'STRAVA_RATE_LIMIT') {
             this.logger.warn('Rate limit hit, waiting 15 minutes...');
             await this.sleep(15 * 60 * 1000);
           } else {
-            this.logger.error(`Failed to process activity ${summary.id}: ${err.message}`);
+            this.logger.error(
+              `Failed to process activity ${summary.id}: ${err.message}`,
+            );
             errors++;
           }
         }
@@ -69,75 +98,336 @@ export class StravaSyncService {
     return { synced, errors };
   }
 
+  // ── Core activity processing ──────────────────────────────────────────────
+
   private async processActivity(userId: string, summary: any): Promise<void> {
     const exists = await this.prisma.activity.findUnique({
       where: { stravaId: BigInt(summary.id) },
     });
-
     if (exists) return;
 
     const full = await this.client.get<any>(userId, `/activities/${summary.id}`);
     await this.sleep(300);
 
     const workoutType = this.classifyWorkoutType(full);
+    const isStructured =
+      workoutType === 'INTERVAL' || workoutType === 'HILL_REPEATS';
 
     await this.prisma.$transaction(async (tx) => {
+      // ── 1. Persist Activity ───────────────────────────────────────────────
       const activity = await tx.activity.create({
         data: {
           userId,
-          stravaId: BigInt(full.id),
-          name: full.name,
-          type: full.type,
-          sportType: full.sport_type ?? null,
+          stravaId:       BigInt(full.id),
+          name:           full.name,
+          type:           full.type,
+          sportType:      full.sport_type ?? null,
           workoutType,
-          startDate: new Date(full.start_date),
-          distanceKm: full.distance ? full.distance / 1000 : null,
-          movingTimeSec: full.moving_time,
-          paceRawSecKm: full.moving_time && full.distance
+          startDate:      new Date(full.start_date),
+          distanceKm:     full.distance ? full.distance / 1000 : null,
+          movingTimeSec:  full.moving_time,
+          paceRawSecKm:   full.moving_time && full.distance
             ? full.moving_time / (full.distance / 1000)
             : null,
           elevationGainM: full.total_elevation_gain ?? null,
-          averageBpm: full.average_heartrate ?? null,
-          maxBpm: full.max_heartrate ?? null,
+          averageBpm:     full.average_heartrate ?? null,
+          maxBpm:         full.max_heartrate ?? null,
           averageCadence: full.average_cadence ?? null,
         },
       });
 
-      const splits: any[] = full.splits_metric ?? [];
-      if (splits.length > 0) {
-        await tx.activitySplit.createMany({
-          data: splits.map((s: any) => {
-            const distKm = s.distance / 1000;
-            const paceMinKm = distKm > 0 ? s.moving_time / 60 / distKm : 0;
-            return {
-              activityId: activity.id,
-              splitIndex: s.split,
-              distanceKm: distKm,
-              movingTimeSec: s.moving_time,
-              paceMinKm,
-            };
-          }),
+      if (isStructured) {
+        // ── 2a. Structured workout — streams + lap detection ────────────────
+        await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
+      } else {
+        // ── 2b. Easy/long run — Strava metric splits ────────────────────────
+        const splits: any[] = full.splits_metric ?? [];
+        if (splits.length > 0) {
+          await tx.activitySplit.createMany({
+            data: splits.map((s: any) => {
+              const distKm    = s.distance / 1000;
+              const paceMinKm = distKm > 0 ? s.moving_time / 60 / distKm : 0;
+              return {
+                activityId:    activity.id,
+                splitIndex:    s.split,
+                distanceKm:    distKm,
+                movingTimeSec: s.moving_time,
+                paceMinKm,
+              };
+            }),
+          });
+        }
+      }
+    });
+
+    this.logger.log(`Saved activity ${full.id} — ${full.name} [${workoutType}]`);
+  }
+
+  private async processStructuredActivity(
+    tx: Omit<
+      PrismaClient,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+    >,
+    userId: string,
+    activityId: string,
+    fullData: any,
+    workoutType: 'INTERVAL' | 'HILL_REPEATS',
+  ): Promise<void> {
+
+    // ── 1. Verifica se já existem laps registradas ──────────────────────
+
+    const rawLaps: any[] = fullData.laps ?? [];
+
+    const hasRecordedLaps =
+      rawLaps.length > 1 &&
+      typeof rawLaps[0]?.name === 'string' &&
+      rawLaps[0].name.startsWith('Lap');
+
+    // ── 2. Se existem laps, não baixa streams ──────────────────────────
+
+    if (hasRecordedLaps) {
+      this.logger.debug(
+        `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
+      );
+
+      const mappedLaps = rawLaps.map((lap: any, i: number) => {
+        const avgSpeed = lap.average_speed ?? 0;
+        const distance = lap.distance ?? 0;
+        const duration = lap.moving_time ?? 0;
+        const elevGain = lap.total_elevation_gain ?? 0;
+
+        return {
+          lapIndex: lap.lap_index ?? i + 1,
+          avgSpeed,
+          avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
+          distanceM: Math.round(distance * 10) / 10,
+          totalDurationSec: lap.elapsed_time ?? duration,
+          movingDurationSec: duration,
+          startSec: lap.start_index ?? 0,
+          endSec: lap.end_index ?? 0,
+          avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
+          elevGainM: Math.round(elevGain * 10) / 10,
+          avgGradePercent:
+            distance > 0
+              ? Math.round((elevGain / distance) * 100 * 10) / 10
+              : 0,
+          vam:
+            duration > 0
+              ? Math.round((elevGain / duration) * 3600)
+              : 0,
+        };
+      });
+
+      const types =
+        workoutType === 'INTERVAL'
+          ? classifyIntervalLapsType(mappedLaps)
+          : classifyHillLapsType(
+              mappedLaps.map((l) => ({ vam: l.vam })),
+            );
+
+      const lapCreateData = mappedLaps.map((lap, i) => ({
+        activityId,
+        lapType: types[i],
+        lapIndex: lap.lapIndex,
+        startSec: lap.startSec,
+        endSec: lap.endSec,
+        distanceM: lap.distanceM,
+        totalDurationSec: lap.totalDurationSec,
+        movingDurationSec: lap.movingDurationSec,
+        avgPaceSecKm: lap.avgPace,
+        avgHr: lap.avgHr,
+        elevGainM: lap.elevGainM,
+        avgGradePercent: lap.avgGradePercent,
+        vam: lap.vam,
+      }));
+
+      if (lapCreateData.length > 0) {
+        await tx.activityLap.createMany({
+          data: lapCreateData,
         });
       }
 
-      // Streams + Laps — only for interval/hill workouts (mirrors Python pipeline logic)
-      // TODO: implement in next iteration once split/lap detection is ported
+      return;
+    }
+
+    // ── 3. Não existem laps -> baixar streams ───────────────────────────
+
+    this.logger.debug(
+      `Activity ${fullData.id}: no recorded laps, running auto-detection`,
+    );
+
+    const rawStreams = await this.client.get<any>(
+      userId,
+      `/activities/${fullData.id}/streams`,
+      {
+        keys: 'time,distance,velocity_smooth,heartrate,altitude',
+        key_by_type: 'true',
+      },
+    );
+
+    await this.sleep(300);
+
+    const timeStream  = rawStreams['time']?.data ?? [];
+    const distStream  = rawStreams['distance']?.data ?? [];
+    const speedStream = rawStreams['velocity_smooth']?.data ?? [];
+    const hrStream    = rawStreams['heartrate']?.data ?? [];
+    const altStream   = rawStreams['altitude']?.data ?? [];
+
+    const secondsData: any[] = [];
+    let prevDistance: number | null = null;
+
+    for (let i = 0; i < timeStream.length; i++) {
+      const totalDist = distStream[i] ?? 0;
+
+      const delta =
+        prevDistance == null
+          ? 0
+          : Math.max(totalDist - prevDistance, 0);
+
+      prevDistance = totalDist;
+
+      const speed = speedStream[i] ?? null;
+
+      secondsData.push({
+        activityId,
+        secondIndex: timeStream[i],
+        distanceTotalM: totalDist,
+        distanceDeltaM: delta,
+        speedMS: speed,
+        heartRate: hrStream[i] ?? null,
+        elevationM: altStream[i] ?? null,
+        paceSecKm: speed && speed > 0 ? 1000 / speed : null,
+      });
+    }
+
+    await tx.activitySecond.createMany({
+      data: secondsData,
     });
 
-    this.logger.log(`Saved activity ${full.id} — ${full.name}`);
+    const processed = await this.processStreamsSQL(activityId);
+
+    const processedDict: ProcessedDict = new Map(
+      processed.map((s) => [s.secondIndex, s]),
+    );
+
+    const detector =
+      workoutType === 'INTERVAL'
+        ? new IntervalDetector()
+        : new HillDetector();
+
+    const detectedLaps = detector.analyze(processedDict);
+
+    let lapCreateData: any[];
+
+    if (!detectedLaps.length) {
+      this.logger.warn(
+        `Activity ${fullData.id}: detector found no laps, falling back to splits`,
+      );
+
+      lapCreateData = this.buildSplitFallback(
+        activityId,
+        fullData,
+      );
+    } else {
+      lapCreateData = detectedLaps.map((lap, idx) => ({
+        activityId,
+        lapType: lap.type,
+        lapIndex: lap.lapIndex ?? idx + 1,
+        startSec: lap.startSec,
+        endSec: lap.endSec,
+        distanceM: lap.distanceM,
+        totalDurationSec: lap.totalDurationSec,
+        movingDurationSec: lap.movingDurationSec,
+        avgPaceSecKm: lap.avgPace,
+        avgHr: lap.avgHr,
+        elevGainM: lap.elevGainM,
+        avgGradePercent: lap.avgGradePercent,
+        vam: lap.vam,
+      }));
+    }
+
+    if (lapCreateData.length > 0) {
+      await tx.activityLap.createMany({
+        data: lapCreateData,
+      });
+    }
   }
 
-  private async getLastActivityTimestamp(userId: string): Promise<number | undefined> {
-    const last = await this.prisma.activity.findFirst({
-      where: { userId },
-      orderBy: { startDate: 'desc' },
-      select: { startDate: true },
+  // ── SQL stream processor ──────────────────────────────────────────────────
+  // Ports process_activity_streams_pd from the Python pipeline.
+  // Runs as a standalone query (not inside the transaction) — it only reads
+  // ActivitySecond rows that were just flushed by createMany above.
+  // For this to see those rows the outer $transaction must use the default
+  // isolation level (READ COMMITTED), which is Prisma's default.
+
+  private async processStreamsSQL(
+    activityId: string,
+  ): Promise<ProcessedSecond[]> {
+    
+    // 1. Busca os dados brutos recém-inseridos no banco
+    const rawData = await this.prisma.activitySecond.findMany({
+      where: { activityId },
+      select: {
+        secondIndex: true,
+        distanceTotalM: true,
+        distanceDeltaM: true,
+        heartRate: true,
+        elevationM: true,
+      },
+      orderBy: { secondIndex: 'asc' },
     });
 
+    // 2. Passa os dados brutos para o processador em memória
+    return StreamProcessor.processStreams(rawData);
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  /**
+   * Fallback when detector finds no lap structure.
+   * Converts Strava metric splits into ActivityLap rows with type='RUN'.
+   */
+  private buildSplitFallback(activityId: string, fullData: any): any[] {
+    const splits: any[] = fullData.splits_metric ?? [];
+    return splits
+      .filter((s: any) => (s.distance ?? 0) > 0)
+      .map((s: any) => {
+        const distM   = s.distance ?? 0;
+        const moveSec = s.moving_time ?? 0;
+        const avgSpeed = moveSec > 0 ? distM / moveSec : 0;
+        return {
+          activityId,
+          lapType:           'RUN',
+          lapIndex:          s.split,
+          startSec:          0,
+          endSec:            0,
+          distanceM:         Math.round(distM * 10) / 10,
+          totalDurationSec:  s.elapsed_time ?? moveSec,
+          movingDurationSec: moveSec,
+          avgPaceSecKm:      avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
+          avgHr:             s.average_heartrate ?? 0,
+          elevGainM:         0,
+          avgGradePercent:   0,
+          vam:               0,
+        };
+      });
+  }
+
+  private async getLastActivityTimestamp(
+    userId: string,
+  ): Promise<number | undefined> {
+    const last = await this.prisma.activity.findFirst({
+      where:   { userId },
+      orderBy: { startDate: 'desc' },
+      select:  { startDate: true },
+    });
     return last ? Math.floor(last.startDate.getTime() / 1000) : undefined;
   }
 
-  private async fetchAllActivities(userId: string, after?: number): Promise<any[]> {
+  private async fetchAllActivities(
+    userId: string,
+    after?: number,
+  ): Promise<any[]> {
     const all: any[] = [];
     let page = 1;
 
@@ -145,7 +435,11 @@ export class StravaSyncService {
       const params: Record<string, string | number> = { per_page: 200, page };
       if (after) params.after = after;
 
-      const batch = await this.client.get<any[]>(userId, '/athlete/activities', params);
+      const batch = await this.client.get<any[]>(
+        userId,
+        '/athlete/activities',
+        params,
+      );
       if (!batch.length) break;
 
       all.push(...batch);
@@ -155,7 +449,9 @@ export class StravaSyncService {
     return all;
   }
 
-  private classifyWorkoutType(activity: any): 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS' {
+  private classifyWorkoutType(
+    activity: any,
+  ): 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS' {
     const description = (activity.description ?? '').toLowerCase();
 
     const hillKeywords = ['hill', 'subida', 'elevação'];
