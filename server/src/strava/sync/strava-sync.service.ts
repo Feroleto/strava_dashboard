@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { LapType, Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { StravaClientService } from '../client/strava-client.service';
 import { IntervalDetector } from './detectors/interval-detector';
@@ -140,29 +140,141 @@ export class StravaSyncService {
         // ── 2a. Structured workout — streams + lap detection ────────────────
         await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
       } else {
-        // ── 2b. Easy/long run — Strava metric splits ────────────────────────
-        const splits: any[] = full.splits_metric ?? [];
-        if (splits.length > 0) {
-          await tx.activitySplit.createMany({
-            data: splits.map((s: any) => {
-              const distKm    = s.distance / 1000;
-              const paceMinKm = distKm > 0 ? s.moving_time / 60 / distKm : 0;
-              return {
-                activityId:    activity.id,
-                splitIndex:    s.split,
-                distanceKm:    distKm,
-                movingTimeSec: s.moving_time,
-                paceMinKm,
-              };
-            }),
-          });
-        }
+        await this.processSteadyActivity(tx, activity.id, full);
       }
     });
 
     this.logger.log(`Saved activity ${full.id} — ${full.name} [${workoutType}]`);
   }
 
+  // easy and long runs laps collector
+  private async processSteadyActivity(
+    tx: Omit<
+      PrismaClient,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+    >,
+    activityId: string,
+    fullData: any,
+  ): Promise<void> {
+
+    // verify if exists recorded laps
+    const rawLaps: any[] = fullData.laps ?? [];
+
+    const hasRecordedLaps = 
+      rawLaps.length > 1 &&
+      typeof rawLaps[0]?.name === 'string' &&
+      rawLaps[0].name.startsWith('Lap');
+
+    // if exists already recorded laps, use that
+    if (hasRecordedLaps) {
+      this.logger.debug(
+        `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
+      );
+
+      const mappedLaps = rawLaps.map((lap: any, i: number) => {
+        const avgSpeed = lap.average_speed ?? 0;
+        const distance = lap.distance ?? 0;
+        const duration = lap.moving_time ?? 0;
+        const elevGain = lap.total_elevation_gain ?? 0;
+
+        return {
+          lapIndex: lap.lap_index ?? i + 1,
+          avgSpeed,
+          avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
+          distanceM: Math.round(distance * 10) / 10,
+          totalDurationSec: lap.elapsed_time ?? duration,
+          movingDurationSec: duration,
+          startSec: lap.start_index ?? 0,
+          endSec: lap.end_index ?? 0,
+          avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
+          elevGainM: Math.round(elevGain * 10) / 10,
+          avgGradePercent:
+            distance > 0
+              ? Math.round((elevGain / distance) * 100 * 10) / 10
+              : 0,
+          vam:
+            duration > 0
+              ? Math.round((elevGain / duration) * 3600)
+              : 0,
+        };
+      });
+
+      const lapType =  LapType.STEADY;
+
+      const lapCreateData = mappedLaps.map((lap, i) => ({
+        activityId,
+        lapType: lapType,
+        lapIndex: lap.lapIndex,
+        startSec: lap.startSec,
+        endSec: lap.endSec,
+        distanceM: lap.distanceM,
+        totalDurationSec: lap.totalDurationSec,
+        movingDurationSec: lap.movingDurationSec,
+        avgPaceSecKm: lap.avgPace,
+        avgHr: lap.avgHr,
+        elevGainM: lap.elevGainM,
+        avgGradePercent: lap.avgGradePercent,
+        vam: lap.vam,
+      }));
+
+      if (lapCreateData.length > 0) {
+        await tx.activityLap.createMany({
+          data: lapCreateData,
+        });
+      }
+
+      return;
+    }
+
+    // only has one recorded lap -> means that the activity was recorded directly using strava
+    const laps: any[] = fullData.splits_metric ?? [];
+    const lapType = LapType.STEADY
+    if (laps.length > 0) {
+      this.logger.debug(
+        `Activity ${fullData.id}: No recorded laps. Using ${laps.length} metric splits as 1km laps.`,
+      );
+      
+      const splitLaps = laps.map((lap: any) => {
+        const distance = lap.distance ?? 0;
+        const movingTime = lap.moving_time ?? 0;
+        const elapsedTime = lap.elapsed_time ?? movingTime;
+        
+        // Se a velocidade média não vier do Strava, calculamos nós mesmos
+        const avgSpeed = lap.average_speed ?? (movingTime > 0 ? distance / movingTime : 0);
+        
+        // metric_splits costumam ter 'elevation_difference' no lugar de 'total_elevation_gain'
+        const elevGain = Math.max(lap.elevation_difference ?? 0, 0); 
+        
+        const avgHr = lap.average_heartrate ?? 0;
+
+        return {
+          activityId,
+          lapType: LapType.STEADY,
+          lapIndex: lap.split, // O Strava manda o índice aqui
+          startSec: 0, // Como não temos os streams das laps, setamos como 0
+          endSec: 0,
+          distanceM: Math.round(distance * 10) / 10,
+          totalDurationSec: elapsedTime,
+          movingDurationSec: movingTime,
+          avgPaceSecKm: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
+          avgHr: Math.round(avgHr * 10) / 10,
+          elevGainM: Math.round(elevGain * 10) / 10,
+          avgGradePercent:
+            distance > 0
+              ? Math.round((elevGain / distance) * 100 * 10) / 10
+              : 0,
+          vam:
+            movingTime > 0 ? Math.round((elevGain / movingTime) * 3600) : 0,
+        };
+      });
+
+      await tx.activityLap.createMany({
+        data: splitLaps,
+      });
+    }
+  }
+
+  // interval and hill repeats laps collector
   private async processStructuredActivity(
     tx: Omit<
       PrismaClient,
@@ -304,7 +416,7 @@ export class StravaSyncService {
       data: secondsData,
     });
 
-    const processed = await this.processStreamsSQL(activityId);
+    const processed = await this.processStreamsSQL(tx, activityId);
 
     const processedDict: ProcessedDict = new Map(
       processed.map((s) => [s.secondIndex, s]),
@@ -361,11 +473,15 @@ export class StravaSyncService {
   // isolation level (READ COMMITTED), which is Prisma's default.
 
   private async processStreamsSQL(
+    tx: Omit<
+      PrismaClient,
+      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+    >,
     activityId: string,
   ): Promise<ProcessedSecond[]> {
     
     // 1. Busca os dados brutos recém-inseridos no banco
-    const rawData = await this.prisma.activitySecond.findMany({
+    const rawData = await tx.activitySecond.findMany({
       where: { activityId },
       select: {
         secondIndex: true,

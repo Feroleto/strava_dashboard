@@ -19,8 +19,6 @@ export class IntervalDetector extends BaseDetector {
     this.minBlockDist    = minBlockDist;
   }
 
-  // ── Ports _detect_blocks ──────────────────────────────────────────────────
-
   protected detectBlocks(dict: ProcessedDict): ProcessedSecond[][] {
     const times = Array.from(dict.keys()).sort((a, b) => a - b);
     const blocks: ProcessedSecond[][] = [];
@@ -39,7 +37,6 @@ export class IntervalDetector extends BaseDetector {
           currentBlock.push(data);
           gapCounter++;
         } else if (currentBlock.length) {
-          // trim trailing gap seconds
           const realBlock =
             gapCounter > 0 && gapCounter < currentBlock.length
               ? currentBlock.slice(0, -gapCounter)
@@ -55,7 +52,6 @@ export class IntervalDetector extends BaseDetector {
       }
     }
 
-    // flush remaining
     if (currentBlock.length) {
       const realBlock =
         gapCounter > 0 && gapCounter < currentBlock.length
@@ -70,8 +66,6 @@ export class IntervalDetector extends BaseDetector {
     return blocks;
   }
 
-  // ── Ports _is_valid_block ─────────────────────────────────────────────────
-
   private isValidBlock(block: ProcessedSecond[]): boolean {
     if (!block.length) return false;
     const dist =
@@ -79,15 +73,12 @@ export class IntervalDetector extends BaseDetector {
     return dist >= this.minBlockDist;
   }
 
-  // ── Ports _summarize_effort ───────────────────────────────────────────────
-
   protected summarizeEffort(
     block: ProcessedSecond[],
     label: string,
   ): DetectedLap {
     const summary = this.summarizeCommon(block, label);
 
-    // IntervalDetector doesn't compute real elevation — matches Python
     const elevGain = block[block.length - 1].elevationM - block[0].elevationM;
 
     summary.elevGainM       = Math.round(elevGain * 10) / 10;

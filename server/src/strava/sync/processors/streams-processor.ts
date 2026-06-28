@@ -9,13 +9,16 @@ export interface RawActivitySecond {
 }
 
 export class StreamProcessor {
-  /**
-   * Processa os streams brutos replicando a lógica de Window Functions do SQL.
-   */
   static processStreams(raw: RawActivitySecond[]): ProcessedSecond[] {
-    if (!raw || raw.length === 0) return [];
+    if (raw.length === 0) {
+      console.log("TESTE");
+    }
 
-    // ── 1. & 2. Full Range (Geração do intervalo completo) ────────────────────────
+    if (!raw || raw.length === 0) {
+      return [];
+    }
+
+    // Full Range
     const minT = raw[0].secondIndex;
     const maxT = raw[raw.length - 1].secondIndex;
     const len = maxT - minT + 1;
@@ -23,7 +26,7 @@ export class StreamProcessor {
     const rawMap = new Map<number, RawActivitySecond>();
     for (const r of raw) rawMap.set(r.secondIndex, r);
 
-    // Arrays para manter o estado de cada segundo
+    // arrays to keep the state for all seconds
     const points = Array.from({ length: len }, (_, i) => {
       const t = minT + i;
       const r = rawMap.get(t);
@@ -33,7 +36,6 @@ export class StreamProcessor {
         elevRaw: r?.elevationM ?? null,
         hrRaw: r?.heartRate ?? null,
         
-        // Variáveis que serão preenchidas nos próximos passos
         distPrev: null as number | null, distPrevT: null as number | null,
         distNext: null as number | null, distNextT: null as number | null,
         elevPrev: null as number | null, elevPrevT: null as number | null,
@@ -47,7 +49,7 @@ export class StreamProcessor {
       };
     });
 
-    // ── Preenchimento Forward (LAST_VALUE IGNORE NULLS) ───────────────────────────
+    // Forward filling (LAST_VALUE IGNORE NULLS)
     let lDist: number | null = null, lDistT: number | null = null, lElev: number | null = null, lElevT: number | null = null, lHr: number | null = null, lHrT: number | null = null;
     for (let i = 0; i < len; i++) {
       const p = points[i];
@@ -60,7 +62,7 @@ export class StreamProcessor {
       p.hrPrev = lHr;     p.hrPrevT = lHrT;
     }
 
-    // ── Preenchimento Backward (FIRST_VALUE IGNORE NULLS) ─────────────────────────
+    // ── Backward filling (FIRST_VALUE IGNORE NULLS)
     let nDist: number | null = null, nDistT: number | null = null, nElev: number | null = null, nElevT: number | null = null, nHr: number | null = null, nHrT: number | null = null;
     for (let i = len - 1; i >= 0; i--) {
       const p = points[i];
@@ -73,11 +75,11 @@ export class StreamProcessor {
       p.hrNext = nHr;     p.hrNextT = nHrT;
     }
 
-    // ── 3. Interpolação Linear ────────────────────────────────────────────────────
+    // linear interpolation
     for (let i = 0; i < len; i++) {
       const p = points[i];
 
-      // Distance (limite 20s)
+      // Distance (20s limit)
       if (p.distRaw !== null) {
         p.distInterp = p.distRaw;
       } else if (p.distNext !== null && p.distPrev !== null && p.distNextT !== null && p.distPrevT !== null && (p.distNextT - p.distPrevT) <= 20) {
@@ -86,7 +88,7 @@ export class StreamProcessor {
         p.distInterp = p.distPrev ?? 0;
       }
 
-      // Elevation (limite 10s)
+      // Elevation (10s limit)
       if (p.elevRaw !== null) {
         p.elevInterp = p.elevRaw;
       } else if (p.elevNext !== null && p.elevPrev !== null && p.elevNextT !== null && p.elevPrevT !== null && (p.elevNextT - p.elevPrevT) <= 10) {
@@ -95,7 +97,7 @@ export class StreamProcessor {
         p.elevInterp = p.elevPrev ?? 0;
       }
 
-      // HR (limite 15s)
+      // HR (15s limit)
       if (p.hrRaw !== null) {
         p.hrInterp = p.hrRaw;
       } else if (p.hrNext !== null && p.hrPrev !== null && p.hrNextT !== null && p.hrPrevT !== null && (p.hrNextT - p.hrPrevT) <= 15) {
@@ -105,51 +107,51 @@ export class StreamProcessor {
       }
     }
 
-    // ── 4. Speed Raw (Diff) ───────────────────────────────────────────────────────
+    // Speed Raw (Diff)
     for (let i = 0; i < len; i++) {
       points[i].speedRaw = i === 0 ? 0.0 : Math.max(0, points[i].distInterp - points[i - 1].distInterp);
     }
 
-    // ── 5. Speed Ms (Média Móvel Centralizada de 5 pontos) ────────────────────────
+    // Speed Ms (rolling average)
     for (let i = 0; i < len; i++) {
       points[i].speedMs = this.rollingAvg(points, i, 2, 2, 'speedRaw');
     }
 
-    // ── 6. Acceleration (Diff de Speed Ms) ────────────────────────────────────────
+    // Acceleration (Diff de Speed Ms)
     for (let i = 0; i < len; i++) {
       points[i].accel = i === 0 ? 0.0 : points[i].speedMs - points[i - 1].speedMs;
     }
 
-    // ── 7. HR EWMA (Frequência Cardíaca Suavizada, Alpha = 0.2) ───────────────────
+    // HR EWMA (smooth heart rate, Alpha = 0.2)
     if (len > 0) points[0].hrEwm = points[0].hrInterp;
     for (let i = 1; i < len; i++) {
       points[i].hrEwm = 0.2 * points[i].hrInterp + 0.8 * points[i - 1].hrEwm;
     }
 
-    // ── 8. Elevation Smooth (Média Móvel Centralizada de 7 pontos) ────────────────
+    // ── 8. Elevation Smooth (7 points rolling average) ────────────────
     for (let i = 0; i < len; i++) {
       points[i].elevSmooth = this.rollingAvg(points, i, 3, 3, 'elevInterp');
     }
 
-    // ── 9. Elevation Delta & Distance Delta ───────────────────────────────────────
+    // Elevation Delta and Distance Delta
     for (let i = 0; i < len; i++) {
       points[i].elevDelta = i === 0 ? 0.0 : points[i].elevSmooth - points[i - 1].elevSmooth;
       points[i].distDelta = Math.max(0.0, i === 0 ? 0.0 : points[i].distInterp - points[i - 1].distInterp);
     }
 
-    // ── 10-12. Grade, Vertical Speed e Pace (Finalização) ─────────────────────────
+    // Grade, Vertical Speed and Pace
     const processed: ProcessedSecond[] = new Array(len);
     for (let i = 0; i < len; i++) {
       const p = points[i];
       
-      // Grade Percent (Clamped entre -40 e 40)
+      // Grade Percent (Clamped between -40 e 40)
       let grade = p.distDelta > 0 ? (p.elevDelta / p.distDelta) * 100.0 : 0.0;
       grade = Math.max(-40.0, Math.min(40.0, grade));
 
-      // Vertical Speed (Média Móvel Centralizada de 5 pontos do elevDelta)
+      // Vertical Speed (5 points rollign average - elevDelta)
       const vSpeed = this.rollingAvg(points, i, 2, 2, 'elevDelta');
 
-      // Pace (segundos por km)
+      // Pace (seconds/km)
       const pace = p.speedMs > 0.3 ? 1000.0 / p.speedMs : null;
 
       processed[i] = {
@@ -169,12 +171,12 @@ export class StreamProcessor {
       };
     }
 
+    console.log("DEBUG PROCESSED:");
+    console.log(processed.length);
+
     return processed;
   }
 
-  /**
-   * Utilitário para calcular média móvel de uma propriedade específica da matriz
-   */
   private static rollingAvg(data: any[], index: number, pre: number, post: number, key: string): number {
     let sum = 0;
     let count = 0;

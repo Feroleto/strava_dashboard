@@ -1,22 +1,5 @@
-/**
- * Ports interval_laps_type_classifier.py and hill_laps_type_classifier.py.
- *
- * These classifiers are used when Garmin/Strava DID record laps (lap button
- * pressed), but the lap names come as "Lap 1", "Lap 2" etc. — meaning we
- * need to infer WORKOUT / REST / WARMUP / COOLDOWN from the lap metrics.
- */
-
 import { LapType } from '@prisma/client';
 
-// ── Constants (mirrors util_type_classifiers.py) ─────────────────────────────
-
-/*
-export const WORKOUT_LABEL  = 'WORKOUT';
-export const REST_LABEL     = 'REST';
-export const STEADY_LABEL   = 'STEADY';
-export const WARMUP_LABEL   = 'WARMUP';
-export const COOLDOWN_LABEL = 'COOLDOWN';
-*/
 const WORKOUT_LABEL: LapType = LapType.WORKOUT;
 const REST_LABEL: LapType = LapType.REST;
 const STEADY_LABEL: LapType = LapType.STEADY;
@@ -28,8 +11,6 @@ const INTERVAL_REST_SCORE    = -0.5;
 const HILL_WORKOUT_SCORE     = 0.5;
 const HILL_REST_SCORE        = -0.5;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
 function mean(arr: number[]): number {
   return arr.reduce((a, b) => a + b, 0) / arr.length;
 }
@@ -40,12 +21,7 @@ function stdDev(arr: number[], mu: number): number {
   return Math.sqrt(variance);
 }
 
-// ── Interval lap classifier ───────────────────────────────────────────────────
-
-/**
- * Ports classify_interval_laps_type.
- * Classifies laps based on z-score of avg_speed relative to the session mean.
- */
+// Interval lap classifier
 export function classifyIntervalLapsType(
   laps: Array<{ avgSpeed: number }>,
 ): LapType[] {
@@ -64,10 +40,10 @@ export function classifyIntervalLapsType(
     return STEADY_LABEL;
   });
 
-  // first WORKOUT index → everything before is WARMUP
+  // first WORKOUT index - everything before is WARMUP
   const firstWorkout = initialLabels.findIndex((l) => l === WORKOUT_LABEL);
 
-  // last WORKOUT or REST index → everything after is COOLDOWN
+  // last WORKOUT or REST index - everything after is COOLDOWN
   let lastWorkout = -1;
   for (let i = initialLabels.length - 1; i >= 0; i--) {
     if (
@@ -92,12 +68,7 @@ export function classifyIntervalLapsType(
   });
 }
 
-// ── Hill lap classifier ───────────────────────────────────────────────────────
-
-/**
- * Ports classify_hill_laps_type.
- * Classifies laps based on z-score of vam (vertical ascent m/h).
- */
+// Hill lap classifier
 export function classifyHillLapsType(
   laps: Array<{ vam: number }>,
 ): LapType[] {
@@ -107,7 +78,7 @@ export function classifyHillLapsType(
   const mu     = mean(vams);
   const sigma  = stdDev(vams, mu);
 
-  // if elevation variation is minimal → not a hill workout
+  // if elevation variation is minimal - not a hill workout
   if (sigma < 50) return Array(laps.length).fill(LapType.RUN);
 
   const initialLabels = vams.map((v) => {
