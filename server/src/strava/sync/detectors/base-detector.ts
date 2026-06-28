@@ -1,7 +1,5 @@
 import { ProcessedSecond } from '../strava-sync.service';
 
-// Mirrors the dict structure that Python's BaseDetector._summarize_common returns.
-// Used as input to map_laps_to_db_model (LapCreateInput in the TS sync service).
 export interface DetectedLap {
   type: string;
   lapIndex: number | null;
@@ -10,14 +8,13 @@ export interface DetectedLap {
   totalDurationSec: number;
   movingDurationSec: number;
   distanceM: number;
-  avgPace: number;       // sec/km
+  avgPace: number;
   avgHr: number;
   elevGainM: number;
   avgGradePercent: number;
   vam: number;
 }
 
-// Indexed by secondIndex — mirrors Python's Dict[int, dict]
 export type ProcessedDict = Map<number, ProcessedSecond>;
 
 export abstract class BaseDetector {
@@ -32,16 +29,12 @@ export abstract class BaseDetector {
     this.cooldownSpeedThreshold = cooldownSpeedThreshold;
   }
 
-  // ── Abstract interface ────────────────────────────────────────────────────
-
   protected abstract detectBlocks(dict: ProcessedDict): ProcessedSecond[][];
 
   protected abstract summarizeEffort(
     block: ProcessedSecond[],
     label: string,
   ): DetectedLap;
-
-  // ── Common summariser (ports _summarize_common) ───────────────────────────
 
   protected summarizeCommon(
     block: ProcessedSecond[],
@@ -87,8 +80,6 @@ export abstract class BaseDetector {
     };
   }
 
-  // ── Split into 1 km blocks (ports _split_into_km) ────────────────────────
-
   protected splitIntoKm(
     block: ProcessedSecond[],
     labelPrefix: string,
@@ -123,8 +114,6 @@ export abstract class BaseDetector {
     return splits;
   }
 
-  // ── Cooldown boundary detection (ports _find_cooldown_start) ─────────────
-
   private findCooldownStart(
     dict: ProcessedDict,
     lastEnd: number,
@@ -155,14 +144,15 @@ export abstract class BaseDetector {
     return cooldownTime;
   }
 
-  // ── Main entry point (ports analyze) ─────────────────────────────────────
-
   analyze(dict: ProcessedDict): DetectedLap[] {
     const effortBlocks = this.detectBlocks(dict);
     const times        = Array.from(dict.keys()).sort((a, b) => a - b);
 
+    console.log(
+      'effort blocks',
+      effortBlocks.length,
+    );
     if (!effortBlocks.length) {
-      // no structure found → split whole activity into 1 km blocks
       return this.splitIntoKm(
         times.map((t) => dict.get(t)!),
         'ACTIVITY',
@@ -171,7 +161,7 @@ export abstract class BaseDetector {
 
     const fullLaps: DetectedLap[] = [];
 
-    // ── WARMUP ────────────────────────────────────────────────────────────
+    // WARMUP
     const warmupEndTime = effortBlocks[0][0].secondIndex;
     if (warmupEndTime > times[0]) {
       const warmupData = times
@@ -180,7 +170,7 @@ export abstract class BaseDetector {
       fullLaps.push(...this.splitIntoKm(warmupData, 'WARMUP'));
     }
 
-    // ── WORKOUTs and RESTs ───────────────────────────────────────────────
+    // WORKOUTs and RESTs
     const restDurations: number[] = [];
     const restDistances: number[] = [];
 
@@ -217,7 +207,7 @@ export abstract class BaseDetector {
         ? restDistances.reduce((a, b) => a + b, 0) / restDistances.length
         : 0;
 
-    // ── last REST before COOLDOWN ─────────────────────────────────────────
+    // LAST REST before cooldown
     const lastBlock   = effortBlocks[effortBlocks.length - 1];
     const lastEnd     = lastBlock[lastBlock.length - 1].secondIndex;
     const activityEnd = times[times.length - 1];
@@ -241,7 +231,7 @@ export abstract class BaseDetector {
       }
     }
 
-    // ── COOLDOWN ─────────────────────────────────────────────────────────
+    // COOLDOWN
     if (cooldownStart < activityEnd) {
       const cooldownData = times
         .filter((t) => t >= cooldownStart)
