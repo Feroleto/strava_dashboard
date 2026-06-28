@@ -19,8 +19,6 @@ export class HillDetector extends BaseDetector {
     this.minWarmupDistM   = minWarmupDistM;
   }
 
-  // ── Ports _detect_blocks ──────────────────────────────────────────────────
-
   protected detectBlocks(dict: ProcessedDict): ProcessedSecond[][] {
     const times  = Array.from(dict.keys()).sort((a, b) => a - b);
     const blocks: ProcessedSecond[][] = [];
@@ -58,7 +56,6 @@ export class HillDetector extends BaseDetector {
       }
     }
 
-    // flush
     if (currentBlock.length) {
       const realBlock =
         gapCounter > 0 && gapCounter < currentBlock.length
@@ -70,13 +67,10 @@ export class HillDetector extends BaseDetector {
       }
     }
 
-    // filter blocks before the warmup distance threshold
     return blocks.filter(
       (b) => b[0].distanceTotalM >= this.minWarmupDistM,
     );
   }
-
-  // ── Ports _is_valid_hill ──────────────────────────────────────────────────
 
   private isValidHill(block: ProcessedSecond[]): boolean {
     if (!block.length) return false;
@@ -89,8 +83,6 @@ export class HillDetector extends BaseDetector {
 
     return elevGain >= this.minElevationGain && avgGrade >= this.minGrade;
   }
-
-  // ── Ports _summarize_effort ───────────────────────────────────────────────
 
   protected summarizeEffort(
     block: ProcessedSecond[],
