@@ -226,7 +226,7 @@ export class StravaSyncService {
       return;
     }
 
-    // only has one recorded lap -> means that the activity was recorded directly using strava
+    // only has one recorded lap - means that the activity was recorded directly using strava
     const laps: any[] = fullData.splits_metric ?? [];
     const lapType = LapType.STEADY
     if (laps.length > 0) {
@@ -239,10 +239,8 @@ export class StravaSyncService {
         const movingTime = lap.moving_time ?? 0;
         const elapsedTime = lap.elapsed_time ?? movingTime;
         
-        // Se a velocidade média não vier do Strava, calculamos nós mesmos
         const avgSpeed = lap.average_speed ?? (movingTime > 0 ? distance / movingTime : 0);
         
-        // metric_splits costumam ter 'elevation_difference' no lugar de 'total_elevation_gain'
         const elevGain = Math.max(lap.elevation_difference ?? 0, 0); 
         
         const avgHr = lap.average_heartrate ?? 0;
@@ -250,8 +248,8 @@ export class StravaSyncService {
         return {
           activityId,
           lapType: LapType.STEADY,
-          lapIndex: lap.split, // O Strava manda o índice aqui
-          startSec: 0, // Como não temos os streams das laps, setamos como 0
+          lapIndex: lap.split,
+          startSec: 0,
           endSec: 0,
           distanceM: Math.round(distance * 10) / 10,
           totalDurationSec: elapsedTime,
@@ -286,16 +284,13 @@ export class StravaSyncService {
     workoutType: 'INTERVAL' | 'HILL_REPEATS',
   ): Promise<void> {
 
-    // ── 1. Verifica se já existem laps registradas ──────────────────────
-
+    // verify if has recorded laps
     const rawLaps: any[] = fullData.laps ?? [];
 
     const hasRecordedLaps =
       rawLaps.length > 1 &&
       typeof rawLaps[0]?.name === 'string' &&
       rawLaps[0].name.startsWith('Lap');
-
-    // ── 2. Se existem laps, não baixa streams ──────────────────────────
 
     if (hasRecordedLaps) {
       this.logger.debug(
@@ -362,8 +357,7 @@ export class StravaSyncService {
       return;
     }
 
-    // ── 3. Não existem laps -> baixar streams ───────────────────────────
-
+    // does not exist recorded laps - download streams
     this.logger.debug(
       `Activity ${fullData.id}: no recorded laps, running auto-detection`,
     );
@@ -465,12 +459,6 @@ export class StravaSyncService {
     }
   }
 
-  // ── SQL stream processor ──────────────────────────────────────────────────
-  // Ports process_activity_streams_pd from the Python pipeline.
-  // Runs as a standalone query (not inside the transaction) — it only reads
-  // ActivitySecond rows that were just flushed by createMany above.
-  // For this to see those rows the outer $transaction must use the default
-  // isolation level (READ COMMITTED), which is Prisma's default.
 
   private async processStreamsSQL(
     tx: Omit<
@@ -480,7 +468,7 @@ export class StravaSyncService {
     activityId: string,
   ): Promise<ProcessedSecond[]> {
     
-    // 1. Busca os dados brutos recém-inseridos no banco
+    // search for rawdata that is in the db
     const rawData = await tx.activitySecond.findMany({
       where: { activityId },
       select: {
@@ -493,11 +481,8 @@ export class StravaSyncService {
       orderBy: { secondIndex: 'asc' },
     });
 
-    // 2. Passa os dados brutos para o processador em memória
     return StreamProcessor.processStreams(rawData);
   }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────
 
   /**
    * Fallback when detector finds no lap structure.
