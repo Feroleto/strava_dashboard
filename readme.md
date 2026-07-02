@@ -80,14 +80,15 @@ strava_dashboard/
     │   ├── schema.prisma    # Data model
     │   ├── migrations/      # Migration history
     │   └── seed.ts          # Single-user seed
-    └── src/
-        ├── app.module.ts
-        └── strava/
-            ├── strava.module.ts
-            ├── auth/        # OAuth flow (redirect + callback)
-            ├── client/      # Strava API HTTP client + token management
-            └── sync/        # Activity sync (cron + manual trigger)
-```
+    ├── src/
+    │   ├── app.module.ts
+    │   └── strava/
+    │       ├── strava.module.ts
+    │       ├── auth/        # OAuth flow (redirect + callback)
+    │       ├── client/      # Strava API HTTP client + token management
+    │       └── sync/        # Activity sync (cron + manual trigger)
+    ├── test/
+``` 
 
 ---
 
@@ -168,7 +169,6 @@ The sync job also runs automatically every 6 hours via cron.
 User
  └── StravaAccount       (OAuth tokens)
  └── Activity            (one per Strava run)
-      ├── ActivitySplit   (1km splits from Strava)
       ├── ActivityLap     (detected or recorded laps)
       └── ActivitySecond  (second-by-second stream data)
 ```
@@ -184,8 +184,8 @@ Every entity carries a `userId` foreign key from day one, in preparation for mul
 - [x] Strava OAuth 2.0 flow
 - [x] Incremental activity sync (cron + manual)
 - [x] Activity splits persistence
-- [ ] Stream ingestion (`ActivitySecond`) for interval/hill workouts
-- [ ] Lap detection port from Python pipeline (`IntervalDetector`, `HillDetector`)
-- [ ] Training load analytics via PostgreSQL window functions (ACWR, monotony, strain)
+- [x] Stream ingestion (`ActivitySecond`) for interval/hill workouts
+- [x] Lap detection port from Python pipeline (`IntervalDetector`, `HillDetector`)
 - [ ] Frontend
+- [ ] Training load analytics via PostgreSQL window functions (ACWR, monotony, strain)
 - [ ] Possiblity of integration with others apps
