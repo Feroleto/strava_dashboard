@@ -109,12 +109,11 @@ export class StravaSyncService {
     const full = await this.client.get<any>(userId, `/activities/${summary.id}`);
     await this.sleep(300);
 
-    const workoutType = this.classifyWorkoutType(full);
+    const workoutType = classifyWorkoutType(full);
     const isStructured =
       workoutType === 'INTERVAL' || workoutType === 'HILL_REPEATS';
 
     await this.prisma.$transaction(async (tx) => {
-      // ── 1. Persist Activity ───────────────────────────────────────────────
       const activity = await tx.activity.create({
         data: {
           userId,
@@ -137,7 +136,6 @@ export class StravaSyncService {
       });
 
       if (isStructured) {
-        // ── 2a. Structured workout — streams + lap detection ────────────────
         await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
       } else {
         await this.processSteadyActivity(tx, activity.id, full);
@@ -484,10 +482,6 @@ export class StravaSyncService {
     return StreamProcessor.processStreams(rawData);
   }
 
-  /**
-   * Fallback when detector finds no lap structure.
-   * Converts Strava metric splits into ActivityLap rows with type='RUN'.
-   */
   private buildSplitFallback(activityId: string, fullData: any): any[] {
     const splits: any[] = fullData.splits_metric ?? [];
     return splits
@@ -550,7 +544,12 @@ export class StravaSyncService {
     return all;
   }
 
-  private classifyWorkoutType(
+  private sleep(ms: number) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
+}
+
+export function classifyWorkoutType(
     activity: any,
   ): 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS' {
     const description = (activity.description ?? '').toLowerCase();
@@ -566,8 +565,3 @@ export class StravaSyncService {
 
     return 'EASY_OR_LONG';
   }
-
-  private sleep(ms: number) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
-  }
-}
