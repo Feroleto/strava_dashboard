@@ -13,8 +13,6 @@ import {
 } from './detectors/lap-classifier';
 import { StreamProcessor } from './processors/streams-processor';
 
-// ── Streams processing result shape ──────────────────────────────────────────
-
 export interface ProcessedSecond {
   secondIndex: number;
   distanceTotalM: number;
@@ -46,8 +44,6 @@ export class StravaSyncService {
     });
     this.prisma = new PrismaClient({ adapter });
   }
-
-  // ── Scheduled entry point ─────────────────────────────────────────────────
 
   @Cron(CronExpression.EVERY_6_HOURS)
   async scheduledSync() {
@@ -97,8 +93,6 @@ export class StravaSyncService {
     this.logger.log(`Sync complete — ${synced} saved, ${errors} errors`);
     return { synced, errors };
   }
-
-  // ── Core activity processing ──────────────────────────────────────────────
 
   private async processActivity(userId: string, summary: any): Promise<void> {
     const exists = await this.prisma.activity.findUnique({

@@ -10,15 +10,11 @@ export interface RawActivitySecond {
 
 export class StreamProcessor {
   static processStreams(raw: RawActivitySecond[]): ProcessedSecond[] {
-    if (raw.length === 0) {
-      console.log("TESTE");
-    }
-
     if (!raw || raw.length === 0) {
       return [];
     }
 
-    // Full Range
+    // streams full range
     const minT = raw[0].secondIndex;
     const maxT = raw[raw.length - 1].secondIndex;
     const len = maxT - minT + 1;
@@ -49,7 +45,7 @@ export class StreamProcessor {
       };
     });
 
-    // Forward filling (LAST_VALUE IGNORE NULLS)
+    // forward filling
     let lDist: number | null = null, lDistT: number | null = null, lElev: number | null = null, lElevT: number | null = null, lHr: number | null = null, lHrT: number | null = null;
     for (let i = 0; i < len; i++) {
       const p = points[i];
@@ -62,7 +58,7 @@ export class StreamProcessor {
       p.hrPrev = lHr;     p.hrPrevT = lHrT;
     }
 
-    // ── Backward filling (FIRST_VALUE IGNORE NULLS)
+    // backward filling
     let nDist: number | null = null, nDistT: number | null = null, nElev: number | null = null, nElevT: number | null = null, nHr: number | null = null, nHrT: number | null = null;
     for (let i = len - 1; i >= 0; i--) {
       const p = points[i];
@@ -79,7 +75,7 @@ export class StreamProcessor {
     for (let i = 0; i < len; i++) {
       const p = points[i];
 
-      // Distance (20s limit)
+      // distance (20s limit)
       if (p.distRaw !== null) {
         p.distInterp = p.distRaw;
       } else if (p.distNext !== null && p.distPrev !== null && p.distNextT !== null && p.distPrevT !== null && (p.distNextT - p.distPrevT) <= 20) {
@@ -88,7 +84,7 @@ export class StreamProcessor {
         p.distInterp = p.distPrev ?? 0;
       }
 
-      // Elevation (10s limit)
+      // elevation (10s limit)
       if (p.elevRaw !== null) {
         p.elevInterp = p.elevRaw;
       } else if (p.elevNext !== null && p.elevPrev !== null && p.elevNextT !== null && p.elevPrevT !== null && (p.elevNextT - p.elevPrevT) <= 10) {
@@ -128,7 +124,7 @@ export class StreamProcessor {
       points[i].hrEwm = 0.2 * points[i].hrInterp + 0.8 * points[i - 1].hrEwm;
     }
 
-    // ── 8. Elevation Smooth (7 points rolling average) ────────────────
+    // Elevation Smooth (7 points rolling average)
     for (let i = 0; i < len; i++) {
       points[i].elevSmooth = this.rollingAvg(points, i, 3, 3, 'elevInterp');
     }
@@ -144,7 +140,7 @@ export class StreamProcessor {
     for (let i = 0; i < len; i++) {
       const p = points[i];
       
-      // Grade Percent (Clamped between -40 e 40)
+      // Grade Percent (Clamped between -40 and 40)
       let grade = p.distDelta > 0 ? (p.elevDelta / p.distDelta) * 100.0 : 0.0;
       grade = Math.max(-40.0, Math.min(40.0, grade));
 
@@ -170,9 +166,6 @@ export class StreamProcessor {
         paceSeckm: pace,
       };
     }
-
-    console.log("DEBUG PROCESSED:");
-    console.log(processed.length);
 
     return processed;
   }

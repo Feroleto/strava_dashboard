@@ -148,10 +148,6 @@ export abstract class BaseDetector {
     const effortBlocks = this.detectBlocks(dict);
     const times        = Array.from(dict.keys()).sort((a, b) => a - b);
 
-    console.log(
-      'effort blocks',
-      effortBlocks.length,
-    );
     if (!effortBlocks.length) {
       return this.splitIntoKm(
         times.map((t) => dict.get(t)!),
