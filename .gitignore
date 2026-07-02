@@ -9,6 +9,7 @@ python-pipeline/*.db
 python-pipeline/extra_files/
 
 # Node
+node_modules/
 server/node_modules/
 server/dist/
 server/.env
