@@ -13,6 +13,13 @@ interface Activity {
   averageBpm: number | null;
 }
 
+interface ActivitiesResponse {
+  items: Activity[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
 function formatPace(secPerKm: number | null): string {
   if (!secPerKm) return '—';
   const min = Math.floor(secPerKm / 60);
@@ -32,67 +39,122 @@ const WORKOUT_LABEL: Record<string, string> = {
   HILL_REPEATS: 'Hill Repeats',
 };
 
+const LIMIT = 20;
+
 export default function ActivitiesList() {
   const [activities, setActivities] = useState<Activity[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
+  const [workoutType, setWorkoutType] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/activities?page=1&limit=20')
+    setLoading(true);
+    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+    if (workoutType) params.set('workoutType', workoutType);
+
+    fetch(`http://localhost:3000/activities?${params}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
       })
-      .then((data) => setActivities(data.items))
+      .then((data: ActivitiesResponse) => {
+        setActivities(data.items);
+        setTotal(data.total);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, []);
+  }, [page, workoutType]);
 
-  if (loading) return <p className="p-8 text-center text-slate-400">Loading...</p>;
+  const totalPages = Math.max(1, Math.ceil(total / LIMIT));
+
   if (error) return <p className="p-8 text-center text-red-400">Error: {error}</p>;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <h1 className="mb-4 text-2xl font-semibold text-slate-100">Activities</h1>
-      <table className="w-full border-collapse">
-        <thead>
-          <tr>
-            {['Data', 'Activity Name', 'Type', 'Distance', 'Time', 'Pace', 'HR'].map((h) => (
-              <th
-                key={h}
-                className="border-b border-slate-800 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
-              >
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {activities.map((a) => (
-            <tr key={a.id} className="hover:bg-slate-800/60">
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {new Date(a.startDate).toLocaleDateString('pt-BR')}
-              </td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">{a.name}</td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {WORKOUT_LABEL[a.workoutType] ?? a.workoutType}
-              </td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {a.distanceKm ? `${a.distanceKm.toFixed(2)} km` : '—'}
-              </td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {formatDuration(a.movingTimeSec)}
-              </td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {formatPace(a.paceRawSecKm)}
-              </td>
-              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
-                {a.averageBpm ? Math.round(a.averageBpm) : '—'}
-              </td>
-            </tr>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-slate-100">Activities</h1>
+        <select
+          value={workoutType}
+          onChange={(e) => {
+            setWorkoutType(e.target.value);
+            setPage(1);
+          }}
+          className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+        >
+          <option value="">All types</option>
+          {Object.entries(WORKOUT_LABEL).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
           ))}
-        </tbody>
-      </table>
+        </select>
+      </div>
+
+      {loading ? (
+        <p className="p-8 text-center text-slate-400">Loading...</p>
+      ) : (
+        <table className="w-full border-collapse">
+          <thead>
+            <tr>
+              {['Data', 'Activity Name', 'Type', 'Distance', 'Time', 'Pace', 'HR'].map((h) => (
+                <th
+                  key={h}
+                  className="border-b border-slate-800 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {activities.map((a) => (
+              <tr key={a.id} className="hover:bg-slate-800/60">
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {new Date(a.startDate).toLocaleDateString('pt-BR')}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">{a.name}</td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {WORKOUT_LABEL[a.workoutType] ?? a.workoutType}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {a.distanceKm ? `${a.distanceKm.toFixed(2)} km` : '—'}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {formatDuration(a.movingTimeSec)}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {formatPace(a.paceRawSecKm)}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {a.averageBpm ? Math.round(a.averageBpm) : '—'}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <div className="mt-4 flex items-center justify-between text-sm text-slate-400">
+        <button
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          disabled={page <= 1}
+          className="rounded border border-slate-700 px-3 py-1.5 text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Prev
+        </button>
+        <span>
+          Page {page} of {totalPages}
+        </span>
+        <button
+          onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+          disabled={page >= totalPages}
+          className="rounded border border-slate-700 px-3 py-1.5 text-slate-200 hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

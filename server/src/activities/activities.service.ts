@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, WorkoutType } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 export interface ActivityListItem {
@@ -31,12 +31,14 @@ export class ActivitiesService {
     userId: string,
     page = 1,
     limit = 20,
+    workoutType?: WorkoutType,
   ): Promise<{ items: ActivityListItem[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
+    const where = { userId, ...(workoutType && { workoutType }) };
 
     const [items, total] = await Promise.all([
       this.prisma.activity.findMany({
-        where: { userId },
+        where,
         orderBy: { startDate: 'desc' },
         skip,
         take: limit,
@@ -53,7 +55,7 @@ export class ActivitiesService {
           averageBpm: true,
         },
       }),
-      this.prisma.activity.count({ where: { userId } }),
+      this.prisma.activity.count({ where }),
     ]);
 
     return { items, total, page, limit };
