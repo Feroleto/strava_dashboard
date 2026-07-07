@@ -48,34 +48,47 @@ export default function ActivitiesList() {
       .finally(() => setLoading(false));
   }, []);
 
-  if (loading) return <p className="status">Carregando...</p>;
-  if (error) return <p className="status error">Erro: {error}</p>;
+  if (loading) return <p className="p-8 text-center text-slate-400">Loading...</p>;
+  if (error) return <p className="p-8 text-center text-red-400">Error: {error}</p>;
 
   return (
-    <div className="activities">
-      <h1>Activities</h1>
-      <table>
+    <div className="mx-auto max-w-4xl px-4 py-8">
+      <h1 className="mb-4 text-2xl font-semibold text-slate-100">Activities</h1>
+      <table className="w-full border-collapse">
         <thead>
           <tr>
-            <th>Data</th>
-            <th>Activity Name</th>
-            <th>Type</th>
-            <th>Distance</th>
-            <th>Time</th>
-            <th>Pace</th>
-            <th>HR</th>
+            {['Data', 'Activity Name', 'Type', 'Distance', 'Time', 'Pace', 'HR'].map((h) => (
+              <th
+                key={h}
+                className="border-b border-slate-800 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
+              >
+                {h}
+              </th>
+            ))}
           </tr>
         </thead>
         <tbody>
           {activities.map((a) => (
-            <tr key={a.id}>
-              <td>{new Date(a.startDate).toLocaleDateString('pt-BR')}</td>
-              <td>{a.name}</td>
-              <td>{WORKOUT_LABEL[a.workoutType] ?? a.workoutType}</td>
-              <td>{a.distanceKm ? `${a.distanceKm.toFixed(2)} km` : '—'}</td>
-              <td>{formatDuration(a.movingTimeSec)}</td>
-              <td>{formatPace(a.paceRawSecKm)}</td>
-              <td>{a.averageBpm ? Math.round(a.averageBpm) : '—'}</td>
+            <tr key={a.id} className="hover:bg-slate-800/60">
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {new Date(a.startDate).toLocaleDateString('pt-BR')}
+              </td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">{a.name}</td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {WORKOUT_LABEL[a.workoutType] ?? a.workoutType}
+              </td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {a.distanceKm ? `${a.distanceKm.toFixed(2)} km` : '—'}
+              </td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {formatDuration(a.movingTimeSec)}
+              </td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {formatPace(a.paceRawSecKm)}
+              </td>
+              <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                {a.averageBpm ? Math.round(a.averageBpm) : '—'}
+              </td>
             </tr>
           ))}
         </tbody>
