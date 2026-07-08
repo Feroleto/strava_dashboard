@@ -125,7 +125,7 @@ export class StravaSyncService {
           elevationGainM: full.total_elevation_gain ?? null,
           averageBpm:     full.average_heartrate ?? null,
           maxBpm:         full.max_heartrate ?? null,
-          averageCadence: full.average_cadence ?? null,
+          averageCadence: full.average_cadence != null ? full.average_cadence * 2 : null,
         },
       });
 
@@ -185,9 +185,11 @@ export class StravaSyncService {
               ? Math.round((elevGain / distance) * 100 * 10) / 10
               : 0,
           vam:
-            duration > 0
+            duration > 0 && elevGain > 0
               ? Math.round((elevGain / duration) * 3600)
               : 0,
+          avgCadence:
+            lap.average_cadence != null ? lap.average_cadence * 2 : null,
         };
       });
 
@@ -207,6 +209,7 @@ export class StravaSyncService {
         elevGainM: lap.elevGainM,
         avgGradePercent: lap.avgGradePercent,
         vam: lap.vam,
+        avgCadence: lap.avgCadence,
       }));
 
       if (lapCreateData.length > 0) {
@@ -255,7 +258,9 @@ export class StravaSyncService {
               ? Math.round((elevGain / distance) * 100 * 10) / 10
               : 0,
           vam:
-            movingTime > 0 ? Math.round((elevGain / movingTime) * 3600) : 0,
+            movingTime > 0 && elevGain > 0
+              ? Math.round((elevGain / movingTime) * 3600) 
+              : 0,
         };
       });
 
@@ -315,6 +320,8 @@ export class StravaSyncService {
             duration > 0
               ? Math.round((elevGain / duration) * 3600)
               : 0,
+          avgCadence:
+            lap.average_cadence != null ? lap.average_cadence * 2 : null,
         };
       });
 
@@ -339,6 +346,7 @@ export class StravaSyncService {
         elevGainM: lap.elevGainM,
         avgGradePercent: lap.avgGradePercent,
         vam: lap.vam,
+        avgCadence: lap.avgCadence,
       }));
 
       if (lapCreateData.length > 0) {

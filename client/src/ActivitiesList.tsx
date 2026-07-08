@@ -13,6 +13,7 @@ interface Activity {
   paceRawSecKm: number | null;
   elevationGainM: number | null;
   averageBpm: number | null;
+  averageCadence: number | null;
 }
 
 interface ActivitiesResponse {
@@ -93,6 +94,7 @@ export default function ActivitiesList() {
                 'Distance',
                 'Time',
                 'Pace',
+                'Cadence',
                 'HR',
               ].map((h) => (
                 <th
@@ -128,6 +130,9 @@ export default function ActivitiesList() {
                 </td>
                 <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
                   {formatPace(a.paceRawSecKm)}
+                </td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {a.averageCadence ? Math.round(a.averageCadence) : '-'}
                 </td>
                 <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
                   {a.averageBpm ? Math.round(a.averageBpm) : '—'}
