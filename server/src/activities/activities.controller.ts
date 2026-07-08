@@ -19,7 +19,36 @@ export class ActivitiesController {
     @Query('dateTo') dateTo?: string,
   ) {
     const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    const filters = this.parseFilters(workoutType, dateFrom, dateTo);
 
+    return this.service.list(
+      userId,
+      page ? parseInt(page, 10) : 1,
+      limit ? parseInt(limit, 10) : 20,
+      filters.workoutType,
+      filters.startDate,
+      filters.endDate,
+    );
+  }
+
+  @Get('weekly-distance')
+  async weeklyDistance(
+    @Query('workoutType') workoutType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
+  ) {
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    const filters = this.parseFilters(workoutType, dateFrom, dateTo);
+
+    return this.service.weeklyDistance(
+      userId,
+      filters.workoutType,
+      filters.startDate,
+      filters.endDate,
+    );
+  }
+
+  private parseFilters(workoutType?: string, dateFrom?: string, dateTo?: string) {
     if (workoutType && !Object.values(WorkoutType).includes(workoutType as WorkoutType)) {
       throw new BadRequestException(
         `Invalid workoutType. Expected one of: ${Object.values(WorkoutType).join(', ')}`,
@@ -32,14 +61,11 @@ export class ActivitiesController {
       endDate.setUTCHours(23, 59, 59, 999);
     }
 
-    return this.service.list(
-      userId,
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
-      workoutType as WorkoutType | undefined,
+    return {
+      workoutType: workoutType as WorkoutType | undefined,
       startDate,
       endDate,
-    );
+    };
   }
 
   private parseDateParam(name: string, value?: string): Date | undefined {
