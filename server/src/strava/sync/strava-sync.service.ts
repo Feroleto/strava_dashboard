@@ -233,8 +233,9 @@ export class StravaSyncService {
         
         const avgSpeed = lap.average_speed ?? (movingTime > 0 ? distance / movingTime : 0);
         
-        const elevGain = Math.max(lap.elevation_difference ?? 0, 0); 
-        
+        //const elevGain = Math.max(lap.elevation_difference ?? 0, 0);
+        const elevGain = lap.elevation_difference ?? 0;
+
         const avgHr = lap.average_heartrate ?? 0;
 
         return {

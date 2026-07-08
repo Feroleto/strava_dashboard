@@ -16,6 +16,40 @@ export interface ActivityListItem {
   averageBpm: number | null;
 }
 
+export interface ActivityLapItem {
+  id: string;
+  lapIndex: number;
+  lapType: string;
+  startSec: number;
+  endSec: number;
+  totalDurationSec: number;
+  movingDurationSec: number;
+  distanceM: number;
+  avgPaceSecKm: number;
+  avgHr: number;
+  elevGainM: number;
+  avgGradePercent: number | null;
+  vam: number | null;
+  avgCadence: number | null;
+}
+
+export interface ActivityDetail {
+  id: string;
+  name: string;
+  type: string;
+  sportType: string | null;
+  workoutType: string;
+  startDate: Date;
+  distanceKm: number | null;
+  movingTimeSec: number;
+  paceRawSecKm: number | null;
+  elevationGainM: number | null;
+  averageBpm: number | null;
+  maxBpm: number | null;
+  averageCadence: number | null;
+  laps: ActivityLapItem[];
+}
+
 @Injectable()
 export class ActivitiesService {
   private readonly prisma: PrismaClient;
@@ -59,5 +93,45 @@ export class ActivitiesService {
     ]);
 
     return { items, total, page, limit };
+  }
+
+  async findById(userId: string, id: string): Promise<ActivityDetail | null> {
+    return this.prisma.activity.findFirst({
+      where: { id, userId },
+      select: {
+        id: true,
+        name: true,
+        type: true,
+        sportType: true,
+        workoutType: true,
+        startDate: true,
+        distanceKm: true,
+        movingTimeSec: true,
+        paceRawSecKm: true,
+        elevationGainM: true,
+        averageBpm: true,
+        maxBpm: true,
+        averageCadence: true,
+        laps: {
+          orderBy: { lapIndex: 'asc' },
+          select: {
+            id: true,
+            lapIndex: true,
+            lapType: true,
+            startSec: true,
+            endSec: true,
+            totalDurationSec: true,
+            movingDurationSec: true,
+            distanceM: true,
+            avgPaceSecKm: true,
+            avgHr: true,
+            elevGainM: true,
+            avgGradePercent: true,
+            vam: true,
+            avgCadence: true,
+          },
+        },
+      },
+    });
   }
 }
