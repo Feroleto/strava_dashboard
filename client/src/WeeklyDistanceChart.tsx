@@ -40,8 +40,7 @@ function niceTicks(maxValue: number): number[] {
   if (maxValue <= 0) return [0];
   const steps = [1, 2, 5, 10, 20, 25, 50, 100];
   const step =
-    steps.find((s) => Math.ceil(maxValue / s) <= 4) ??
-    steps[steps.length - 1];
+    steps.find((s) => Math.ceil(maxValue / s) <= 4) ?? steps[steps.length - 1];
   const top = Math.ceil(maxValue / step) * step;
   const ticks: number[] = [];
   for (let v = 0; v <= top; v += step) ticks.push(v);
@@ -139,9 +138,7 @@ export default function WeeklyDistanceChart({
       </div>
 
       {error ? (
-        <p className="py-10 text-center text-sm text-red-400">
-          Error: {error}
-        </p>
+        <p className="py-10 text-center text-sm text-red-400">Error: {error}</p>
       ) : !hasData && !loading ? (
         <p className="py-10 text-center text-sm text-slate-500">
           No activities in this period
@@ -159,7 +156,9 @@ export default function WeeklyDistanceChart({
             {/* gridlines + y ticks */}
             {geometry.ticks.map((tick) => {
               const y =
-                PAD_TOP + geometry.innerH - (tick / geometry.yMax) * geometry.innerH;
+                PAD_TOP +
+                geometry.innerH -
+                (tick / geometry.yMax) * geometry.innerH;
               return (
                 <g key={tick}>
                   <line
