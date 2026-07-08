@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WORKOUT_LABEL, formatDuration, formatPace } from './activityFormat';
+import DateRangeFilter, { type DateRange } from './DateRangeFilter';
 
 interface Activity {
   id: string;
@@ -31,6 +32,7 @@ export default function ActivitiesList() {
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [workoutType, setWorkoutType] = useState('');
+  const [dateRange, setDateRange] = useState<DateRange>({ from: '', to: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -41,6 +43,8 @@ export default function ActivitiesList() {
       limit: String(LIMIT),
     });
     if (workoutType) params.set('workoutType', workoutType);
+    if (dateRange.from) params.set('dateFrom', dateRange.from);
+    if (dateRange.to) params.set('dateTo', dateRange.to);
 
     fetch(`http://localhost:3000/activities?${params}`)
       .then((res) => {
@@ -53,7 +57,7 @@ export default function ActivitiesList() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [page, workoutType]);
+  }, [page, workoutType, dateRange]);
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
@@ -62,23 +66,32 @@ export default function ActivitiesList() {
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-semibold text-slate-100">Activities</h1>
-        <select
-          value={workoutType}
-          onChange={(e) => {
-            setWorkoutType(e.target.value);
-            setPage(1);
-          }}
-          className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
-        >
-          <option value="">All types</option>
-          {Object.entries(WORKOUT_LABEL).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
+        <div className="flex flex-wrap items-center gap-2">
+          <select
+            value={workoutType}
+            onChange={(e) => {
+              setWorkoutType(e.target.value);
+              setPage(1);
+            }}
+            className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200"
+          >
+            <option value="">All types</option>
+            {Object.entries(WORKOUT_LABEL).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+
+          <DateRangeFilter
+            onChange={(range) => {
+              setDateRange(range);
+              setPage(1);
+            }}
+          />
+        </div>
       </div>
 
       {loading ? (
