@@ -95,7 +95,7 @@ function makeStravaLap(index: number, avgSpeed: number, elevGain = 0): any {
   };
 }
 
-function makeMetricSplit(index: number, avgSpeed: number): any {
+function makeMetricSplit(index: number, avgSpeed: number, elevDiff = 0): any {
   const movingTime = 1000 / avgSpeed;
   return {
     split:                  index,
@@ -104,7 +104,7 @@ function makeMetricSplit(index: number, avgSpeed: number): any {
     elapsed_time:           movingTime + 5,
     average_speed:          avgSpeed,
     average_heartrate:      155,
-    elevation_difference:   0,
+    elevation_difference:   elevDiff,
   };
 }
 
@@ -152,6 +152,7 @@ describe('StravaSyncService', () => {
 
     service = module.get<StravaSyncService>(StravaSyncService);
     stravaClient = module.get(StravaClientService);
+    stravaClient.get.mockResolvedValue({});
 
     vi.spyOn(service as any, 'sleep').mockResolvedValue(undefined);
   });
@@ -346,6 +347,42 @@ describe('StravaSyncService', () => {
       );
     });
 
+    it('computes negative elevGainM for a downhill recorded lap from the altitude stream', async () => {
+      const altStream: number[] = [];
+      altStream[0]   = 100;
+      altStream[100] = 150;
+      altStream[200] = 80;
+
+      const activity = makeStravaActivity({
+        laps: [
+          {
+            lap_index: 1, name: 'Lap 1', average_speed: 3.0, distance: 1000,
+            moving_time: 333, elapsed_time: 335, average_heartrate: 150,
+            start_index: 0, end_index: 100,
+          },
+          {
+            lap_index: 2, name: 'Lap 2', average_speed: 3.0, distance: 1000,
+            moving_time: 333, elapsed_time: 335, average_heartrate: 150,
+            start_index: 100, end_index: 200,
+          },
+        ],
+      });
+
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activity)
+        .mockResolvedValueOnce({ altitude: { data: altStream } });
+
+      await service.sync(USER_ID);
+
+      const createCall = mockPrisma.activityLap.createMany.mock.calls[0][0];
+      expect(createCall.data[0].elevGainM).toBe(50);
+      expect(createCall.data[1].elevGainM).toBe(-70);
+      expect(createCall.data[1].avgGradePercent).toBe(-7);
+      expect(createCall.data[1].vam).toBe(0);
+    });
+
     it('converts activity-level average_cadence from rpm to spm', async () => {
       const activity = makeStravaActivity({ average_cadence: 85 });
 
@@ -448,6 +485,33 @@ describe('StravaSyncService', () => {
 
       expect(mockPrisma.activitySecond.createMany).toHaveBeenCalled();
       expect(mockPrisma.activityLap.createMany).toHaveBeenCalled();
+    });
+
+    it('keeps negative elevGainM on the splits_metric fallback when the detector finds no laps', async () => {
+      const activity = makeStravaActivity({
+        description:   '6x200m',
+        laps:          [],
+        splits_metric: [makeMetricSplit(1, 4.0, -15)],
+      });
+
+      const mockStreams = {
+        time:             { data: [0, 1, 2, 3, 4] },
+        distance:         { data: [0, 4, 8, 12, 16] },
+        velocity_smooth:  { data: [4, 4, 4, 4, 4] },
+        heartrate:        { data: [150, 151, 152, 153, 154] },
+        altitude:         { data: [100, 100, 100, 100, 100] },
+      };
+
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activity)
+        .mockResolvedValueOnce(mockStreams);
+
+      await service.sync(USER_ID);
+
+      const createCall = mockPrisma.activityLap.createMany.mock.calls[0][0];
+      expect(createCall.data[0].elevGainM).toBe(-15);
     });
   });
 
