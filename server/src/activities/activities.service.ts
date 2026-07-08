@@ -14,6 +14,7 @@ export interface ActivityListItem {
   paceRawSecKm: number | null;
   elevationGainM: number | null;
   averageBpm: number | null;
+  averageCadence: number | null;
 }
 
 export interface ActivityLapItem {
@@ -87,6 +88,7 @@ export class ActivitiesService {
           paceRawSecKm: true,
           elevationGainM: true,
           averageBpm: true,
+          averageCadence: true,
         },
       }),
       this.prisma.activity.count({ where }),
