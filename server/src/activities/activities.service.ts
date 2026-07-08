@@ -34,6 +34,12 @@ export interface ActivityLapItem {
   avgCadence: number | null;
 }
 
+export interface WeeklyDistancePoint {
+  weekStart: string;
+  totalKm: number;
+  totalTimeSec: number;
+}
+
 export interface ActivityDetail {
   id: string;
   name: string;
@@ -62,16 +68,13 @@ export class ActivitiesService {
     this.prisma = new PrismaClient({ adapter });
   }
 
-  async list(
+  private buildWhere(
     userId: string,
-    page = 1,
-    limit = 20,
     workoutType?: WorkoutType,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<{ items: ActivityListItem[]; total: number; page: number; limit: number }> {
-    const skip = (page - 1) * limit;
-    const where = {
+  ) {
+    return {
       userId,
       ...(workoutType && { workoutType }),
       ...((startDate || endDate) && {
@@ -81,6 +84,18 @@ export class ActivitiesService {
         },
       }),
     };
+  }
+
+  async list(
+    userId: string,
+    page = 1,
+    limit = 20,
+    workoutType?: WorkoutType,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<{ items: ActivityListItem[]; total: number; page: number; limit: number }> {
+    const skip = (page - 1) * limit;
+    const where = this.buildWhere(userId, workoutType, startDate, endDate);
 
     const [items, total] = await Promise.all([
       this.prisma.activity.findMany({
@@ -106,6 +121,55 @@ export class ActivitiesService {
     ]);
 
     return { items, total, page, limit };
+  }
+
+  async weeklyDistance(
+    userId: string,
+    workoutType?: WorkoutType,
+    startDate?: Date,
+    endDate?: Date,
+  ): Promise<{ weeks: WeeklyDistancePoint[] }> {
+    const activities = await this.prisma.activity.findMany({
+      where: this.buildWhere(userId, workoutType, startDate, endDate),
+      select: { startDate: true, distanceKm: true, movingTimeSec: true },
+    });
+
+    if (activities.length === 0) return { weeks: [] };
+
+    const totals = new Map<number, { totalKm: number; totalTimeSec: number }>();
+    for (const activity of activities) {
+      const week = this.weekStartUtc(activity.startDate).getTime();
+      const entry = totals.get(week) ?? { totalKm: 0, totalTimeSec: 0 };
+      entry.totalKm += activity.distanceKm ?? 0;
+      entry.totalTimeSec += activity.movingTimeSec;
+      totals.set(week, entry);
+    }
+
+    const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+    const weekKeys = [...totals.keys()];
+    const firstWeek = Math.min(...weekKeys);
+    const lastWeek = Math.max(...weekKeys);
+
+    const weeks: WeeklyDistancePoint[] = [];
+    for (let week = firstWeek; week <= lastWeek; week += WEEK_MS) {
+      const entry = totals.get(week) ?? { totalKm: 0, totalTimeSec: 0 };
+      weeks.push({
+        weekStart: new Date(week).toISOString().slice(0, 10),
+        totalKm: entry.totalKm,
+        totalTimeSec: entry.totalTimeSec,
+      });
+    }
+
+    return { weeks };
+  }
+
+  private weekStartUtc(date: Date): Date {
+    const day = new Date(
+      Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()),
+    );
+    const offsetFromMonday = (day.getUTCDay() + 6) % 7;
+    day.setUTCDate(day.getUTCDate() - offsetFromMonday);
+    return day;
   }
 
   async findById(userId: string, id: string): Promise<ActivityDetail | null> {

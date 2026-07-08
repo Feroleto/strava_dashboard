@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { WORKOUT_LABEL, formatDuration, formatPace } from './activityFormat';
 import DateRangeFilter, { type DateRange } from './DateRangeFilter';
+import WeeklyDistanceChart from './WeeklyDistanceChart';
 
 interface Activity {
   id: string;
@@ -93,6 +94,8 @@ export default function ActivitiesList() {
           />
         </div>
       </div>
+
+      <WeeklyDistanceChart workoutType={workoutType} dateRange={dateRange} />
 
       {loading ? (
         <p className="p-8 text-center text-slate-400">Loading...</p>
