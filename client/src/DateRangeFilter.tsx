@@ -1,4 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
+import type { DateRange as DayPickerRange } from 'react-day-picker';
+import { Calendar } from '@/components/ui/calendar';
+import { Button } from '@/components/ui/button';
 
 export interface DateRange {
   from: string;
@@ -20,7 +23,7 @@ const QUICK_OPTIONS: { key: QuickKey; label: string }[] = [
   { key: 'last90', label: 'Last 90 days' },
   { key: 'thisMonth', label: 'This Month' },
   { key: 'ytd', label: 'Year to Date' },
-  { key: 'allRuns', label: 'All Runs'},
+  { key: 'allRuns', label: 'All Runs' },
 ];
 
 const MONTH_LABELS = [
@@ -67,6 +70,11 @@ function toIsoDate(d: Date): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+function fromIsoDate(iso: string): Date {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
+}
+
 function daysInMonth(year: number, month: number): number {
   return new Date(year, month, 0).getDate();
 }
@@ -75,7 +83,7 @@ function quickRange(key: QuickKey): DateRange {
   const today = new Date();
   const to = toIsoDate(today);
 
-  if (key === 'allRuns'){
+  if (key === 'allRuns') {
     return { from: '', to: '' };
   }
 
@@ -148,8 +156,7 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<Tab>('quick');
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
-  const [draftFrom, setDraftFrom] = useState('');
-  const [draftTo, setDraftTo] = useState('');
+  const [draftRange, setDraftRange] = useState<DayPickerRange | undefined>();
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -177,8 +184,10 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
   function openPanel() {
     if (!isOpen) {
       if (selection.kind === 'custom') {
-        setDraftFrom(selection.from);
-        setDraftTo(selection.to);
+        setDraftRange({
+          from: fromIsoDate(selection.from),
+          to: fromIsoDate(selection.to),
+        });
       }
       if (selection.kind === 'month') {
         setViewYear(Number(selection.month.split('-')[0]));
@@ -194,19 +203,28 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
     setIsOpen((v) => !v);
   }
 
+  function applyDraft() {
+    if (!draftRange?.from || !draftRange?.to) return;
+    apply({
+      kind: 'custom',
+      from: toIsoDate(draftRange.from),
+      to: toIsoDate(draftRange.to),
+    });
+  }
+
   return (
     <div ref={containerRef} className="relative">
       <button
         type="button"
         onClick={openPanel}
-        className="rounded border border-slate-700 bg-slate-900 px-3 py-1.5 text-sm text-slate-200 hover:bg-slate-800"
+        className="rounded-md border border-border bg-popover px-3 py-1.5 text-sm text-foreground hover:bg-accent"
       >
         {periodLabel(selection)}
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 z-10 mt-2 w-80 rounded border border-slate-700 bg-slate-900 shadow-lg">
-          <div className="flex border-b border-slate-800">
+        <div className="absolute right-0 z-10 mt-2 w-80 rounded-lg border border-border bg-popover shadow-lg">
+          <div className="flex border-b border-border">
             {TABS.map(([value, text]) => (
               <button
                 key={value}
@@ -214,8 +232,8 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
                 onClick={() => setTab(value)}
                 className={`flex-1 px-3 py-2 text-sm ${
                   tab === value
-                    ? 'border-b-2 border-slate-300 text-slate-100'
-                    : 'text-slate-400 hover:text-slate-200'
+                    ? 'border-b-2 border-primary text-foreground'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {text}
@@ -231,7 +249,7 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
                     <button
                       type="button"
                       onClick={() => apply({ kind: 'quick', key: option.key })}
-                      className="w-full rounded px-3 py-1.5 text-left text-sm text-slate-200 hover:bg-slate-800"
+                      className="w-full rounded-md px-3 py-1.5 text-left text-sm text-foreground hover:bg-accent"
                     >
                       {option.label}
                     </button>
@@ -247,18 +265,18 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
                     type="button"
                     onClick={() => setViewYear((y) => y - 1)}
                     aria-label="Ano anterior"
-                    className="rounded px-2 py-1 text-sm text-slate-300 hover:bg-slate-800"
+                    className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     ‹
                   </button>
-                  <span className="text-sm font-medium text-slate-200">
+                  <span className="text-sm font-medium text-foreground">
                     {viewYear}
                   </span>
                   <button
                     type="button"
                     onClick={() => setViewYear((y) => y + 1)}
                     aria-label="Próximo ano"
-                    className="rounded px-2 py-1 text-sm text-slate-300 hover:bg-slate-800"
+                    className="rounded-md px-2 py-1 text-sm text-muted-foreground hover:bg-accent hover:text-foreground"
                   >
                     ›
                   </button>
@@ -276,10 +294,10 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
                         onClick={() =>
                           apply({ kind: 'month', month: monthValue })
                         }
-                        className={`rounded px-2 py-1.5 text-sm ${
+                        className={`rounded-md px-2 py-1.5 text-sm ${
                           isSelected
-                            ? 'bg-slate-700 text-slate-100'
-                            : 'text-slate-300 hover:bg-slate-800'
+                            ? 'bg-primary text-primary-foreground'
+                            : 'text-muted-foreground hover:bg-accent hover:text-foreground'
                         }`}
                       >
                         {m}
@@ -291,37 +309,22 @@ export default function DateRangeFilter({ onChange }: DateRangeFilterProps) {
             )}
 
             {tab === 'custom' && (
-              <div className="flex flex-col gap-2">
-                <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  From
-                  <input
-                    type="date"
-                    value={draftFrom}
-                    max={draftTo || undefined}
-                    onChange={(e) => setDraftFrom(e.target.value)}
-                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-200"
-                  />
-                </label>
-                <label className="flex flex-col gap-1 text-xs text-slate-400">
-                  To
-                  <input
-                    type="date"
-                    value={draftTo}
-                    min={draftFrom || undefined}
-                    onChange={(e) => setDraftTo(e.target.value)}
-                    className="rounded border border-slate-700 bg-slate-950 px-2 py-1.5 text-sm text-slate-200"
-                  />
-                </label>
-                <button
-                  type="button"
-                  disabled={!draftFrom || !draftTo}
-                  onClick={() =>
-                    apply({ kind: 'custom', from: draftFrom, to: draftTo })
-                  }
-                  className="mt-1 rounded bg-slate-700 px-3 py-1.5 text-sm text-slate-100 hover:bg-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
+              <div className="flex flex-col items-center gap-3">
+                <Calendar
+                  mode="range"
+                  numberOfMonths={1}
+                  selected={draftRange}
+                  onSelect={setDraftRange}
+                  defaultMonth={draftRange?.from}
+                  className="p-0"
+                />
+                <Button
+                  className="w-full"
+                  disabled={!draftRange?.from || !draftRange?.to}
+                  onClick={applyDraft}
                 >
                   Apply
-                </button>
+                </Button>
               </div>
             )}
           </div>
