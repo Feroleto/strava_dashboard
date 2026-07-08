@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { WORKOUT_LABEL, formatDuration, formatPace } from './activityFormat';
 
 interface Activity {
   id: string;
@@ -20,28 +22,10 @@ interface ActivitiesResponse {
   limit: number;
 }
 
-function formatPace(secPerKm: number | null): string {
-  if (!secPerKm) return '—';
-  const min = Math.floor(secPerKm / 60);
-  const sec = Math.round(secPerKm % 60);
-  return `${min}:${sec.toString().padStart(2, '0')} /km`;
-}
-
-function formatDuration(sec: number): string {
-  const h = Math.floor(sec / 3600);
-  const m = Math.floor((sec % 3600) / 60);
-  return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
-}
-
-const WORKOUT_LABEL: Record<string, string> = {
-  EASY_OR_LONG: 'Easy or Long Run',
-  INTERVAL: 'Interval',
-  HILL_REPEATS: 'Hill Repeats',
-};
-
 const LIMIT = 20;
 
 export default function ActivitiesList() {
+  const navigate = useNavigate();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
@@ -51,7 +35,10 @@ export default function ActivitiesList() {
 
   useEffect(() => {
     setLoading(true);
-    const params = new URLSearchParams({ page: String(page), limit: String(LIMIT) });
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(LIMIT),
+    });
     if (workoutType) params.set('workoutType', workoutType);
 
     fetch(`http://localhost:3000/activities?${params}`)
@@ -69,7 +56,8 @@ export default function ActivitiesList() {
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
-  if (error) return <p className="p-8 text-center text-red-400">Error: {error}</p>;
+  if (error)
+    return <p className="p-8 text-center text-red-400">Error: {error}</p>;
 
   return (
     <div className="mx-auto max-w-4xl px-4 py-8">
@@ -98,7 +86,15 @@ export default function ActivitiesList() {
         <table className="w-full border-collapse">
           <thead>
             <tr>
-              {['Data', 'Activity Name', 'Type', 'Distance', 'Time', 'Pace', 'HR'].map((h) => (
+              {[
+                'Data',
+                'Activity Name',
+                'Type',
+                'Distance',
+                'Time',
+                'Pace',
+                'HR',
+              ].map((h) => (
                 <th
                   key={h}
                   className="border-b border-slate-800 px-3 py-2 text-left text-xs font-semibold uppercase text-slate-400"
@@ -110,11 +106,17 @@ export default function ActivitiesList() {
           </thead>
           <tbody>
             {activities.map((a) => (
-              <tr key={a.id} className="hover:bg-slate-800/60">
+              <tr
+                key={a.id}
+                onClick={() => navigate(`/activities/${a.id}`)}
+                className="cursor-pointer hover:bg-slate-800/60"
+              >
                 <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
                   {new Date(a.startDate).toLocaleDateString('pt-BR')}
                 </td>
-                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">{a.name}</td>
+                <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
+                  {a.name}
+                </td>
                 <td className="border-b border-slate-800 px-3 py-2 text-sm text-slate-200">
                   {WORKOUT_LABEL[a.workoutType] ?? a.workoutType}
                 </td>

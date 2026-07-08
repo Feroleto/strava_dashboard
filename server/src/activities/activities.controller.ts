@@ -1,4 +1,4 @@
-import { BadRequestException, Controller, Get, Query } from '@nestjs/common';
+import { BadRequestException, Controller, Get, NotFoundException, Param, Query } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { WorkoutType } from '@prisma/client';
 import { ActivitiesService } from './activities.service';
@@ -30,5 +30,17 @@ export class ActivitiesController {
       limit ? parseInt(limit, 10) : 20,
       workoutType as WorkoutType | undefined,
     );
+  }
+
+  @Get(':id')
+  async findById(@Param('id') id: string) {
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    const activity = await this.service.findById(userId, id);
+
+    if (!activity) {
+      throw new NotFoundException(`Activity ${id} not found`);
+    }
+
+    return activity;
   }
 }
