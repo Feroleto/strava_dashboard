@@ -67,9 +67,20 @@ export class ActivitiesService {
     page = 1,
     limit = 20,
     workoutType?: WorkoutType,
+    startDate?: Date,
+    endDate?: Date,
   ): Promise<{ items: ActivityListItem[]; total: number; page: number; limit: number }> {
     const skip = (page - 1) * limit;
-    const where = { userId, ...(workoutType && { workoutType }) };
+    const where = {
+      userId,
+      ...(workoutType && { workoutType }),
+      ...((startDate || endDate) && {
+        startDate: {
+          ...(startDate && { gte: startDate }),
+          ...(endDate && { lte: endDate }),
+        },
+      }),
+    };
 
     const [items, total] = await Promise.all([
       this.prisma.activity.findMany({

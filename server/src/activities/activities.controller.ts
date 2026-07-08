@@ -15,6 +15,8 @@ export class ActivitiesController {
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('workoutType') workoutType?: string,
+    @Query('dateFrom') dateFrom?: string,
+    @Query('dateTo') dateTo?: string,
   ) {
     const userId = this.config.getOrThrow<string>('SEED_USER_ID');
 
@@ -24,12 +26,31 @@ export class ActivitiesController {
       );
     }
 
+    const startDate = this.parseDateParam('dateFrom', dateFrom);
+    const endDate = this.parseDateParam('dateTo', dateTo);
+    if (endDate) {
+      endDate.setUTCHours(23, 59, 59, 999);
+    }
+
     return this.service.list(
       userId,
       page ? parseInt(page, 10) : 1,
       limit ? parseInt(limit, 10) : 20,
       workoutType as WorkoutType | undefined,
+      startDate,
+      endDate,
     );
+  }
+
+  private parseDateParam(name: string, value?: string): Date | undefined {
+    if (!value) return undefined;
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) {
+      throw new BadRequestException(`Invalid ${name}. Expected a valid date (YYYY-MM-DD).`);
+    }
+
+    return date;
   }
 
   @Get(':id')
