@@ -89,6 +89,7 @@ function makeStravaLap(index: number, avgSpeed: number, elevGain = 0): any {
     elapsed_time:           movingTime + 5,
     total_elevation_gain:   elevGain,
     average_heartrate:      155,
+    average_cadence:        85,
     start_index:            (index - 1) * movingTime,
     end_index:              index * movingTime,
   };
@@ -336,8 +337,28 @@ describe('StravaSyncService', () => {
       expect(mockPrisma.activityLap.createMany).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.arrayContaining([
-            expect.objectContaining({ lapType: LapType.STEADY }),
+            expect.objectContaining({
+              lapType: LapType.STEADY,
+              avgCadence: 170,
+            }),
           ]),
+        }),
+      );
+    });
+
+    it('converts activity-level average_cadence from rpm to spm', async () => {
+      const activity = makeStravaActivity({ average_cadence: 85 });
+
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activity);
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ averageCadence: 170 }),
         }),
       );
     });
@@ -392,11 +413,13 @@ describe('StravaSyncService', () => {
 
       const createCall = mockPrisma.activityLap.createMany.mock.calls[0][0];
       const types: string[] = createCall.data.map((l: any) => l.lapType);
+      const cadences: number[] = createCall.data.map((l: any) => l.avgCadence);
 
       expect(types[0]).toBe(LapType.WARMUP);
       expect(types[types.length - 1]).toBe(LapType.COOLDOWN);;
       expect(types).toContain(LapType.WORKOUT);
       expect(types).toContain(LapType.REST);
+      expect(cadences).toEqual(cadences.map(() => 170));
     });
 
     
