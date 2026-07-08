@@ -132,7 +132,7 @@ export class StravaSyncService {
       if (isStructured) {
         await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
       } else {
-        await this.processSteadyActivity(tx, activity.id, full);
+        await this.processSteadyActivity(tx, userId, activity.id, full);
       }
     });
 
@@ -145,6 +145,7 @@ export class StravaSyncService {
       PrismaClient,
       '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
     >,
+    userId: string,
     activityId: string,
     fullData: any,
   ): Promise<void> {
@@ -152,7 +153,7 @@ export class StravaSyncService {
     // verify if exists recorded laps
     const rawLaps: any[] = fullData.laps ?? [];
 
-    const hasRecordedLaps = 
+    const hasRecordedLaps =
       rawLaps.length > 1 &&
       typeof rawLaps[0]?.name === 'string' &&
       rawLaps[0].name.startsWith('Lap');
@@ -163,11 +164,13 @@ export class StravaSyncService {
         `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
       );
 
+      const altStream = await this.fetchAltitudeStream(userId, fullData.id);
+
       const mappedLaps = rawLaps.map((lap: any, i: number) => {
         const avgSpeed = lap.average_speed ?? 0;
         const distance = lap.distance ?? 0;
         const duration = lap.moving_time ?? 0;
-        const elevGain = lap.total_elevation_gain ?? 0;
+        const elevGain = this.lapElevationGain(altStream, lap);
 
         return {
           lapIndex: lap.lap_index ?? i + 1,
@@ -295,11 +298,13 @@ export class StravaSyncService {
         `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
       );
 
+      const altStream = await this.fetchAltitudeStream(userId, fullData.id);
+
       const mappedLaps = rawLaps.map((lap: any, i: number) => {
         const avgSpeed = lap.average_speed ?? 0;
         const distance = lap.distance ?? 0;
         const duration = lap.moving_time ?? 0;
-        const elevGain = lap.total_elevation_gain ?? 0;
+        const elevGain = this.lapElevationGain(altStream, lap);
 
         return {
           lapIndex: lap.lap_index ?? i + 1,
@@ -317,7 +322,7 @@ export class StravaSyncService {
               ? Math.round((elevGain / distance) * 100 * 10) / 10
               : 0,
           vam:
-            duration > 0
+            duration > 0 && elevGain > 0
               ? Math.round((elevGain / duration) * 3600)
               : 0,
           avgCadence:
@@ -461,6 +466,27 @@ export class StravaSyncService {
   }
 
 
+  private async fetchAltitudeStream(
+    userId: string,
+    stravaActivityId: number | string,
+  ): Promise<number[]> {
+    const rawStreams = await this.client.get<any>(
+      userId,
+      `/activities/${stravaActivityId}/streams`,
+      { keys: 'altitude', key_by_type: 'true' },
+    );
+    await this.sleep(300);
+    return rawStreams['altitude']?.data ?? [];
+  }
+
+  // net elevation change (can be negative on downhill laps), derived from the
+  // altitude stream since Strava's recorded-lap objects only expose cumulative gain
+  private lapElevationGain(altStream: number[], lap: any): number {
+    const startAlt = altStream[lap.start_index ?? -1];
+    const endAlt = altStream[lap.end_index ?? -1];
+    return startAlt != null && endAlt != null ? endAlt - startAlt : 0;
+  }
+
   private async processStreamsSQL(
     tx: Omit<
       PrismaClient,
@@ -493,6 +519,7 @@ export class StravaSyncService {
         const distM   = s.distance ?? 0;
         const moveSec = s.moving_time ?? 0;
         const avgSpeed = moveSec > 0 ? distM / moveSec : 0;
+        const elevGain = s.elevation_difference ?? 0;
         return {
           activityId,
           lapType:           'RUN',
@@ -504,9 +531,13 @@ export class StravaSyncService {
           movingDurationSec: moveSec,
           avgPaceSecKm:      avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
           avgHr:             s.average_heartrate ?? 0,
-          elevGainM:         0,
-          avgGradePercent:   0,
-          vam:               0,
+          elevGainM:         Math.round(elevGain * 10) / 10,
+          avgGradePercent:
+            distM > 0 ? Math.round((elevGain / distM) * 100 * 10) / 10 : 0,
+          vam:
+            moveSec > 0 && elevGain > 0
+              ? Math.round((elevGain / moveSec) * 3600)
+              : 0,
         };
       });
   }

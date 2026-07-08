@@ -47,7 +47,8 @@ export abstract class BaseDetector {
     const startData = block[0];
     const endData   = block[block.length - 1];
 
-    const distance = endData.distanceTotalM - startData.distanceTotalM;
+    const distance  = endData.distanceTotalM - startData.distanceTotalM;
+    const elevGain  = endData.elevationM - startData.elevationM;
 
     const movingSeconds = block.filter(
       (d) => (d.speedMs ?? 0) > this.minSpeedMoving,
@@ -74,7 +75,7 @@ export abstract class BaseDetector {
       distanceM:         Math.round(distance * 10) / 10,
       avgPace,
       avgHr:             Math.round(avgHr * 10) / 10,
-      elevGainM:         0,
+      elevGainM:         Math.round(elevGain * 10) / 10,
       avgGradePercent:   0,
       vam:               0,
     };
