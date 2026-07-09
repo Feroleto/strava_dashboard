@@ -29,11 +29,48 @@ export interface ProcessedSecond {
   paceSeckm: number | null;
 }
 
+export interface SyncProgress {
+  state: 'idle' | 'running' | 'done' | 'error';
+  phase: 'listing' | 'processing' | 'rate_limited' | null;
+  total: number | null;
+  processed: number;
+  synced: number;
+  errors: number;
+  etaSeconds: number | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  message: string | null;
+}
+
+const ESTIMATED_SECONDS_PER_ACTIVITY = 9;
+
 @Injectable()
 export class StravaSyncService {
   private readonly logger = new Logger(StravaSyncService.name);
   private readonly prisma: PrismaClient;
   private isSyncing = false;
+
+  private progress: SyncProgress = {
+    state: 'idle',
+    phase: null,
+    total: null,
+    processed: 0,
+    synced: 0,
+    errors: 0,
+    etaSeconds: null,
+    startedAt: null,
+    finishedAt: null,
+    message: null,
+  };
+
+  getProgress(): SyncProgress {
+    const { total, processed, state, phase } = this.progress;
+    const etaSeconds =
+      state === 'running' && phase === 'processing' && total != null
+        ? Math.max(total - processed, 0) * ESTIMATED_SECONDS_PER_ACTIVITY
+        : null;
+    return { ...this.progress, etaSeconds };
+  }
 
   constructor(
     private readonly client: StravaClientService,
@@ -59,6 +96,18 @@ export class StravaSyncService {
     }
 
     this.isSyncing = true;
+    this.progress = {
+      state: 'running',
+      phase: 'listing',
+      total: null,
+      processed: 0,
+      synced: 0,
+      errors: 0,
+      etaSeconds: null,
+      startedAt: new Date().toISOString(),
+      finishedAt: null,
+      message: null,
+    };
     let synced = 0;
     let errors = 0;
 
@@ -68,26 +117,41 @@ export class StravaSyncService {
 
       const runs = activities.filter((a: any) => a.type === 'Run');
       this.logger.log(`Found ${runs.length} new runs to process`);
+      this.progress.total = runs.length;
+      this.progress.phase = 'processing';
 
       for (const summary of runs) {
         try {
           await this.processActivity(userId, summary);
           synced++;
+          this.progress.synced = synced;
           await this.sleep(9000);
         } catch (err: any) {
           if (err.message === 'STRAVA_RATE_LIMIT') {
             this.logger.warn('Rate limit hit, waiting 15 minutes...');
+            this.progress.phase = 'rate_limited';
             await this.sleep(15 * 60 * 1000);
+            this.progress.phase = 'processing';
           } else {
             this.logger.error(
               `Failed to process activity ${summary.id}: ${err.message}`,
             );
             errors++;
+            this.progress.errors = errors;
           }
         }
+        this.progress.processed++;
       }
+
+      this.progress.state = 'done';
+    } catch (err: any) {
+      this.progress.state = 'error';
+      this.progress.message = err.message ?? 'Unknown error';
+      this.logger.error(`Sync failed: ${err.message}`);
     } finally {
       this.isSyncing = false;
+      this.progress.phase = null;
+      this.progress.finishedAt = new Date().toISOString();
     }
 
     this.logger.log(`Sync complete — ${synced} saved, ${errors} errors`);

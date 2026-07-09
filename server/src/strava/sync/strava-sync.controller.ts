@@ -1,6 +1,7 @@
-import { Controller, Post, Logger } from '@nestjs/common';
+import { Controller, Get, Post, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { StravaSyncService } from './strava-sync.service';
+import type { SyncProgress } from './strava-sync.service';
 
 @Controller('strava/sync')
 export class StravaSyncController {
@@ -12,10 +13,18 @@ export class StravaSyncController {
   ) {}
 
   @Post()
-  async triggerSync() {
+  triggerSync(): SyncProgress {
     this.logger.log('Manual sync triggered via HTTP');
     const userId = this.config.getOrThrow<string>('SEED_USER_ID');
-    const result = await this.syncService.sync(userId);
-    return result;
+    // fire-and-forget: progress is exposed via GET /strava/sync/status
+    void this.syncService.sync(userId).catch((err) => {
+      this.logger.error(`Background sync failed: ${err.message}`);
+    });
+    return this.syncService.getProgress();
+  }
+
+  @Get('status')
+  getStatus(): SyncProgress {
+    return this.syncService.getProgress();
   }
 }
