@@ -1,0 +1,170 @@
+import { useState } from 'react';
+import { formatDayMonth, formatKm } from './activityFormat';
+import SegmentedControl from './SegmentedControl';
+
+export interface WeekAgg {
+  start: Date;
+  km: number;
+  sec: number;
+  count: number;
+}
+
+export type Period = '4' | '8' | '12' | '26';
+
+const PERIODS: [Period, string][] = [
+  ['4', '4 sem'],
+  ['8', '8 sem'],
+  ['12', '12 sem'],
+  ['26', 'Tudo'],
+];
+
+const VB_W = 720;
+const VB_H = 210;
+const AXIS_Y = 196;
+const PLOT_H = 170;
+
+// Catmull-Rom → cubic bézier (tension /6), same smoothing as the design prototype
+function smoothPath(pts: [number, number][]): string {
+  if (pts.length < 2) return '';
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < pts.length - 1; i++) {
+    const p0 = pts[Math.max(0, i - 1)];
+    const p1 = pts[i];
+    const p2 = pts[i + 1];
+    const p3 = pts[Math.min(pts.length - 1, i + 2)];
+    const c1 = [p1[0] + (p2[0] - p0[0]) / 6, p1[1] + (p2[1] - p0[1]) / 6];
+    const c2 = [p2[0] - (p3[0] - p1[0]) / 6, p2[1] - (p3[1] - p1[1]) / 6];
+    d += ` C ${c1[0].toFixed(1)} ${c1[1].toFixed(1)}, ${c2[0].toFixed(1)} ${c2[1].toFixed(1)}, ${p2[0].toFixed(1)} ${p2[1].toFixed(1)}`;
+  }
+  return d;
+}
+
+interface WeeklyChartProps {
+  weeks: WeekAgg[];
+  totalKm: number;
+  period: Period;
+  onPeriodChange: (p: Period) => void;
+}
+
+export default function WeeklyChart({
+  weeks,
+  totalKm,
+  period,
+  onPeriodChange,
+}: WeeklyChartProps) {
+  const [hover, setHover] = useState<number | null>(null);
+
+  const n = weeks.length;
+  const maxKm = Math.max(1, ...weeks.map((w) => w.km));
+  const pts: [number, number][] = weeks.map((w, i) => [
+    ((i + 0.5) / n) * VB_W,
+    AXIS_Y - (w.km / maxKm) * PLOT_H,
+  ]);
+  const linePath = smoothPath(pts);
+  const areaPath =
+    n >= 2
+      ? `${linePath} L ${pts[n - 1][0].toFixed(1)} ${AXIS_Y} L ${pts[0][0].toFixed(1)} ${AXIS_Y} Z`
+      : '';
+  const labelEvery = Math.max(1, Math.ceil(n / 8));
+
+  const hov = hover !== null && weeks[hover] ? hover : null;
+  const reading =
+    hov !== null
+      ? `Semana de ${formatDayMonth(weeks[hov].start)} · ${formatKm(weeks[hov].km)} km`
+      : `${formatKm(totalKm)} km no período`;
+
+  return (
+    <div className="mb-9 rounded-[var(--rad)] border border-border bg-card px-7 pt-6 pb-4 transition-[background] duration-[250ms]">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="text-sm font-semibold text-foreground">
+          Distância semanal
+        </div>
+        <div className="flex items-center gap-3.5">
+          <div className="text-[12.5px] text-muted-foreground">{reading}</div>
+          <SegmentedControl
+            compact
+            items={PERIODS}
+            active={period}
+            onPick={onPeriodChange}
+          />
+        </div>
+      </div>
+
+      <div className="relative">
+        <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="block w-full">
+          <defs>
+            <linearGradient id="weekly-grad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stopColor="var(--acc)" stopOpacity="0.22" />
+              <stop offset="1" stopColor="var(--acc)" stopOpacity="0" />
+            </linearGradient>
+          </defs>
+          <line x1="0" y1="26" x2={VB_W} y2="26" stroke="var(--border)" />
+          <line x1="0" y1="111" x2={VB_W} y2="111" stroke="var(--border)" />
+          <line
+            x1="0"
+            y1={AXIS_Y}
+            x2={VB_W}
+            y2={AXIS_Y}
+            stroke="var(--grid-ax)"
+          />
+          <text x="4" y="21" fontSize="10.5" fill="var(--muted-foreground)">
+            {Math.round(maxKm)} km
+          </text>
+          <text x="4" y="106" fontSize="10.5" fill="var(--muted-foreground)">
+            {Math.round(maxKm / 2)} km
+          </text>
+          {areaPath && <path d={areaPath} fill="url(#weekly-grad)" />}
+          {linePath && (
+            <path
+              d={linePath}
+              fill="none"
+              stroke="var(--acc)"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          )}
+        </svg>
+
+        {hov !== null && (
+          <>
+            <div
+              className="pointer-events-none absolute top-2 bottom-[7%] w-0 border-l border-dashed border-grid-ax"
+              style={{ left: `${(((hov + 0.5) / n) * 100).toFixed(2)}%` }}
+            />
+            <div
+              className="pointer-events-none absolute h-[9px] w-[9px] rounded-full border-2 border-card bg-acc"
+              style={{
+                left: `${(((hov + 0.5) / n) * 100).toFixed(2)}%`,
+                top: `${((pts[hov][1] / VB_H) * 100).toFixed(2)}%`,
+                margin: '-4.5px 0 0 -4.5px',
+              }}
+            />
+          </>
+        )}
+
+        <div className="absolute inset-0 flex">
+          {weeks.map((w, i) => (
+            <div
+              key={w.start.getTime()}
+              className="flex-1"
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-1 flex pb-1.5">
+        {weeks.map((w, i) => (
+          <div
+            key={w.start.getTime()}
+            className="flex-1 text-center text-[11px] text-muted-foreground"
+          >
+            {i % labelEvery === 0 ? formatDayMonth(w.start) : ''}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
