@@ -55,6 +55,7 @@ export interface ActivityDetail {
   averageBpm: number | null;
   maxBpm: number | null;
   averageCadence: number | null;
+  summaryPolyline: string | null;
   laps: ActivityLapItem[];
 }
 
@@ -196,6 +197,7 @@ export class ActivitiesService {
         averageBpm: true,
         maxBpm: true,
         averageCadence: true,
+        summaryPolyline: true,
         laps: {
           orderBy: { lapIndex: 'asc' },
           select: {

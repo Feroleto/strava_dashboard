@@ -190,6 +190,7 @@ export class StravaSyncService {
           averageBpm:     full.average_heartrate ?? null,
           maxBpm:         full.max_heartrate ?? null,
           averageCadence: full.average_cadence != null ? full.average_cadence * 2 : null,
+          summaryPolyline: full.map?.summary_polyline || null,
         },
       });
 
@@ -604,6 +605,28 @@ export class StravaSyncService {
               : 0,
         };
       });
+  }
+
+  // one-off backfill for activities synced before summaryPolyline existed;
+  // the athlete activity list already carries map.summary_polyline, so this
+  // costs ~2 API calls total instead of one per activity
+  async backfillPolylines(userId: string): Promise<{ updated: number }> {
+    const summaries = await this.fetchAllActivities(userId);
+    let updated = 0;
+
+    for (const summary of summaries) {
+      const polyline = summary.map?.summary_polyline;
+      if (!polyline) continue;
+
+      const result = await this.prisma.activity.updateMany({
+        where: { stravaId: BigInt(summary.id), summaryPolyline: null },
+        data: { summaryPolyline: polyline },
+      });
+      updated += result.count;
+    }
+
+    this.logger.log(`Polyline backfill complete — ${updated} activities updated`);
+    return { updated };
   }
 
   private async getLastActivityTimestamp(
