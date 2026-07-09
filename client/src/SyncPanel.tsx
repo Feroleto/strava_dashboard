@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react';
-import { Button } from '@/components/ui/button';
 
 interface SyncStatus {
   state: 'idle' | 'running' | 'done' | 'error';
@@ -24,14 +23,14 @@ function formatEta(sec: number): string {
   if (sec >= 3600) {
     const h = Math.floor(sec / 3600);
     const m = Math.round((sec % 3600) / 60);
-    return `~${h}h ${m}min remaining`;
+    return `~${h}h ${m}min restantes`;
   }
   if (sec >= 60) {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    return `~${m}min ${s}s remaining`;
+    return `~${m}min ${s}s restantes`;
   }
-  return `~${sec}s remaining`;
+  return `~${sec}s restantes`;
 }
 
 export default function SyncPanel({ onSynced }: SyncPanelProps) {
@@ -97,66 +96,65 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
     total == null ? 0 : total === 0 ? 100 : (processed / total) * 100;
 
   let statusLine: string;
-  let statusTone = 'text-slate-400';
+  let statusTone = 'text-muted-foreground';
   if (requestError) {
-    statusLine = `Failed to start sync: ${requestError}`;
-    statusTone = 'text-red-400';
+    statusLine = `Falha ao iniciar: ${requestError}`;
+    statusTone = 'text-neg';
   } else if (running && status?.phase === 'listing') {
-    statusLine = 'Fetching activity list from Strava…';
+    statusLine = 'Buscando atividades no Strava…';
   } else if (running && status?.phase === 'rate_limited') {
-    statusLine = 'Strava rate limit hit — waiting 15 minutes before resuming';
-    statusTone = 'text-amber-400';
+    statusLine = 'Limite do Strava — aguardando 15 min';
+    statusTone = 'text-neg';
   } else if (running) {
-    statusLine = 'Downloading and processing activities…';
+    statusLine =
+      total != null
+        ? `${synced} de ${total} salvas${errors > 0 ? `, ${errors} com erro` : ''}`
+        : 'Processando atividades…';
   } else if (watching && status?.state === 'done') {
     statusLine =
       total === 0
-        ? 'Sync complete — no new activities'
-        : `Sync complete — ${synced} ${synced === 1 ? 'activity' : 'activities'} saved${errors > 0 ? `, ${errors} failed` : ''}`;
+        ? 'Sincronizado — nada novo'
+        : `Sincronizado — ${synced} ${synced === 1 ? 'atividade salva' : 'atividades salvas'}${errors > 0 ? `, ${errors} com erro` : ''}`;
   } else if (watching && status?.state === 'error') {
-    statusLine = `Sync failed: ${status.message ?? 'unknown error'}`;
-    statusTone = 'text-red-400';
+    statusLine = `Falha no sync: ${status.message ?? 'erro desconhecido'}`;
+    statusTone = 'text-neg';
   } else {
-    statusLine = 'Download new activities from Strava';
+    statusLine = 'Baixar novas atividades';
   }
 
   return (
-    <div className="mb-4 rounded border border-slate-800 bg-slate-900/40 p-4">
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-sm font-semibold text-slate-200">Strava sync</h2>
-          <p className={`mt-0.5 text-xs ${statusTone}`}>{statusLine}</p>
-        </div>
-        <Button size="sm" onClick={startSync} disabled={running}>
-          {running ? 'Syncing…' : 'Sync now'}
-        </Button>
+    <div className="mt-[26px]">
+      <div className="mb-2.5 text-[11.5px] font-medium tracking-[.05em] uppercase text-muted-foreground">
+        Strava
+      </div>
+      <div className="flex items-center justify-between gap-2.5">
+        <p className={`min-w-0 text-[12.5px] ${statusTone}`}>{statusLine}</p>
+        <button
+          onClick={startSync}
+          disabled={running}
+          className="shrink-0 cursor-pointer rounded-[9px] bg-chip px-[13px] py-1.5 text-[12.5px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          {running ? 'Sincronizando…' : 'Sync'}
+        </button>
       </div>
 
       {running && (
-        <div className="mt-3">
-          <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+        <div className="mt-2.5">
+          <div className="h-1.5 w-full overflow-hidden rounded-full bg-chip">
             {total == null ? (
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-primary" />
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-acc" />
             ) : (
               <div
-                className="h-full rounded-full bg-primary transition-[width] duration-700"
+                className="h-full rounded-full bg-acc transition-[width] duration-700"
                 style={{ width: `${percent}%` }}
               />
             )}
           </div>
-          <div className="mt-1.5 flex items-baseline justify-between text-xs text-slate-400">
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {synced} of {total ?? '…'} activities saved
-              {errors > 0 && (
-                <span className="text-red-400">, {errors} failed</span>
-              )}
-            </span>
-            {status?.etaSeconds != null && (
-              <span style={{ fontVariantNumeric: 'tabular-nums' }}>
-                {formatEta(status.etaSeconds)}
-              </span>
-            )}
-          </div>
+          {status?.etaSeconds != null && (
+            <div className="mt-1.5 text-[11px] text-muted-foreground">
+              {formatEta(status.etaSeconds)}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 .env
 CLAUDE.md
 .claude/
+layout_dashboard/
 
 # Python
 python-pipeline/venv/
