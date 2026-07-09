@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { WORKOUT_LABEL, formatDuration, formatPace } from './activityFormat';
 import DateRangeFilter, { type DateRange } from './DateRangeFilter';
 import WeeklyDistanceChart from './WeeklyDistanceChart';
+import SyncPanel from './SyncPanel';
 
 interface Activity {
   id: string;
@@ -34,6 +35,7 @@ export default function ActivitiesList() {
   const [page, setPage] = useState(1);
   const [workoutType, setWorkoutType] = useState('');
   const [dateRange, setDateRange] = useState<DateRange>({ from: '', to: '' });
+  const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,7 +60,7 @@ export default function ActivitiesList() {
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [page, workoutType, dateRange]);
+  }, [page, workoutType, dateRange, refreshKey]);
 
   const totalPages = Math.max(1, Math.ceil(total / LIMIT));
 
@@ -95,7 +97,13 @@ export default function ActivitiesList() {
         </div>
       </div>
 
-      <WeeklyDistanceChart workoutType={workoutType} dateRange={dateRange} />
+      <SyncPanel onSynced={() => setRefreshKey((k) => k + 1)} />
+
+      <WeeklyDistanceChart
+        workoutType={workoutType}
+        dateRange={dateRange}
+        refreshKey={refreshKey}
+      />
 
       {loading ? (
         <p className="p-8 text-center text-slate-400">Loading...</p>
