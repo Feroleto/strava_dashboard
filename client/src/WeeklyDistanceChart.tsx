@@ -14,6 +14,7 @@ interface WeeklyDistanceResponse {
 interface WeeklyDistanceChartProps {
   workoutType: string;
   dateRange: DateRange;
+  refreshKey?: number;
 }
 
 const CHART_W = 720;
@@ -64,6 +65,7 @@ function barPath(x: number, y: number, w: number, h: number): string {
 export default function WeeklyDistanceChart({
   workoutType,
   dateRange,
+  refreshKey = 0,
 }: WeeklyDistanceChartProps) {
   const [weeks, setWeeks] = useState<WeeklyDistancePoint[]>([]);
   const [loading, setLoading] = useState(true);
@@ -89,7 +91,7 @@ export default function WeeklyDistanceChart({
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [workoutType, dateRange]);
+  }, [workoutType, dateRange, refreshKey]);
 
   const totalKm = useMemo(
     () => weeks.reduce((sum, w) => sum + w.totalKm, 0),
