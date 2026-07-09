@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   WORKOUT_META,
   formatDurationShort,
@@ -6,7 +6,7 @@ import {
   formatMinSec,
   formatPace,
 } from './activityFormat';
-import { routeGeometry } from './polyline';
+import RouteMap from './RouteMap';
 
 interface ActivityLap {
   id: string;
@@ -38,7 +38,6 @@ interface ActivityDetail {
 
 const MAP_W = 640;
 const MAP_H = 240;
-const MAP_PAD = 22;
 
 const LAP_TYPE_BASE: Record<string, string> = {
   WARMUP: 'Aquecimento',
@@ -114,14 +113,6 @@ export default function ActivityDetailView({
       .then((data: ActivityDetail) => setActivity(data))
       .catch((err) => setError(err.message));
   }, [id]);
-
-  const route = useMemo(
-    () =>
-      activity?.summaryPolyline
-        ? routeGeometry(activity.summaryPolyline, MAP_W, MAP_H, MAP_PAD)
-        : null,
-    [activity],
-  );
 
   if (error) {
     return (
@@ -207,56 +198,30 @@ export default function ActivityDetailView({
       </div>
 
       <div className="mt-[22px] overflow-hidden rounded-[var(--rad)] border border-border bg-card transition-[background] duration-[250ms]">
-        <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block w-full">
-          {[80, 160, 240, 320, 400, 480, 560].map((x) => (
-            <line
-              key={x}
-              x1={x}
-              y1="0"
-              x2={x}
-              y2={MAP_H}
-              stroke="var(--border)"
-            />
-          ))}
-          {[60, 120, 180].map((y) => (
-            <line
-              key={y}
-              x1="0"
-              y1={y}
-              x2={MAP_W}
-              y2={y}
-              stroke="var(--border)"
-            />
-          ))}
-          {route ? (
-            <>
-              <path
-                d={route.d}
-                fill="none"
-                stroke="var(--acc)"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                opacity="0.9"
+        {activity.summaryPolyline ? (
+          <RouteMap polyline={activity.summaryPolyline} />
+        ) : (
+          <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block w-full">
+            {[80, 160, 240, 320, 400, 480, 560].map((x) => (
+              <line
+                key={x}
+                x1={x}
+                y1="0"
+                x2={x}
+                y2={MAP_H}
+                stroke="var(--border)"
               />
-              <circle
-                cx={route.start[0]}
-                cy={route.start[1]}
-                r="5.5"
-                fill="var(--pos)"
-                stroke="var(--card)"
-                strokeWidth="2.5"
+            ))}
+            {[60, 120, 180].map((y) => (
+              <line
+                key={y}
+                x1="0"
+                y1={y}
+                x2={MAP_W}
+                y2={y}
+                stroke="var(--border)"
               />
-              <circle
-                cx={route.end[0]}
-                cy={route.end[1]}
-                r="5.5"
-                fill="var(--foreground)"
-                stroke="var(--card)"
-                strokeWidth="2.5"
-              />
-            </>
-          ) : (
+            ))}
             <text
               x={MAP_W / 2}
               y={MAP_H / 2 + 4}
@@ -266,8 +231,8 @@ export default function ActivityDetailView({
             >
               Sem dados de GPS nesta atividade
             </text>
-          )}
-        </svg>
+          </svg>
+        )}
       </div>
 
       {activity.laps.length > 0 && (
