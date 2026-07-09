@@ -14,6 +14,7 @@ export interface ActivityListItem {
   paceRawSecKm: number | null;
   elevationGainM: number | null;
   averageBpm: number | null;
+  maxBpm: number | null;
   averageCadence: number | null;
 }
 
@@ -93,7 +94,12 @@ export class ActivitiesService {
     workoutType?: WorkoutType,
     startDate?: Date,
     endDate?: Date,
-  ): Promise<{ items: ActivityListItem[]; total: number; page: number; limit: number }> {
+  ): Promise<{
+    items: ActivityListItem[];
+    total: number;
+    page: number;
+    limit: number;
+  }> {
     const skip = (page - 1) * limit;
     const where = this.buildWhere(userId, workoutType, startDate, endDate);
 
@@ -114,6 +120,7 @@ export class ActivitiesService {
           paceRawSecKm: true,
           elevationGainM: true,
           averageBpm: true,
+          maxBpm: true,
           averageCadence: true,
         },
       }),
