@@ -169,3 +169,37 @@
     @apply font-sans;
   }
 }
+
+/* Leaflet route map (RouteMap.tsx) — colors driven by the theme tokens.
+   CSS wins over Leaflet's SVG presentation attributes, so these follow
+   theme switches without re-rendering the map. */
+.leaflet-container {
+  background: var(--chip);
+  font-family: inherit;
+}
+.route-line {
+  stroke: var(--acc);
+}
+.route-start {
+  fill: var(--pos);
+  fill-opacity: 1;
+  stroke: var(--card);
+}
+.route-end {
+  fill: var(--foreground);
+  fill-opacity: 1;
+  stroke: var(--card);
+}
+/* OSM raster tiles are light-only; approximate a dark basemap via filter */
+.dark .leaflet-tile {
+  filter: brightness(0.6) invert(1) contrast(3) hue-rotate(200deg) saturate(0.3)
+    brightness(0.7);
+}
+.leaflet-control-attribution {
+  background: color-mix(in oklab, var(--card) 80%, transparent);
+  color: var(--muted-foreground);
+  font-size: 10px;
+}
+.leaflet-control-attribution a {
+  color: var(--muted-foreground);
+}
