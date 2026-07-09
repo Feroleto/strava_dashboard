@@ -58,6 +58,17 @@ export function formatDurationShort(sec: number): string {
   return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
 }
 
+/** "4:32" — lap durations */
+export function formatMinSec(sec: number): string {
+  let m = Math.floor(sec / 60);
+  let s = Math.round(sec % 60);
+  if (s === 60) {
+    m++;
+    s = 0;
+  }
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
 /** "DD/MM" */
 export function formatDayMonth(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
