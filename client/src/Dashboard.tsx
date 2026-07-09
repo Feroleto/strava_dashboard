@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import {
   WORKOUT_META,
   formatDayMonth,
@@ -11,6 +10,7 @@ import {
 import WeeklyChart, { type Period, type WeekAgg } from './WeeklyChart';
 import SegmentedControl from './SegmentedControl';
 import SyncPanel from './SyncPanel';
+import ActivityDetailView from './ActivityDetailView';
 
 interface Activity {
   id: string;
@@ -112,13 +112,13 @@ function PeekCard({ label, value }: { label: string; value: string }) {
 }
 
 export default function Dashboard() {
-  const navigate = useNavigate();
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
   );
   const [period, setPeriod] = useState<Period>('12');
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [peekId, setPeekId] = useState<string | null>(null);
+  const [detailId, setDetailId] = useState<string | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -274,134 +274,145 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* right panel: list view */}
-      <div className="min-w-0">
-        <WeeklyChart
-          weeks={weeks}
-          totalKm={totals.km}
-          period={period}
-          onPeriodChange={(p) => setPeriod(p)}
-        />
+      {/* right panel: detail view swaps in-place with the list */}
+      {detailId ? (
+        <div className="min-w-0">
+          <ActivityDetailView id={detailId} onBack={() => setDetailId(null)} />
+        </div>
+      ) : (
+        <div className="min-w-0">
+          <WeeklyChart
+            weeks={weeks}
+            totalKm={totals.km}
+            period={period}
+            onPeriodChange={(p) => setPeriod(p)}
+          />
 
-        {loading ? (
-          <p className="py-10 text-center text-[13.5px] text-muted-foreground">
-            Carregando…
-          </p>
-        ) : shownGroups.length === 0 ? (
-          <p className="py-10 text-center text-[13.5px] text-muted-foreground">
-            Nenhuma atividade neste filtro
-          </p>
-        ) : (
-          <>
-            {shownGroups.map((week) => (
-              <div key={week.start.getTime()} className="mb-[26px]">
-                <div className="flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
-                  <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
-                    Semana de {formatDayMonth(week.start)}
-                  </div>
-                  <div className="text-[12.5px] text-muted-foreground">
-                    {week.count} corrida{week.count === 1 ? '' : 's'} ·{' '}
-                    {formatKm(week.km)} km
-                  </div>
-                </div>
-                {week.runs.map((a) => {
-                  const peek = peekId === a.id;
-                  const meta = WORKOUT_META[a.workoutType];
-                  return (
-                    <div key={a.id} className="border-b border-border">
-                      <div className="flex items-center">
-                        <div
-                          onClick={() => navigate(`/activities/${a.id}`)}
-                          className="flex min-w-0 flex-1 cursor-pointer items-center gap-[13px] px-0.5 py-[13px]"
-                        >
-                          <div
-                            className="h-[7px] w-[7px] flex-none rounded-full"
-                            style={{ background: meta?.dot }}
-                          />
-                          <div className="min-w-0 flex-1 text-sm font-semibold text-foreground">
-                            {a.name}
-                            <span className="font-normal text-muted-foreground">
-                              {' '}
-                              · {formatDayMonth(new Date(a.startDate))}
-                            </span>
-                          </div>
-                          <div className="w-[72px] text-right text-[13.5px] text-muted-foreground">
-                            {a.distanceKm != null
-                              ? `${formatKm(a.distanceKm)} km`
-                              : '—'}
-                          </div>
-                          <div className="w-16 text-right text-[13.5px] text-muted-foreground">
-                            {formatDurationShort(a.movingTimeSec)}
-                          </div>
-                          <div className="w-[84px] text-right text-sm font-semibold text-foreground">
-                            {formatPace(a.paceRawSecKm)}
-                          </div>
-                        </div>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setPeekId(peek ? null : a.id);
-                          }}
-                          className="ml-1 h-[38px] w-[38px] cursor-pointer rounded-[9px] text-[15px] text-muted-foreground transition-transform duration-150 hover:bg-chip"
-                          style={{
-                            transform: peek ? 'rotate(90deg)' : 'rotate(0deg)',
-                          }}
-                          aria-label={peek ? 'Fechar resumo' : 'Abrir resumo'}
-                          aria-expanded={peek}
-                        >
-                          ›
-                        </button>
-                      </div>
-                      {peek && (
-                        <div className="grid grid-cols-4 gap-2.5 px-5 pt-0.5 pb-4">
-                          <PeekCard
-                            label="Elevação"
-                            value={
-                              a.elevationGainM != null
-                                ? `${Math.round(a.elevationGainM)} m`
-                                : '—'
-                            }
-                          />
-                          <PeekCard
-                            label="FC média"
-                            value={
-                              a.averageBpm != null
-                                ? `${Math.round(a.averageBpm)} bpm`
-                                : '—'
-                            }
-                          />
-                          <PeekCard
-                            label="FC máx"
-                            value={
-                              a.maxBpm != null
-                                ? `${Math.round(a.maxBpm)} bpm`
-                                : '—'
-                            }
-                          />
-                          <PeekCard
-                            label="Cadência"
-                            value={
-                              a.averageCadence != null
-                                ? `${Math.round(a.averageCadence)} spm`
-                                : '—'
-                            }
-                          />
-                        </div>
-                      )}
+          {loading ? (
+            <p className="py-10 text-center text-[13.5px] text-muted-foreground">
+              Carregando…
+            </p>
+          ) : shownGroups.length === 0 ? (
+            <p className="py-10 text-center text-[13.5px] text-muted-foreground">
+              Nenhuma atividade neste filtro
+            </p>
+          ) : (
+            <>
+              {shownGroups.map((week) => (
+                <div key={week.start.getTime()} className="mb-[26px]">
+                  <div className="flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
+                    <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
+                      Semana de {formatDayMonth(week.start)}
                     </div>
-                  );
-                })}
-              </div>
-            ))}
-            {hiddenWeeks > 0 && (
-              <div className="text-[12.5px] text-muted-foreground">
-                + {hiddenWeeks} semana{hiddenWeeks === 1 ? '' : 's'} anterior
-                {hiddenWeeks === 1 ? '' : 'es'} no período
-              </div>
-            )}
-          </>
-        )}
-      </div>
+                    <div className="text-[12.5px] text-muted-foreground">
+                      {week.count} corrida{week.count === 1 ? '' : 's'} ·{' '}
+                      {formatKm(week.km)} km
+                    </div>
+                  </div>
+                  {week.runs.map((a) => {
+                    const peek = peekId === a.id;
+                    const meta = WORKOUT_META[a.workoutType];
+                    return (
+                      <div key={a.id} className="border-b border-border">
+                        <div className="flex items-center">
+                          <div
+                            onClick={() => {
+                              setDetailId(a.id);
+                              setPeekId(null);
+                            }}
+                            className="flex min-w-0 flex-1 cursor-pointer items-center gap-[13px] px-0.5 py-[13px]"
+                          >
+                            <div
+                              className="h-[7px] w-[7px] flex-none rounded-full"
+                              style={{ background: meta?.dot }}
+                            />
+                            <div className="min-w-0 flex-1 text-sm font-semibold text-foreground">
+                              {a.name}
+                              <span className="font-normal text-muted-foreground">
+                                {' '}
+                                · {formatDayMonth(new Date(a.startDate))}
+                              </span>
+                            </div>
+                            <div className="w-[72px] text-right text-[13.5px] text-muted-foreground">
+                              {a.distanceKm != null
+                                ? `${formatKm(a.distanceKm)} km`
+                                : '—'}
+                            </div>
+                            <div className="w-16 text-right text-[13.5px] text-muted-foreground">
+                              {formatDurationShort(a.movingTimeSec)}
+                            </div>
+                            <div className="w-[84px] text-right text-sm font-semibold text-foreground">
+                              {formatPace(a.paceRawSecKm)}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setPeekId(peek ? null : a.id);
+                            }}
+                            className="ml-1 h-[38px] w-[38px] cursor-pointer rounded-[9px] text-[15px] text-muted-foreground transition-transform duration-150 hover:bg-chip"
+                            style={{
+                              transform: peek
+                                ? 'rotate(90deg)'
+                                : 'rotate(0deg)',
+                            }}
+                            aria-label={peek ? 'Fechar resumo' : 'Abrir resumo'}
+                            aria-expanded={peek}
+                          >
+                            ›
+                          </button>
+                        </div>
+                        {peek && (
+                          <div className="grid grid-cols-4 gap-2.5 px-5 pt-0.5 pb-4">
+                            <PeekCard
+                              label="Elevação"
+                              value={
+                                a.elevationGainM != null
+                                  ? `${Math.round(a.elevationGainM)} m`
+                                  : '—'
+                              }
+                            />
+                            <PeekCard
+                              label="FC média"
+                              value={
+                                a.averageBpm != null
+                                  ? `${Math.round(a.averageBpm)} bpm`
+                                  : '—'
+                              }
+                            />
+                            <PeekCard
+                              label="FC máx"
+                              value={
+                                a.maxBpm != null
+                                  ? `${Math.round(a.maxBpm)} bpm`
+                                  : '—'
+                              }
+                            />
+                            <PeekCard
+                              label="Cadência"
+                              value={
+                                a.averageCadence != null
+                                  ? `${Math.round(a.averageCadence)} spm`
+                                  : '—'
+                              }
+                            />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+              {hiddenWeeks > 0 && (
+                <div className="text-[12.5px] text-muted-foreground">
+                  + {hiddenWeeks} semana{hiddenWeeks === 1 ? '' : 's'} anterior
+                  {hiddenWeeks === 1 ? '' : 'es'} no período
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
