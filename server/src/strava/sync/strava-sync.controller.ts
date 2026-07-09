@@ -27,4 +27,11 @@ export class StravaSyncController {
   getStatus(): SyncProgress {
     return this.syncService.getProgress();
   }
+
+  @Post('backfill-polylines')
+  async backfillPolylines(): Promise<{ updated: number }> {
+    this.logger.log('Polyline backfill triggered via HTTP');
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    return this.syncService.backfillPolylines(userId);
+  }
 }
