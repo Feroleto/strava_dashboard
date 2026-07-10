@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { formatDayMonth, formatMonthLong } from './activityFormat';
+import { formatDayMonth, formatMonthLong } from '@/lib/activityFormat';
 
 export interface DateRange {
   // midnight first activity

@@ -5,36 +5,9 @@ import {
   formatKm,
   formatMinSec,
   formatPace,
-} from './activityFormat';
+} from '@/lib/activityFormat';
 import RouteMap from './RouteMap';
-
-interface ActivityLap {
-  id: string;
-  lapIndex: number;
-  lapType: string;
-  movingDurationSec: number;
-  distanceM: number;
-  avgPaceSecKm: number;
-  avgHr: number;
-  elevGainM: number;
-  avgCadence: number;
-}
-
-interface ActivityDetail {
-  id: string;
-  name: string;
-  workoutType: string;
-  startDate: string;
-  distanceKm: number | null;
-  movingTimeSec: number;
-  paceRawSecKm: number | null;
-  elevationGainM: number | null;
-  averageBpm: number | null;
-  maxBpm: number | null;
-  averageCadence: number | null;
-  summaryPolyline: string | null;
-  laps: ActivityLap[];
-}
+import type { ActivityDetail, ActivityLap } from '@/lib/types';
 
 const MAP_W = 640;
 const MAP_H = 240;
@@ -253,7 +226,7 @@ export default function ActivityDetailView({
             <div className="w-[66px] text-right">Dist</div>
             <div className="w-14 text-right">Time</div>
             <div className="w-16 text-right">Pace</div>
-            <div className='w-11 text-right'>SPM</div>
+            <div className="w-11 text-right">SPM</div>
             <div className="w-11 text-right">HR</div>
           </div>
           {activity.laps.map((lap, i) => (

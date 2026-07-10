@@ -4,8 +4,8 @@ import {
   formatKm,
   formatMonthLong,
   formatMonthShort,
-} from './activityFormat';
-import SegmentedControl from './SegmentedControl';
+} from '@/lib/activityFormat';
+import SegmentedControl from '@/components/SegmentedControl';
 
 export interface BinAgg {
   start: Date;

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { decodePolyline } from './polyline';
+import { decodePolyline } from '@/lib/polyline';
 
 // route/marker colors come from the theme tokens via CSS classes in index.css
 // (.route-line, .route-start, .route-end), so they react to theme switches

@@ -1,4 +1,4 @@
-import Dashboard from './Dashboard';
+import Dashboard from '@/features/dashboard/Dashboard';
 
 function App() {
   return <Dashboard />;
