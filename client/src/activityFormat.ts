@@ -73,3 +73,14 @@ export function formatMinSec(sec: number): string {
 export function formatDayMonth(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
+
+/** "jan" — mês abreviado pt-BR, sem o ponto do toLocaleDateString */
+export function formatMonthShort(d: Date): string {
+  return d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+}
+
+/** "Abril de 2026" */
+export function formatMonthLong(d: Date): string {
+  const s = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
