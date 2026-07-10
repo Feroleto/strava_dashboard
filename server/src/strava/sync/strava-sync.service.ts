@@ -29,6 +29,27 @@ export interface ProcessedSecond {
   paceSeckm: number | null;
 }
 
+type TxClient = Omit<
+  PrismaClient,
+  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
+>;
+
+interface MappedLap {
+  lapIndex: number;
+  avgSpeed: number;
+  avgPace: number;
+  distanceM: number;
+  totalDurationSec: number;
+  movingDurationSec: number;
+  startSec: number;
+  endSec: number;
+  avgHr: number;
+  elevGainM: number;
+  avgGradePercent: number;
+  vam: number;
+  avgCadence: number | null;
+}
+
 export interface SyncProgress {
   state: 'idle' | 'running' | 'done' | 'error';
   phase: 'listing' | 'processing' | 'rate_limited' | null;
@@ -206,88 +227,20 @@ export class StravaSyncService {
 
   // easy and long runs laps collector
   private async processSteadyActivity(
-    tx: Omit<
-      PrismaClient,
-      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
-    >,
+    tx: TxClient,
     userId: string,
     activityId: string,
     fullData: any,
   ): Promise<void> {
-
-    // verify if exists recorded laps
-    const rawLaps: any[] = fullData.laps ?? [];
-
-    const hasRecordedLaps =
-      rawLaps.length > 1 &&
-      typeof rawLaps[0]?.name === 'string' &&
-      rawLaps[0].name.startsWith('Lap');
-
-    // if exists already recorded laps, use that
-    if (hasRecordedLaps) {
-      this.logger.debug(
-        `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
-      );
-
-      const altStream = await this.fetchAltitudeStream(userId, fullData.id);
-
-      const mappedLaps = rawLaps.map((lap: any, i: number) => {
-        const avgSpeed = lap.average_speed ?? 0;
-        const distance = lap.distance ?? 0;
-        const duration = lap.moving_time ?? 0;
-        const elevGain = this.lapElevationGain(altStream, lap);
-
-        return {
-          lapIndex: lap.lap_index ?? i + 1,
-          avgSpeed,
-          avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
-          distanceM: Math.round(distance * 10) / 10,
-          totalDurationSec: lap.elapsed_time ?? duration,
-          movingDurationSec: duration,
-          startSec: lap.start_index ?? 0,
-          endSec: lap.end_index ?? 0,
-          avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
-          elevGainM: Math.round(elevGain * 10) / 10,
-          avgGradePercent:
-            distance > 0
-              ? Math.round((elevGain / distance) * 100 * 10) / 10
-              : 0,
-          vam:
-            duration > 0 && elevGain > 0
-              ? Math.round((elevGain / duration) * 3600)
-              : 0,
-          avgCadence:
-            lap.average_cadence != null ? lap.average_cadence * 2 : null,
-        };
-      });
-
-      const lapType =  LapType.STEADY;
-
-      const lapCreateData = mappedLaps.map((lap, i) => ({
-        activityId,
-        lapType: lapType,
-        lapIndex: lap.lapIndex,
-        startSec: lap.startSec,
-        endSec: lap.endSec,
-        distanceM: lap.distanceM,
-        totalDurationSec: lap.totalDurationSec,
-        movingDurationSec: lap.movingDurationSec,
-        avgPaceSecKm: lap.avgPace,
-        avgHr: lap.avgHr,
-        elevGainM: lap.elevGainM,
-        avgGradePercent: lap.avgGradePercent,
-        vam: lap.vam,
-        avgCadence: lap.avgCadence,
-      }));
-
-      if (lapCreateData.length > 0) {
-        await tx.activityLap.createMany({
-          data: lapCreateData,
-        });
-      }
-
-      return;
-    }
+    // if exists already recorded laps, use that (all STEADY)
+    const savedRecorded = await this.saveRecordedLaps(
+      tx,
+      userId,
+      activityId,
+      fullData,
+      (laps) => laps.map(() => LapType.STEADY),
+    );
+    if (savedRecorded) return;
 
     // only has one recorded lap - means that the activity was recorded directly using strava
     const laps: any[] = fullData.splits_metric ?? [];
@@ -340,93 +293,24 @@ export class StravaSyncService {
 
   // interval and hill repeats laps collector
   private async processStructuredActivity(
-    tx: Omit<
-      PrismaClient,
-      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
-    >,
+    tx: TxClient,
     userId: string,
     activityId: string,
     fullData: any,
     workoutType: 'INTERVAL' | 'HILL_REPEATS',
   ): Promise<void> {
-
-    // verify if has recorded laps
-    const rawLaps: any[] = fullData.laps ?? [];
-
-    const hasRecordedLaps =
-      rawLaps.length > 1 &&
-      typeof rawLaps[0]?.name === 'string' &&
-      rawLaps[0].name.startsWith('Lap');
-
-    if (hasRecordedLaps) {
-      this.logger.debug(
-        `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
-      );
-
-      const altStream = await this.fetchAltitudeStream(userId, fullData.id);
-
-      const mappedLaps = rawLaps.map((lap: any, i: number) => {
-        const avgSpeed = lap.average_speed ?? 0;
-        const distance = lap.distance ?? 0;
-        const duration = lap.moving_time ?? 0;
-        const elevGain = this.lapElevationGain(altStream, lap);
-
-        return {
-          lapIndex: lap.lap_index ?? i + 1,
-          avgSpeed,
-          avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
-          distanceM: Math.round(distance * 10) / 10,
-          totalDurationSec: lap.elapsed_time ?? duration,
-          movingDurationSec: duration,
-          startSec: lap.start_index ?? 0,
-          endSec: lap.end_index ?? 0,
-          avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
-          elevGainM: Math.round(elevGain * 10) / 10,
-          avgGradePercent:
-            distance > 0
-              ? Math.round((elevGain / distance) * 100 * 10) / 10
-              : 0,
-          vam:
-            duration > 0 && elevGain > 0
-              ? Math.round((elevGain / duration) * 3600)
-              : 0,
-          avgCadence:
-            lap.average_cadence != null ? lap.average_cadence * 2 : null,
-        };
-      });
-
-      const types =
+    // if exists already recorded laps, classify and use that
+    const savedRecorded = await this.saveRecordedLaps(
+      tx,
+      userId,
+      activityId,
+      fullData,
+      (laps) =>
         workoutType === 'INTERVAL'
-          ? classifyIntervalLapsType(mappedLaps)
-          : classifyHillLapsType(
-              mappedLaps.map((l) => ({ vam: l.vam })),
-            );
-
-      const lapCreateData = mappedLaps.map((lap, i) => ({
-        activityId,
-        lapType: types[i],
-        lapIndex: lap.lapIndex,
-        startSec: lap.startSec,
-        endSec: lap.endSec,
-        distanceM: lap.distanceM,
-        totalDurationSec: lap.totalDurationSec,
-        movingDurationSec: lap.movingDurationSec,
-        avgPaceSecKm: lap.avgPace,
-        avgHr: lap.avgHr,
-        elevGainM: lap.elevGainM,
-        avgGradePercent: lap.avgGradePercent,
-        vam: lap.vam,
-        avgCadence: lap.avgCadence,
-      }));
-
-      if (lapCreateData.length > 0) {
-        await tx.activityLap.createMany({
-          data: lapCreateData,
-        });
-      }
-
-      return;
-    }
+          ? classifyIntervalLapsType(laps)
+          : classifyHillLapsType(laps),
+    );
+    if (savedRecorded) return;
 
     // does not exist recorded laps - download streams
     this.logger.debug(
@@ -531,6 +415,90 @@ export class StravaSyncService {
   }
 
 
+  // shared recorded-laps path: detects laps recorded on the watch, maps them
+  // (fetching the altitude stream for net elevation) and persists them with
+  // the lap types returned by `classify`. Returns false when the activity has
+  // no recorded laps, so each processor can fall back to its own strategy
+  private async saveRecordedLaps(
+    tx: TxClient,
+    userId: string,
+    activityId: string,
+    fullData: any,
+    classify: (laps: MappedLap[]) => LapType[],
+  ): Promise<boolean> {
+    const rawLaps: any[] = fullData.laps ?? [];
+
+    const hasRecordedLaps =
+      rawLaps.length > 1 &&
+      typeof rawLaps[0]?.name === 'string' &&
+      rawLaps[0].name.startsWith('Lap');
+
+    if (!hasRecordedLaps) return false;
+
+    this.logger.debug(
+      `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
+    );
+
+    const altStream = await this.fetchAltitudeStream(userId, fullData.id);
+
+    const mappedLaps: MappedLap[] = rawLaps.map((lap: any, i: number) => {
+      const avgSpeed = lap.average_speed ?? 0;
+      const distance = lap.distance ?? 0;
+      const duration = lap.moving_time ?? 0;
+      const elevGain = this.lapElevationGain(altStream, lap);
+
+      return {
+        lapIndex: lap.lap_index ?? i + 1,
+        avgSpeed,
+        avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
+        distanceM: Math.round(distance * 10) / 10,
+        totalDurationSec: lap.elapsed_time ?? duration,
+        movingDurationSec: duration,
+        startSec: lap.start_index ?? 0,
+        endSec: lap.end_index ?? 0,
+        avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
+        elevGainM: Math.round(elevGain * 10) / 10,
+        avgGradePercent:
+          distance > 0
+            ? Math.round((elevGain / distance) * 100 * 10) / 10
+            : 0,
+        vam:
+          duration > 0 && elevGain > 0
+            ? Math.round((elevGain / duration) * 3600)
+            : 0,
+        avgCadence:
+          lap.average_cadence != null ? lap.average_cadence * 2 : null,
+      };
+    });
+
+    const types = classify(mappedLaps);
+
+    const lapCreateData = mappedLaps.map((lap, i) => ({
+      activityId,
+      lapType: types[i],
+      lapIndex: lap.lapIndex,
+      startSec: lap.startSec,
+      endSec: lap.endSec,
+      distanceM: lap.distanceM,
+      totalDurationSec: lap.totalDurationSec,
+      movingDurationSec: lap.movingDurationSec,
+      avgPaceSecKm: lap.avgPace,
+      avgHr: lap.avgHr,
+      elevGainM: lap.elevGainM,
+      avgGradePercent: lap.avgGradePercent,
+      vam: lap.vam,
+      avgCadence: lap.avgCadence,
+    }));
+
+    if (lapCreateData.length > 0) {
+      await tx.activityLap.createMany({
+        data: lapCreateData,
+      });
+    }
+
+    return true;
+  }
+
   private async fetchAltitudeStream(
     userId: string,
     stravaActivityId: number | string,
@@ -553,10 +521,7 @@ export class StravaSyncService {
   }
 
   private async processStreamsSQL(
-    tx: Omit<
-      PrismaClient,
-      '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
-    >,
+    tx: TxClient,
     activityId: string,
   ): Promise<ProcessedSecond[]> {
     
