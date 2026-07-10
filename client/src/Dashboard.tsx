@@ -13,6 +13,7 @@ import WeeklyChart, {
   type Granularity,
   type Period,
 } from './WeeklyChart';
+import DateRangePicker, { type DateRange } from './DateRangePicker';
 import SegmentedControl from './SegmentedControl';
 import SyncPanel from './SyncPanel';
 import ActivityDetailView from './ActivityDetailView';
@@ -39,14 +40,16 @@ interface ActivitiesResponse {
 type TypeFilter = 'ALL' | 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS';
 
 const TYPE_OPTIONS: [TypeFilter, string][] = [
-  ['ALL', 'Todas'],
-  ['EASY_OR_LONG', 'Fácil/longa'],
-  ['INTERVAL', 'Intervalo'],
-  ['HILL_REPEATS', 'Subida'],
+  ['ALL', 'All'],
+  ['EASY_OR_LONG', 'EASY/LONG'],
+  ['INTERVAL', 'Interval'],
+  ['HILL_REPEATS', 'Hill Repeats'],
 ];
 
 const MAX_WEEKS = 70;
 const WEEKS_PER_PAGE = 4;
+const DAY_MS = 86_400_000;
+const MONTHLY_THRESHOLD_DAYS = 200;
 
 interface BinWithRuns extends BinAgg {
   runs: Activity[];
@@ -71,8 +74,6 @@ function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-// binning parametrizado por granularidade (semana/mês; trimestre entra aqui se
-// o histórico crescer) — bins vazios são zero-preenchidos
 function aggregateBins(
   activities: Activity[],
   type: TypeFilter,
@@ -117,24 +118,14 @@ function aggregateWeeks(
   return aggregateBins(activities, type, 'week', from, monday);
 }
 
-function aggregateMonths(
-  activities: Activity[],
-  type: TypeFilter,
-): BinWithRuns[] {
-  if (activities.length === 0) return [];
-  // range vai da primeira atividade registrada (independente do filtro de
-  // tipo, pra manter o eixo estável) até o mês atual
-  const earliest = activities.reduce(
-    (min, a) => (a.startDate < min ? a.startDate : min),
-    activities[0].startDate,
-  );
-  return aggregateBins(
-    activities,
-    type,
-    'month',
-    new Date(earliest),
-    startOfBin(new Date(), 'month'),
-  );
+/** "Abril de 2026" se o range for exatamente um mês calendário, senão "01/04 – 15/05" */
+function formatRangeLabel(range: DateRange): string {
+  const start = new Date(range.start);
+  const lastDay = new Date(start.getFullYear(), start.getMonth() + 1, 0);
+  if (start.getDate() === 1 && range.end === lastDay.getTime()) {
+    return formatMonthLong(start);
+  }
+  return `${formatDayMonth(start)} – ${formatDayMonth(new Date(range.end))}`;
 }
 
 function RailStat({ label, value }: { label: string; value: string }) {
@@ -163,12 +154,13 @@ export default function Dashboard() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
   );
+  // `period` não muda quando um range custom entra — é ele que volta ao limpar
   const [period, setPeriod] = useState<Period>('12');
+  const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [peekId, setPeekId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [weekPage, setWeekPage] = useState(1);
-  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -202,17 +194,88 @@ export default function Dashboard() {
 
   const isAll = period === 'all';
   const n = isAll ? MAX_WEEKS : parseInt(period, 10);
+  const rangeActive = dateRange != null;
+  const rangeDays = dateRange
+    ? Math.round((dateRange.end - dateRange.start) / DAY_MS) + 1
+    : 0;
 
-  const weeks = useMemo(
-    () => aggregateWeeks(activities, n, typeFilter),
-    [activities, n, typeFilter],
+  const earliestDate = useMemo(
+    () =>
+      activities.length > 0
+        ? new Date(
+            activities.reduce(
+              (min, a) => (a.startDate < min ? a.startDate : min),
+              activities[0].startDate,
+            ),
+          )
+        : undefined,
+    [activities],
   );
 
-  // bins mensais só existem no modo "Tudo" (gráfico vira mensal + drill-down)
-  const months = useMemo(
-    () => (isAll ? aggregateMonths(activities, typeFilter) : []),
-    [activities, typeFilter, isAll],
+  // atividades dentro do range custom (ambas as pontas inclusivas)
+  const inRange = useMemo(
+    () =>
+      dateRange
+        ? activities.filter((a) => {
+            const t = new Date(a.startDate).getTime();
+            return t >= dateRange.start && t < dateRange.end + DAY_MS;
+          })
+        : activities,
+    [activities, dateRange],
   );
+
+  // bins semanais que alimentam a lista e os totais do rail
+  const weeks = useMemo(() => {
+    if (dateRange) {
+      return aggregateBins(
+        inRange,
+        typeFilter,
+        'week',
+        new Date(dateRange.start),
+        startOfBin(new Date(dateRange.end), 'week'),
+      );
+    }
+    return aggregateWeeks(activities, n, typeFilter);
+  }, [activities, inRange, dateRange, n, typeFilter]);
+
+  const chartGranularity: Granularity =
+    (rangeActive && rangeDays > MONTHLY_THRESHOLD_DAYS) ||
+    (!rangeActive && isAll)
+      ? 'month'
+      : 'week';
+
+  const chartBins = useMemo(() => {
+    if (dateRange) {
+      if (chartGranularity === 'week') return weeks;
+      return aggregateBins(
+        inRange,
+        typeFilter,
+        'month',
+        new Date(dateRange.start),
+        startOfBin(new Date(dateRange.end), 'month'),
+      );
+    }
+    if (isAll && earliestDate) {
+      // "Tudo": um bin por mês calendário, da primeira atividade até hoje
+      return aggregateBins(
+        activities,
+        typeFilter,
+        'month',
+        earliestDate,
+        startOfBin(new Date(), 'month'),
+      );
+    }
+    return weeks;
+  }, [
+    dateRange,
+    chartGranularity,
+    weeks,
+    inRange,
+    isAll,
+    earliestDate,
+    activities,
+    typeFilter,
+  ]);
 
   const totals = useMemo(() => {
     const runs = weeks.flatMap((w) => w.runs);
@@ -226,64 +289,43 @@ export default function Dashboard() {
 
   const typeCounts = useMemo(() => {
     const periodStart = weeks[0]?.start;
-    const inPeriod = periodStart
-      ? activities.filter((a) => new Date(a.startDate) >= periodStart)
-      : [];
-    const counts: Record<string, number> = { ALL: inPeriod.length };
-    for (const a of inPeriod) {
+    const scoped = dateRange
+      ? inRange
+      : periodStart
+        ? activities.filter((a) => new Date(a.startDate) >= periodStart)
+        : [];
+    const counts: Record<string, number> = { ALL: scoped.length };
+    for (const a of scoped) {
       counts[a.workoutType] = (counts[a.workoutType] ?? 0) + 1;
     }
     return counts;
-  }, [activities, weeks]);
+  }, [activities, inRange, dateRange, weeks]);
 
-  const monthActive = isAll && selectedMonth != null;
-  const selectedBin = monthActive
-    ? months.find((m) => m.start.getTime() === selectedMonth)
-    : undefined;
-
-  const weekGroups = useMemo(() => {
-    let source = weeks;
-    if (isAll && selectedMonth != null) {
-      // drill-down: restringe cada semana às corridas do mês selecionado
-      // (semanas que cruzam a virada de mês ficam parciais)
-      const mStart = new Date(selectedMonth);
-      const mEnd = nextBin(mStart, 'month');
-      source = weeks.map((w) => {
-        const runs = w.runs.filter((a) => {
-          const date = new Date(a.startDate);
-          return date >= mStart && date < mEnd;
-        });
-        return {
-          ...w,
-          runs,
-          km: runs.reduce((s, a) => s + (a.distanceKm ?? 0), 0),
-          sec: runs.reduce((s, a) => s + a.movingTimeSec, 0),
-          count: runs.length,
-        };
-      });
-    }
-    return [...source].reverse().filter((w) => w.count > 0);
-  }, [weeks, isAll, selectedMonth]);
-
+  const weekGroups = useMemo(
+    () => [...weeks].reverse().filter((w) => w.count > 0),
+    [weeks],
+  );
   const totalWeekPages = Math.max(
     1,
     Math.ceil(weekGroups.length / WEEKS_PER_PAGE),
   );
   // clamp instead of trusting state: a refetch or filter change can shrink the list
   const currentWeekPage = Math.min(weekPage, totalWeekPages);
-  // um mês selecionado cabe inteiro — sem paginação
-  const shownGroups = monthActive
-    ? weekGroups
-    : weekGroups.slice(
-        (currentWeekPage - 1) * WEEKS_PER_PAGE,
-        currentWeekPage * WEEKS_PER_PAGE,
-      );
+  const shownGroups = weekGroups.slice(
+    (currentWeekPage - 1) * WEEKS_PER_PAGE,
+    currentWeekPage * WEEKS_PER_PAGE,
+  );
   const olderWeeks = Math.max(
     0,
     weekGroups.length - currentWeekPage * WEEKS_PER_PAGE,
   );
 
   const avgPace = totals.km > 0 ? totals.sec / totals.km : null;
+
+  const applyRange = (range: DateRange | null) => {
+    setDateRange(range);
+    setWeekPage(1);
+  };
 
   if (error) {
     return (
@@ -296,10 +338,14 @@ export default function Dashboard() {
       {/* left rail */}
       <div className="flex flex-col">
         <div className="text-2xl font-semibold tracking-[-.02em] text-foreground">
-          Corridas
+          Runs
         </div>
         <div className="mt-[3px] text-[13px] text-muted-foreground">
-          {isAll ? 'Todo o período' : `Últimas ${n} semanas`}
+          {dateRange
+            ? formatRangeLabel(dateRange)
+            : isAll
+              ? 'All runs'
+              : `Last ${n} weeks`}
         </div>
 
         <div className="mt-8">
@@ -307,23 +353,23 @@ export default function Dashboard() {
             {formatKm(totals.km)}
           </div>
           <div className="mt-1.5 text-[13.5px] text-muted-foreground">
-            km percorridos no período
+            km covered in this period
           </div>
         </div>
 
         <div className="mt-7 border-t border-border">
-          <RailStat label="Atividades" value={String(totals.count)} />
-          <RailStat label="Pace médio" value={formatPace(avgPace)} />
-          <RailStat label="Tempo total" value={formatDuration(totals.sec)} />
+          <RailStat label="Activities" value={String(totals.count)} />
+          <RailStat label="Average Pace" value={formatPace(avgPace)} />
+          <RailStat label="Total Time" value={formatDuration(totals.sec)} />
           <RailStat
-            label="Elevação"
+            label="Elevation Gain"
             value={`${Math.round(totals.elev).toLocaleString('pt-BR')} m`}
           />
         </div>
 
         <div className="mt-[26px]">
           <div className="mb-2.5 text-[11.5px] font-medium tracking-[.05em] uppercase text-muted-foreground">
-            Tipo de treino
+            Workout Type
           </div>
           <div className="flex flex-col gap-1.5">
             {TYPE_OPTIONS.map(([key, label]) => {
@@ -365,8 +411,8 @@ export default function Dashboard() {
         <div className="mt-auto pt-[30px] self-start">
           <SegmentedControl
             items={[
-              ['light', 'Claro'],
-              ['dark', 'Escuro'],
+              ['light', 'Light'],
+              ['dark', 'Dark'],
             ]}
             active={theme}
             onPick={setTheme}
@@ -382,24 +428,40 @@ export default function Dashboard() {
       ) : (
         <div className="min-w-0">
           <WeeklyChart
-            bins={isAll ? months : weeks}
-            granularity={isAll ? 'month' : 'week'}
+            bins={chartBins}
+            granularity={chartGranularity}
             totalKm={totals.km}
             period={period}
             onPeriodChange={(p) => {
               setPeriod(p);
               setWeekPage(1);
-              setSelectedMonth(null);
+              setDateRange(null);
             }}
-            selected={isAll ? selectedMonth : null}
             onSelect={
-              isAll
-                ? (ms) => setSelectedMonth((prev) => (prev === ms ? null : ms))
+              isAll && !rangeActive
+                ? (ms) => {
+                    // drill-down do "Tudo": mês clicado vira range custom
+                    const s = new Date(ms);
+                    applyRange({
+                      start: ms,
+                      end: new Date(
+                        s.getFullYear(),
+                        s.getMonth() + 1,
+                        0,
+                      ).getTime(),
+                    });
+                  }
                 : undefined
             }
-          />
+          >
+            <DateRangePicker
+              range={dateRange}
+              onChange={applyRange}
+              minDate={earliestDate}
+            />
+          </WeeklyChart>
 
-          {monthActive && (
+          {dateRange && (
             <div className="mb-[26px] flex">
               <div
                 className="flex items-center gap-2.5 rounded-full px-3.5 py-[7px]"
@@ -412,16 +474,16 @@ export default function Dashboard() {
                   className="text-[12.5px] font-semibold"
                   style={{ color: 'var(--acc-tx)' }}
                 >
-                  {formatMonthLong(new Date(selectedMonth!))}
+                  {formatRangeLabel(dateRange)}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {selectedBin?.count ?? 0} corrida
-                  {(selectedBin?.count ?? 0) === 1 ? '' : 's'} ·{' '}
-                  {formatKm(selectedBin?.km ?? 0)} km
+                  {totals.count} run{totals.count === 1 ? '' : 's'} ·{' '}
+                  {formatKm(totals.km)} km · {rangeDays} day
+                  {rangeDays === 1 ? '' : 's'}
                 </span>
                 <button
-                  onClick={() => setSelectedMonth(null)}
-                  aria-label="Limpar filtro de mês"
+                  onClick={() => applyRange(null)}
+                  aria-label="Clean custom period"
                   className="cursor-pointer text-[14px] leading-none text-muted-foreground hover:text-foreground"
                 >
                   ×
@@ -444,10 +506,17 @@ export default function Dashboard() {
                 <div key={week.start.getTime()} className="mb-[26px]">
                   <div className="flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
                     <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
-                      Semana de {formatDayMonth(week.start)}
+                      {formatDayMonth(week.start)} –{' '}
+                      {formatDayMonth(
+                        new Date(
+                          week.start.getFullYear(),
+                          week.start.getMonth(),
+                          week.start.getDate() + 6,
+                        ),
+                      )}
                     </div>
                     <div className="text-[12.5px] text-muted-foreground">
-                      {week.count} corrida{week.count === 1 ? '' : 's'} ·{' '}
+                      {week.count} run{week.count === 1 ? '' : 's'} ·{' '}
                       {formatKm(week.km)} km
                     </div>
                   </div>
@@ -507,7 +576,7 @@ export default function Dashboard() {
                         {peek && (
                           <div className="grid grid-cols-4 gap-2.5 px-5 pt-0.5 pb-4">
                             <PeekCard
-                              label="Elevação"
+                              label="Elevation"
                               value={
                                 a.elevationGainM != null
                                   ? `${Math.round(a.elevationGainM)} m`
@@ -515,7 +584,7 @@ export default function Dashboard() {
                               }
                             />
                             <PeekCard
-                              label="FC média"
+                              label="AVG HR"
                               value={
                                 a.averageBpm != null
                                   ? `${Math.round(a.averageBpm)} bpm`
@@ -523,7 +592,7 @@ export default function Dashboard() {
                               }
                             />
                             <PeekCard
-                              label="FC máx"
+                              label="MAX HR"
                               value={
                                 a.maxBpm != null
                                   ? `${Math.round(a.maxBpm)} bpm`
@@ -531,7 +600,7 @@ export default function Dashboard() {
                               }
                             />
                             <PeekCard
-                              label="Cadência"
+                              label="Cadence"
                               value={
                                 a.averageCadence != null
                                   ? `${Math.round(a.averageCadence)} spm`
@@ -545,32 +614,32 @@ export default function Dashboard() {
                   })}
                 </div>
               ))}
-              {!monthActive && totalWeekPages > 1 && (
+              {totalWeekPages > 1 && (
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => setWeekPage(currentWeekPage - 1)}
                     disabled={currentWeekPage <= 1}
                     className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
                   >
-                    ‹ Semanas recentes
+                    ‹ Recent weeks
                   </button>
                   <span className="text-[12.5px] text-muted-foreground">
-                    Página {currentWeekPage} de {totalWeekPages}
+                    Page {currentWeekPage} of {totalWeekPages}
                   </span>
                   <button
                     onClick={() => setWeekPage(currentWeekPage + 1)}
                     disabled={currentWeekPage >= totalWeekPages}
                     className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
                   >
-                    Semanas anteriores ›
+                    Previous weeks ›
                   </button>
                 </div>
               )}
-              {isAll && !monthActive && (
+              {isAll && !rangeActive && (
                 <div className="mt-4 text-center text-[12.5px] text-muted-foreground">
                   {olderWeeks > 0
-                    ? `+ ${olderWeeks} semanas anteriores · clique num mês no gráfico para filtrar`
-                    : 'Clique num mês no gráfico para filtrar'}
+                    ? `+ ${olderWeeks} previous weeks · Select a month in the graph to filter`
+                    : 'Select a month in the graph to filter'}
                 </div>
               )}
             </>
