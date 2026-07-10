@@ -17,7 +17,7 @@ interface ActivityLap {
   avgPaceSecKm: number;
   avgHr: number;
   elevGainM: number;
-  avgCadence: number | null;
+  avgCadence: number;
 }
 
 interface ActivityDetail {
@@ -40,17 +40,17 @@ const MAP_W = 640;
 const MAP_H = 240;
 
 const LAP_TYPE_BASE: Record<string, string> = {
-  WARMUP: 'Aquecimento',
-  COOLDOWN: 'Desaquecimento',
-  WORKOUT: 'Tiro',
-  REST: 'Rec.',
+  WARMUP: 'Warmup',
+  COOLDOWN: 'Cooldown',
+  WORKOUT: 'Run',
+  REST: 'Rec',
   RUN: 'Volta',
   STEADY: 'Km',
-  ACTIVITY: 'Atividade',
+  ACTIVITY: 'Activity',
 };
 
-// "Tiro 1", "Rec. 1", "Km 3"… — numbered per type; single-occurrence types
-// (Aquecimento, Desaquecimento) keep the bare label
+// "Run 1", "Rec 1", "Km 3" — numbered per type; single-occurrence types
+// (Warmup, Cooldown) keep the bare label
 function lapLabels(laps: ActivityLap[]): string[] {
   const perType: Record<string, number> = {};
   for (const lap of laps) {
@@ -66,7 +66,7 @@ function lapLabels(laps: ActivityLap[]): string[] {
 
 function formatDateFull(iso: string): string {
   const d = new Date(iso);
-  const date = d.toLocaleDateString('pt-BR', {
+  const date = d.toLocaleDateString('en-US', {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
@@ -137,34 +137,34 @@ export default function ActivityDetailView({
 
   const stats: [string, string][] = [
     [
-      'Distância',
+      'Distance',
       activity.distanceKm != null ? `${formatKm(activity.distanceKm)} km` : '—',
     ],
-    ['Tempo', formatDurationShort(activity.movingTimeSec)],
-    ['Pace médio', formatPace(activity.paceRawSecKm)],
+    ['Time', formatDurationShort(activity.movingTimeSec)],
+    ['Pace', formatPace(activity.paceRawSecKm)],
     [
-      'Elevação',
+      'Elevetaion',
       activity.elevationGainM != null
         ? `${Math.round(activity.elevationGainM)} m`
         : '—',
     ],
     [
-      'FC média',
+      'AVG HR',
       activity.averageBpm != null
         ? `${Math.round(activity.averageBpm)} bpm`
         : '—',
     ],
     [
-      'FC máx',
+      'MAX HR',
       activity.maxBpm != null ? `${Math.round(activity.maxBpm)} bpm` : '—',
     ],
     [
-      'Cadência',
+      'Cadence',
       activity.averageCadence != null
         ? `${Math.round(activity.averageCadence)} spm`
         : '—',
     ],
-    ['Melhor pace', formatPace(fastestPace)],
+    ['Best Pace', formatPace(fastestPace)],
   ];
 
   return (
@@ -174,7 +174,7 @@ export default function ActivityDetailView({
           onClick={onBack}
           className="cursor-pointer rounded-[9px] bg-chip py-[7px] pr-[13px] pl-2.5 text-[13px] font-medium text-foreground hover:bg-grid-ax"
         >
-          ← Voltar
+          ← Return
         </button>
         <div
           className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
@@ -243,17 +243,18 @@ export default function ActivityDetailView({
             </div>
             <div className="text-[12.5px] text-muted-foreground">
               {activity.laps.length}{' '}
-              {activity.laps.length === 1 ? 'volta' : 'voltas'}
+              {activity.laps.length === 1 ? 'Lap' : 'Laps'}
             </div>
           </div>
           <div className="flex items-center gap-[13px] px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground">
             <div className="w-[22px]">#</div>
-            <div className="w-[110px]">Volta</div>
+            <div className="w-[110px]">Lap</div>
             <div className="flex-1" />
             <div className="w-[66px] text-right">Dist</div>
-            <div className="w-14 text-right">Tempo</div>
+            <div className="w-14 text-right">Time</div>
             <div className="w-16 text-right">Pace</div>
-            <div className="w-11 text-right">FC</div>
+            <div className='w-11 text-right'>SPM</div>
+            <div className="w-11 text-right">HR</div>
           </div>
           {activity.laps.map((lap, i) => (
             <div
@@ -286,6 +287,9 @@ export default function ActivityDetailView({
               </div>
               <div className="w-16 text-right text-[13.5px] font-semibold text-foreground">
                 {formatPace(lap.avgPaceSecKm).replace(' /km', '')}
+              </div>
+              <div className="w-11 text-right text-[13px] text-muted-foreground">
+                {lap.avgCadence > 0 ? Math.round(lap.avgCadence) : '-'}
               </div>
               <div className="w-11 text-right text-[13px] text-muted-foreground">
                 {lap.avgHr > 0 ? Math.round(lap.avgHr) : '—'}

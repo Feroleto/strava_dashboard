@@ -98,28 +98,28 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
   let statusLine: string;
   let statusTone = 'text-muted-foreground';
   if (requestError) {
-    statusLine = `Falha ao iniciar: ${requestError}`;
+    statusLine = `Failure to start: ${requestError}`;
     statusTone = 'text-neg';
   } else if (running && status?.phase === 'listing') {
-    statusLine = 'Buscando atividades no Strava…';
+    statusLine = 'Search activities on Strava…';
   } else if (running && status?.phase === 'rate_limited') {
-    statusLine = 'Limite do Strava — aguardando 15 min';
+    statusLine = 'Strava fetch limit — waiting 15 min';
     statusTone = 'text-neg';
   } else if (running) {
     statusLine =
       total != null
-        ? `${synced} de ${total} salvas${errors > 0 ? `, ${errors} com erro` : ''}`
-        : 'Processando atividades…';
+        ? `${synced} of ${total} saved${errors > 0 ? `, ${errors} with error` : ''}`
+        : 'Processing activities';
   } else if (watching && status?.state === 'done') {
     statusLine =
       total === 0
-        ? 'Sincronizado — nada novo'
-        : `Sincronizado — ${synced} ${synced === 1 ? 'atividade salva' : 'atividades salvas'}${errors > 0 ? `, ${errors} com erro` : ''}`;
+        ? 'Synced — nothing new'
+        : `Synced — ${synced} ${synced === 1 ? 'new activity' : 'new activities'}${errors > 0 ? `, ${errors} errors` : ''}`;
   } else if (watching && status?.state === 'error') {
-    statusLine = `Falha no sync: ${status.message ?? 'erro desconhecido'}`;
+    statusLine = `Sync failure: ${status.message ?? 'unknown error'}`;
     statusTone = 'text-neg';
   } else {
-    statusLine = 'Baixar novas atividades';
+    statusLine = 'Sync new activities';
   }
 
   return (
@@ -134,7 +134,7 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
           disabled={running}
           className="shrink-0 cursor-pointer rounded-[9px] bg-chip px-[13px] py-1.5 text-[12.5px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {running ? 'Sincronizando…' : 'Sync'}
+          {running ? 'Syncing' : 'Sync'}
         </button>
       </div>
 

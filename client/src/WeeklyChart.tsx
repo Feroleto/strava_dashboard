@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import {
   formatDayMonth,
   formatKm,
@@ -19,16 +19,25 @@ export type Granularity = 'week' | 'month';
 export type Period = '4' | '8' | '12' | 'all';
 
 const PERIODS: [Period, string][] = [
-  ['4', '4 sem'],
-  ['8', '8 sem'],
-  ['12', '12 sem'],
-  ['all', 'Tudo'],
+  ['4', '4 w'],
+  ['8', '8 w'],
+  ['12', '12 w'],
+  ['all', 'All'],
 ];
 
 const VB_W = 720;
 const VB_H = 210;
 const AXIS_Y = 196;
 const PLOT_H = 170;
+
+function formatWeekRange(start: Date): string {
+  const end = new Date(
+    start.getFullYear(),
+    start.getMonth(),
+    start.getDate() + 6,
+  );
+  return `${formatDayMonth(start)} – ${formatDayMonth(end)}`;
+}
 
 // Catmull-Rom → cubic bézier (tension /6), same smoothing as the design prototype
 function smoothPath(pts: [number, number][]): string {
@@ -52,10 +61,10 @@ interface WeeklyChartProps {
   totalKm: number;
   period: Period;
   onPeriodChange: (p: Period) => void;
-  /** bin selecionado (timestamp do start) — só usado no modo mensal */
-  selected?: number | null;
-  /** presente apenas quando os bins são clicáveis (modo mensal) */
+  /** presente apenas quando os bins são clicáveis (modo mensal do "Tudo") */
   onSelect?: (startMs: number) => void;
+  /** controles extras no header, depois do segmented (ex.: date range picker) */
+  children?: ReactNode;
 }
 
 export default function WeeklyChart({
@@ -64,8 +73,8 @@ export default function WeeklyChart({
   totalKm,
   period,
   onPeriodChange,
-  selected = null,
   onSelect,
+  children,
 }: WeeklyChartProps) {
   const [hover, setHover] = useState<number | null>(null);
 
@@ -82,24 +91,20 @@ export default function WeeklyChart({
       ? `${linePath} L ${pts[n - 1][0].toFixed(1)} ${AXIS_Y} L ${pts[0][0].toFixed(1)} ${AXIS_Y} Z`
       : '';
   const labelEvery = monthly ? 1 : Math.max(1, Math.ceil(n / 8));
-  const selIdx =
-    selected != null
-      ? bins.findIndex((b) => b.start.getTime() === selected)
-      : -1;
 
   const hov = hover !== null && bins[hover] ? hover : null;
   const reading =
     hov !== null
       ? monthly
-        ? `${formatMonthLong(bins[hov].start)} · ${formatKm(bins[hov].km)} km · ${bins[hov].count} corrida${bins[hov].count === 1 ? '' : 's'}`
-        : `Semana de ${formatDayMonth(bins[hov].start)} · ${formatKm(bins[hov].km)} km`
-      : `${formatKm(totalKm)} km no período`;
+        ? `${formatMonthLong(bins[hov].start)} · ${formatKm(bins[hov].km)} km · ${bins[hov].count} run${bins[hov].count === 1 ? '' : 's'}`
+        : `${formatWeekRange(bins[hov].start)} · ${formatKm(bins[hov].km)} km`
+      : `${formatKm(totalKm)} km in this period`;
 
   return (
     <div className="mb-9 rounded-[var(--rad)] border border-border bg-card px-7 pt-6 pb-4 transition-[background] duration-[250ms]">
       <div className="mb-1.5 flex items-center justify-between">
         <div className="text-sm font-semibold text-foreground">
-          {monthly ? 'Distância mensal' : 'Distância semanal'}
+          {monthly ? 'Monthly distance' : 'Weekly distance'}
         </div>
         <div className="flex items-center gap-3.5">
           <div className="text-[12.5px] text-muted-foreground">{reading}</div>
@@ -109,21 +114,11 @@ export default function WeeklyChart({
             active={period}
             onPick={onPeriodChange}
           />
+          {children}
         </div>
       </div>
 
       <div className="relative">
-        {selIdx >= 0 && (
-          <div
-            className="pointer-events-none absolute top-1 bottom-[7%] rounded-[8px]"
-            style={{
-              left: `${((selIdx / n) * 100).toFixed(2)}%`,
-              width: `${(100 / n).toFixed(2)}%`,
-              background: 'color-mix(in oklab, var(--acc) 8%, transparent)',
-            }}
-          />
-        )}
-
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="block w-full">
           <defs>
             <linearGradient id="weekly-grad" x1="0" y1="0" x2="0" y2="1">
@@ -193,10 +188,7 @@ export default function WeeklyChart({
         {bins.map((b, i) => (
           <div
             key={b.start.getTime()}
-            className={`flex-1 text-center text-[11px] ${
-              i === selIdx ? 'font-semibold' : 'text-muted-foreground'
-            }`}
-            style={i === selIdx ? { color: 'var(--acc-tx)' } : undefined}
+            className="flex-1 text-center text-[11px] text-muted-foreground"
           >
             {i % labelEvery === 0
               ? monthly
