@@ -1,7 +1,7 @@
 export const WORKOUT_LABEL: Record<string, string> = {
-  EASY_OR_LONG: 'Fácil/longa',
-  INTERVAL: 'Intervalo',
-  HILL_REPEATS: 'Subida',
+  EASY_OR_LONG: 'Easy/Long',
+  INTERVAL: 'Interval',
+  HILL_REPEATS: 'Hill Repeats',
 };
 
 // dot/badge colors per workout type (tokens from index.css)
@@ -10,19 +10,19 @@ export const WORKOUT_META: Record<
   { label: string; dot: string; badgeBg: string; badgeColor: string }
 > = {
   EASY_OR_LONG: {
-    label: 'Fácil/longa',
+    label: 'Easy/Long',
     dot: 'var(--dot-easy)',
     badgeBg: 'var(--neutral-bg)',
     badgeColor: 'var(--neutral)',
   },
   INTERVAL: {
-    label: 'Intervalo',
+    label: 'Interval',
     dot: 'var(--acc)',
     badgeBg: 'var(--acc-bg)',
     badgeColor: 'var(--acc-tx)',
   },
   HILL_REPEATS: {
-    label: 'Subida',
+    label: 'Hill Repeats',
     dot: 'var(--pos)',
     badgeBg: 'var(--pos-bg)',
     badgeColor: 'var(--pos)',
@@ -44,21 +44,21 @@ export function formatPace(secPerKm: number | null): string {
   return `${min}:${sec.toString().padStart(2, '0')} /km`;
 }
 
-/** "29h 16m" | "42min" — rail totals */
+// "29h 16m" | "42min" — rail totals
 export function formatDuration(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.round((sec % 3600) / 60);
   return h > 0 ? `${h}h ${m.toString().padStart(2, '0')}m` : `${m}min`;
 }
 
-/** "1h11" | "58min" — activity rows */
+// "1h11" | "58min" — activity rows
 export function formatDurationShort(sec: number): string {
   const h = Math.floor(sec / 3600);
   const m = Math.round((sec % 3600) / 60);
   return h > 0 ? `${h}h${m.toString().padStart(2, '0')}` : `${m}min`;
 }
 
-/** "4:32" — lap durations */
+// "4:32" — lap durations
 export function formatMinSec(sec: number): string {
   let m = Math.floor(sec / 60);
   let s = Math.round(sec % 60);
@@ -69,18 +69,18 @@ export function formatMinSec(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
-/** "DD/MM" */
+// "DD/MM"
 export function formatDayMonth(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
-/** "jan" — mês abreviado pt-BR, sem o ponto do toLocaleDateString */
+// removing dot from toLocaleDateString
 export function formatMonthShort(d: Date): string {
-  return d.toLocaleDateString('pt-BR', { month: 'short' }).replace('.', '');
+  return d.toLocaleDateString('en-US', { month: 'short' }).replace('.', '');
 }
 
-/** "Abril de 2026" */
+// January 2026
 export function formatMonthLong(d: Date): string {
-  const s = d.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
