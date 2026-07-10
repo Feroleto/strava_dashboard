@@ -19,7 +19,7 @@ export default function RouteMap({ polyline }: { polyline: string }) {
 
     const map = L.map(el, {
       zoomControl: false,
-      scrollWheelZoom: false,
+      scrollWheelZoom: true,
     });
 
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
