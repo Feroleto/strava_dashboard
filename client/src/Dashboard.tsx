@@ -5,9 +5,14 @@ import {
   formatDuration,
   formatDurationShort,
   formatKm,
+  formatMonthLong,
   formatPace,
 } from './activityFormat';
-import WeeklyChart, { type Period, type WeekAgg } from './WeeklyChart';
+import WeeklyChart, {
+  type BinAgg,
+  type Granularity,
+  type Period,
+} from './WeeklyChart';
 import SegmentedControl from './SegmentedControl';
 import SyncPanel from './SyncPanel';
 import ActivityDetailView from './ActivityDetailView';
@@ -40,17 +45,25 @@ const TYPE_OPTIONS: [TypeFilter, string][] = [
   ['HILL_REPEATS', 'Subida'],
 ];
 
-const MAX_WEEKS = 26;
-const SHOWN_WEEK_GROUPS = 5;
+const MAX_WEEKS = 70;
+const WEEKS_PER_PAGE = 4;
 
-interface WeekWithRuns extends WeekAgg {
+interface BinWithRuns extends BinAgg {
   runs: Activity[];
 }
 
-function mondayOfCurrentWeek(): Date {
-  const d = new Date();
+function startOfBin(date: Date, granularity: Granularity): Date {
+  const d = new Date(date);
   d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  if (granularity === 'week') d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  else d.setDate(1);
+  return d;
+}
+
+function nextBin(start: Date, granularity: Granularity): Date {
+  const d = new Date(start);
+  if (granularity === 'week') d.setDate(d.getDate() + 7);
+  else d.setMonth(d.getMonth() + 1);
   return d;
 }
 
@@ -58,18 +71,22 @@ function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function aggregateWeeks(
+// binning parametrizado por granularidade (semana/mês; trimestre entra aqui se
+// o histórico crescer) — bins vazios são zero-preenchidos
+function aggregateBins(
   activities: Activity[],
-  n: number,
   type: TypeFilter,
-): WeekWithRuns[] {
-  const monday = mondayOfCurrentWeek();
-  const weeks: WeekWithRuns[] = [];
-  for (let i = n - 1; i >= 0; i--) {
-    const start = new Date(monday);
-    start.setDate(start.getDate() - 7 * i);
-    const end = new Date(start);
-    end.setDate(end.getDate() + 7);
+  granularity: Granularity,
+  from: Date,
+  until: Date,
+): BinWithRuns[] {
+  const bins: BinWithRuns[] = [];
+  for (
+    let start = startOfBin(from, granularity);
+    start <= until;
+    start = nextBin(start, granularity)
+  ) {
+    const end = nextBin(start, granularity);
     const runs = activities.filter((a) => {
       const date = new Date(a.startDate);
       return (
@@ -78,7 +95,7 @@ function aggregateWeeks(
         (type === 'ALL' || a.workoutType === type)
       );
     });
-    weeks.push({
+    bins.push({
       start,
       km: runs.reduce((s, a) => s + (a.distanceKm ?? 0), 0),
       sec: runs.reduce((s, a) => s + a.movingTimeSec, 0),
@@ -86,7 +103,38 @@ function aggregateWeeks(
       runs,
     });
   }
-  return weeks;
+  return bins;
+}
+
+function aggregateWeeks(
+  activities: Activity[],
+  n: number,
+  type: TypeFilter,
+): BinWithRuns[] {
+  const monday = startOfBin(new Date(), 'week');
+  const from = new Date(monday);
+  from.setDate(from.getDate() - 7 * (n - 1));
+  return aggregateBins(activities, type, 'week', from, monday);
+}
+
+function aggregateMonths(
+  activities: Activity[],
+  type: TypeFilter,
+): BinWithRuns[] {
+  if (activities.length === 0) return [];
+  // range vai da primeira atividade registrada (independente do filtro de
+  // tipo, pra manter o eixo estável) até o mês atual
+  const earliest = activities.reduce(
+    (min, a) => (a.startDate < min ? a.startDate : min),
+    activities[0].startDate,
+  );
+  return aggregateBins(
+    activities,
+    type,
+    'month',
+    new Date(earliest),
+    startOfBin(new Date(), 'month'),
+  );
 }
 
 function RailStat({ label, value }: { label: string; value: string }) {
@@ -119,6 +167,8 @@ export default function Dashboard() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [peekId, setPeekId] = useState<string | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
+  const [weekPage, setWeekPage] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -129,9 +179,9 @@ export default function Dashboard() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // fetch the whole 26-week window once; period/type are applied client-side
+  // fetch the whole window once; period/type are applied client-side
   useEffect(() => {
-    const from = mondayOfCurrentWeek();
+    const from = startOfBin(new Date(), 'week');
     from.setDate(from.getDate() - 7 * (MAX_WEEKS - 1));
     const params = new URLSearchParams({
       limit: '1000',
@@ -150,11 +200,18 @@ export default function Dashboard() {
       .finally(() => setLoading(false));
   }, [refreshKey]);
 
-  const n = parseInt(period, 10);
+  const isAll = period === 'all';
+  const n = isAll ? MAX_WEEKS : parseInt(period, 10);
 
   const weeks = useMemo(
     () => aggregateWeeks(activities, n, typeFilter),
     [activities, n, typeFilter],
+  );
+
+  // bins mensais só existem no modo "Tudo" (gráfico vira mensal + drill-down)
+  const months = useMemo(
+    () => (isAll ? aggregateMonths(activities, typeFilter) : []),
+    [activities, typeFilter, isAll],
   );
 
   const totals = useMemo(() => {
@@ -179,12 +236,52 @@ export default function Dashboard() {
     return counts;
   }, [activities, weeks]);
 
-  const weekGroups = useMemo(
-    () => [...weeks].reverse().filter((w) => w.count > 0),
-    [weeks],
+  const monthActive = isAll && selectedMonth != null;
+  const selectedBin = monthActive
+    ? months.find((m) => m.start.getTime() === selectedMonth)
+    : undefined;
+
+  const weekGroups = useMemo(() => {
+    let source = weeks;
+    if (isAll && selectedMonth != null) {
+      // drill-down: restringe cada semana às corridas do mês selecionado
+      // (semanas que cruzam a virada de mês ficam parciais)
+      const mStart = new Date(selectedMonth);
+      const mEnd = nextBin(mStart, 'month');
+      source = weeks.map((w) => {
+        const runs = w.runs.filter((a) => {
+          const date = new Date(a.startDate);
+          return date >= mStart && date < mEnd;
+        });
+        return {
+          ...w,
+          runs,
+          km: runs.reduce((s, a) => s + (a.distanceKm ?? 0), 0),
+          sec: runs.reduce((s, a) => s + a.movingTimeSec, 0),
+          count: runs.length,
+        };
+      });
+    }
+    return [...source].reverse().filter((w) => w.count > 0);
+  }, [weeks, isAll, selectedMonth]);
+
+  const totalWeekPages = Math.max(
+    1,
+    Math.ceil(weekGroups.length / WEEKS_PER_PAGE),
   );
-  const shownGroups = weekGroups.slice(0, SHOWN_WEEK_GROUPS);
-  const hiddenWeeks = weekGroups.length - shownGroups.length;
+  // clamp instead of trusting state: a refetch or filter change can shrink the list
+  const currentWeekPage = Math.min(weekPage, totalWeekPages);
+  // um mês selecionado cabe inteiro — sem paginação
+  const shownGroups = monthActive
+    ? weekGroups
+    : weekGroups.slice(
+        (currentWeekPage - 1) * WEEKS_PER_PAGE,
+        currentWeekPage * WEEKS_PER_PAGE,
+      );
+  const olderWeeks = Math.max(
+    0,
+    weekGroups.length - currentWeekPage * WEEKS_PER_PAGE,
+  );
 
   const avgPace = totals.km > 0 ? totals.sec / totals.km : null;
 
@@ -202,7 +299,7 @@ export default function Dashboard() {
           Corridas
         </div>
         <div className="mt-[3px] text-[13px] text-muted-foreground">
-          Últimas {n} semanas
+          {isAll ? 'Todo o período' : `Últimas ${n} semanas`}
         </div>
 
         <div className="mt-8">
@@ -234,7 +331,10 @@ export default function Dashboard() {
               return (
                 <button
                   key={key}
-                  onClick={() => setTypeFilter(key)}
+                  onClick={() => {
+                    setTypeFilter(key);
+                    setWeekPage(1);
+                  }}
                   className={`flex cursor-pointer items-center gap-2.5 rounded-[10px] border px-[13px] py-[9px] text-left text-[13px] font-medium ${
                     active
                       ? 'border-grid-ax bg-card text-foreground'
@@ -282,11 +382,53 @@ export default function Dashboard() {
       ) : (
         <div className="min-w-0">
           <WeeklyChart
-            weeks={weeks}
+            bins={isAll ? months : weeks}
+            granularity={isAll ? 'month' : 'week'}
             totalKm={totals.km}
             period={period}
-            onPeriodChange={(p) => setPeriod(p)}
+            onPeriodChange={(p) => {
+              setPeriod(p);
+              setWeekPage(1);
+              setSelectedMonth(null);
+            }}
+            selected={isAll ? selectedMonth : null}
+            onSelect={
+              isAll
+                ? (ms) => setSelectedMonth((prev) => (prev === ms ? null : ms))
+                : undefined
+            }
           />
+
+          {monthActive && (
+            <div className="mb-[26px] flex">
+              <div
+                className="flex items-center gap-2.5 rounded-full px-3.5 py-[7px]"
+                style={{
+                  background:
+                    'color-mix(in oklab, var(--acc) 10%, transparent)',
+                }}
+              >
+                <span
+                  className="text-[12.5px] font-semibold"
+                  style={{ color: 'var(--acc-tx)' }}
+                >
+                  {formatMonthLong(new Date(selectedMonth!))}
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {selectedBin?.count ?? 0} corrida
+                  {(selectedBin?.count ?? 0) === 1 ? '' : 's'} ·{' '}
+                  {formatKm(selectedBin?.km ?? 0)} km
+                </span>
+                <button
+                  onClick={() => setSelectedMonth(null)}
+                  aria-label="Limpar filtro de mês"
+                  className="cursor-pointer text-[14px] leading-none text-muted-foreground hover:text-foreground"
+                >
+                  ×
+                </button>
+              </div>
+            </div>
+          )}
 
           {loading ? (
             <p className="py-10 text-center text-[13.5px] text-muted-foreground">
@@ -403,10 +545,32 @@ export default function Dashboard() {
                   })}
                 </div>
               ))}
-              {hiddenWeeks > 0 && (
-                <div className="text-[12.5px] text-muted-foreground">
-                  + {hiddenWeeks} semana{hiddenWeeks === 1 ? '' : 's'} anterior
-                  {hiddenWeeks === 1 ? '' : 'es'} no período
+              {!monthActive && totalWeekPages > 1 && (
+                <div className="flex items-center justify-between">
+                  <button
+                    onClick={() => setWeekPage(currentWeekPage - 1)}
+                    disabled={currentWeekPage <= 1}
+                    className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
+                  >
+                    ‹ Semanas recentes
+                  </button>
+                  <span className="text-[12.5px] text-muted-foreground">
+                    Página {currentWeekPage} de {totalWeekPages}
+                  </span>
+                  <button
+                    onClick={() => setWeekPage(currentWeekPage + 1)}
+                    disabled={currentWeekPage >= totalWeekPages}
+                    className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
+                  >
+                    Semanas anteriores ›
+                  </button>
+                </div>
+              )}
+              {isAll && !monthActive && (
+                <div className="mt-4 text-center text-[12.5px] text-muted-foreground">
+                  {olderWeeks > 0
+                    ? `+ ${olderWeeks} semanas anteriores · clique num mês no gráfico para filtrar`
+                    : 'Clique num mês no gráfico para filtrar'}
                 </div>
               )}
             </>
