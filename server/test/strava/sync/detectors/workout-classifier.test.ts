@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyWorkoutType } from "src/strava/sync/strava-sync.service";
+import { classifyWorkoutType } from "src/strava/sync/detectors/workout-classifier";
 
 describe('classifyWorkoutType', () => {
     // easy or long runs

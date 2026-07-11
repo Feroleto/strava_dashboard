@@ -1,5 +1,5 @@
 import { StreamProcessor, RawActivitySecond } from 'src/strava/sync/processors/streams-processor';
-import type { ProcessedSecond } from 'src/strava/sync/strava-sync.service';
+import type { ProcessedSecond } from 'src/strava/sync/types';
 import { describe, it, expect, beforeAll } from "vitest";
 
 function makeSeconds(

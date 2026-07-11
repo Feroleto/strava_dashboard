@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { IntervalDetector } from 'src/strava/sync/detectors/interval-detector';
 import { ProcessedDict } from 'src/strava/sync/detectors/base-detector';
-import { ProcessedSecond } from 'src/strava/sync/strava-sync.service';
+import { ProcessedSecond } from 'src/strava/sync/types';
 
 function makeSecond(overrides: Partial<ProcessedSecond>): ProcessedSecond {
   return {

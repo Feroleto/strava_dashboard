@@ -1,4 +1,4 @@
-import { ProcessedSecond } from '../strava-sync.service';
+import { ProcessedSecond } from '../types';
 
 export interface DetectedLap {
   type: string;

@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
-import { LapType, Prisma, PrismaClient } from '@prisma/client';
+import { LapType, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { StravaClientService } from '../client/strava-client.service';
 import { IntervalDetector } from './detectors/interval-detector';
@@ -11,45 +11,25 @@ import {
   classifyIntervalLapsType,
   classifyHillLapsType,
 } from './detectors/lap-classifier';
+import { classifyWorkoutType } from './detectors/workout-classifier';
 import { StreamProcessor } from './processors/streams-processor';
-
-export interface ProcessedSecond {
-  secondIndex: number;
-  distanceTotalM: number;
-  distanceDeltaM: number;
-  speedRaw: number;
-  speedMs: number;
-  accelerationMs2: number;
-  heartRate: number;
-  elevationM: number;
-  elevationSmooth: number;
-  elevationDelta: number;
-  gradePercent: number;
-  verticalSpeedMs: number;
-  paceSeckm: number | null;
-}
+import {
+  buildLapsFromSplits,
+  detectedLapToCreateData,
+  mapRecordedLap,
+  recordedLapToCreateData,
+} from './processors/lap-mapper';
+import { MappedLap, ProcessedSecond } from './types';
+import {
+  StravaActivityDetail,
+  StravaActivitySummary,
+  StravaStreamSet,
+} from './strava-api.types';
 
 type TxClient = Omit<
   PrismaClient,
   '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
 >;
-
-interface MappedLap {
-  lapIndex: number;
-  avgSpeed: number;
-  avgPace: number;
-  distanceM: number;
-  totalDurationSec: number;
-  movingDurationSec: number;
-  startSec: number;
-  endSec: number;
-  avgHr: number;
-  maxHr: number | null;
-  elevGainM: number;
-  avgGradePercent: number;
-  vam: number;
-  avgCadence: number | null;
-}
 
 export interface SyncProgress {
   state: 'idle' | 'running' | 'done' | 'error';
@@ -137,7 +117,7 @@ export class StravaSyncService {
       const after = await this.getLastActivityTimestamp(userId);
       const activities = await this.fetchAllActivities(userId, after);
 
-      const runs = activities.filter((a: any) => a.type === 'Run');
+      const runs = activities.filter((a) => a.type === 'Run');
       this.logger.log(`Found ${runs.length} new runs to process`);
       this.progress.total = runs.length;
       this.progress.phase = 'processing';
@@ -180,13 +160,19 @@ export class StravaSyncService {
     return { synced, errors };
   }
 
-  private async processActivity(userId: string, summary: any): Promise<void> {
+  private async processActivity(
+    userId: string,
+    summary: StravaActivitySummary,
+  ): Promise<void> {
     const exists = await this.prisma.activity.findUnique({
       where: { stravaId: BigInt(summary.id) },
     });
     if (exists) return;
 
-    const full = await this.client.get<any>(userId, `/activities/${summary.id}`);
+    const full = await this.client.get<StravaActivityDetail>(
+      userId,
+      `/activities/${summary.id}`,
+    );
     await this.sleep(300);
 
     const workoutType = classifyWorkoutType(full);
@@ -231,7 +217,7 @@ export class StravaSyncService {
     tx: TxClient,
     userId: string,
     activityId: string,
-    fullData: any,
+    fullData: StravaActivityDetail,
   ): Promise<void> {
     // if exists already recorded laps, use that (all STEADY)
     const savedRecorded = await this.saveRecordedLaps(
@@ -244,50 +230,15 @@ export class StravaSyncService {
     if (savedRecorded) return;
 
     // only has one recorded lap - means that the activity was recorded directly using strava
-    const laps: any[] = fullData.splits_metric ?? [];
-    const lapType = LapType.STEADY
-    if (laps.length > 0) {
-      this.logger.debug(
-        `Activity ${fullData.id}: No recorded laps. Using ${laps.length} metric splits as 1km laps.`,
-      );
-      
-      const splitLaps = laps.map((lap: any) => {
-        const distance = lap.distance ?? 0;
-        const movingTime = lap.moving_time ?? 0;
-        const elapsedTime = lap.elapsed_time ?? movingTime;
-        
-        const avgSpeed = lap.average_speed ?? (movingTime > 0 ? distance / movingTime : 0);
-        
-        //const elevGain = Math.max(lap.elevation_difference ?? 0, 0);
-        const elevGain = lap.elevation_difference ?? 0;
+    const splits = fullData.splits_metric ?? [];
+    if (!splits.length) return;
 
-        const avgHr = lap.average_heartrate ?? 0;
+    this.logger.debug(
+      `Activity ${fullData.id}: No recorded laps. Using ${splits.length} metric splits as 1km laps.`,
+    );
 
-        return {
-          activityId,
-          lapType: LapType.STEADY,
-          lapIndex: lap.split,
-          startSec: 0,
-          endSec: 0,
-          distanceM: Math.round(distance * 10) / 10,
-          totalDurationSec: elapsedTime,
-          movingDurationSec: movingTime,
-          avgPaceSecKm: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
-          avgHr: Math.round(avgHr * 10) / 10,
-          // splits_metric only carries average_heartrate, never a max
-          maxHr: null,
-          elevGainM: Math.round(elevGain * 10) / 10,
-          avgGradePercent:
-            distance > 0
-              ? Math.round((elevGain / distance) * 100 * 10) / 10
-              : 0,
-          vam:
-            movingTime > 0 && elevGain > 0
-              ? Math.round((elevGain / movingTime) * 3600) 
-              : 0,
-        };
-      });
-
+    const splitLaps = buildLapsFromSplits(activityId, splits, LapType.STEADY);
+    if (splitLaps.length > 0) {
       await tx.activityLap.createMany({
         data: splitLaps,
       });
@@ -299,7 +250,7 @@ export class StravaSyncService {
     tx: TxClient,
     userId: string,
     activityId: string,
-    fullData: any,
+    fullData: StravaActivityDetail,
     workoutType: 'INTERVAL' | 'HILL_REPEATS',
   ): Promise<void> {
     // if exists already recorded laps, classify and use that
@@ -320,7 +271,7 @@ export class StravaSyncService {
       `Activity ${fullData.id}: no recorded laps, running auto-detection`,
     );
 
-    const rawStreams = await this.client.get<any>(
+    const rawStreams = await this.client.get<StravaStreamSet>(
       userId,
       `/activities/${fullData.id}/streams`,
       {
@@ -381,34 +332,22 @@ export class StravaSyncService {
 
     const detectedLaps = detector.analyze(processedDict);
 
-    let lapCreateData: any[];
+    let lapCreateData;
 
     if (!detectedLaps.length) {
       this.logger.warn(
         `Activity ${fullData.id}: detector found no laps, falling back to splits`,
       );
 
-      lapCreateData = this.buildSplitFallback(
+      lapCreateData = buildLapsFromSplits(
         activityId,
-        fullData,
+        fullData.splits_metric ?? [],
+        LapType.RUN,
       );
     } else {
-      lapCreateData = detectedLaps.map((lap, idx) => ({
-        activityId,
-        lapType: lap.type,
-        lapIndex: lap.lapIndex ?? idx + 1,
-        startSec: lap.startSec,
-        endSec: lap.endSec,
-        distanceM: lap.distanceM,
-        totalDurationSec: lap.totalDurationSec,
-        movingDurationSec: lap.movingDurationSec,
-        avgPaceSecKm: lap.avgPace,
-        avgHr: lap.avgHr,
-        maxHr: lap.maxHr,
-        elevGainM: lap.elevGainM,
-        avgGradePercent: lap.avgGradePercent,
-        vam: lap.vam,
-      }));
+      lapCreateData = detectedLaps.map((lap, idx) =>
+        detectedLapToCreateData(activityId, lap, idx),
+      );
     }
 
     if (lapCreateData.length > 0) {
@@ -418,7 +357,6 @@ export class StravaSyncService {
     }
   }
 
-
   // shared recorded-laps path: detects laps recorded on the watch, maps them
   // (fetching the altitude stream for net elevation) and persists them with
   // the lap types returned by `classify`. Returns false when the activity has
@@ -427,10 +365,10 @@ export class StravaSyncService {
     tx: TxClient,
     userId: string,
     activityId: string,
-    fullData: any,
+    fullData: StravaActivityDetail,
     classify: (laps: MappedLap[]) => LapType[],
   ): Promise<boolean> {
-    const rawLaps: any[] = fullData.laps ?? [];
+    const rawLaps = fullData.laps ?? [];
 
     const hasRecordedLaps =
       rawLaps.length > 1 &&
@@ -445,56 +383,15 @@ export class StravaSyncService {
 
     const altStream = await this.fetchAltitudeStream(userId, fullData.id);
 
-    const mappedLaps: MappedLap[] = rawLaps.map((lap: any, i: number) => {
-      const avgSpeed = lap.average_speed ?? 0;
-      const distance = lap.distance ?? 0;
-      const duration = lap.moving_time ?? 0;
-      const elevGain = this.lapElevationGain(altStream, lap);
-
-      return {
-        lapIndex: lap.lap_index ?? i + 1,
-        avgSpeed,
-        avgPace: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
-        distanceM: Math.round(distance * 10) / 10,
-        totalDurationSec: lap.elapsed_time ?? duration,
-        movingDurationSec: duration,
-        startSec: lap.start_index ?? 0,
-        endSec: lap.end_index ?? 0,
-        avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
-        maxHr: lap.max_heartrate ?? null,
-        elevGainM: Math.round(elevGain * 10) / 10,
-        avgGradePercent:
-          distance > 0
-            ? Math.round((elevGain / distance) * 100 * 10) / 10
-            : 0,
-        vam:
-          duration > 0 && elevGain > 0
-            ? Math.round((elevGain / duration) * 3600)
-            : 0,
-        avgCadence:
-          lap.average_cadence != null ? lap.average_cadence * 2 : null,
-      };
-    });
+    const mappedLaps = rawLaps.map((lap, i) =>
+      mapRecordedLap(lap, i, altStream),
+    );
 
     const types = classify(mappedLaps);
 
-    const lapCreateData = mappedLaps.map((lap, i) => ({
-      activityId,
-      lapType: types[i],
-      lapIndex: lap.lapIndex,
-      startSec: lap.startSec,
-      endSec: lap.endSec,
-      distanceM: lap.distanceM,
-      totalDurationSec: lap.totalDurationSec,
-      movingDurationSec: lap.movingDurationSec,
-      avgPaceSecKm: lap.avgPace,
-      avgHr: lap.avgHr,
-      maxHr: lap.maxHr,
-      elevGainM: lap.elevGainM,
-      avgGradePercent: lap.avgGradePercent,
-      vam: lap.vam,
-      avgCadence: lap.avgCadence,
-    }));
+    const lapCreateData = mappedLaps.map((lap, i) =>
+      recordedLapToCreateData(activityId, types[i], lap),
+    );
 
     if (lapCreateData.length > 0) {
       await tx.activityLap.createMany({
@@ -509,7 +406,7 @@ export class StravaSyncService {
     userId: string,
     stravaActivityId: number | string,
   ): Promise<number[]> {
-    const rawStreams = await this.client.get<any>(
+    const rawStreams = await this.client.get<StravaStreamSet>(
       userId,
       `/activities/${stravaActivityId}/streams`,
       { keys: 'altitude', key_by_type: 'true' },
@@ -518,19 +415,11 @@ export class StravaSyncService {
     return rawStreams['altitude']?.data ?? [];
   }
 
-  // net elevation change (can be negative on downhill laps), derived from the
-  // altitude stream since Strava's recorded-lap objects only expose cumulative gain
-  private lapElevationGain(altStream: number[], lap: any): number {
-    const startAlt = altStream[lap.start_index ?? -1];
-    const endAlt = altStream[lap.end_index ?? -1];
-    return startAlt != null && endAlt != null ? endAlt - startAlt : 0;
-  }
-
   private async processStreamsSQL(
     tx: TxClient,
     activityId: string,
   ): Promise<ProcessedSecond[]> {
-    
+
     // search for rawdata that is in the db
     const rawData = await tx.activitySecond.findMany({
       where: { activityId },
@@ -545,38 +434,6 @@ export class StravaSyncService {
     });
 
     return StreamProcessor.processStreams(rawData);
-  }
-
-  private buildSplitFallback(activityId: string, fullData: any): any[] {
-    const splits: any[] = fullData.splits_metric ?? [];
-    return splits
-      .filter((s: any) => (s.distance ?? 0) > 0)
-      .map((s: any) => {
-        const distM   = s.distance ?? 0;
-        const moveSec = s.moving_time ?? 0;
-        const avgSpeed = moveSec > 0 ? distM / moveSec : 0;
-        const elevGain = s.elevation_difference ?? 0;
-        return {
-          activityId,
-          lapType:           'RUN',
-          lapIndex:          s.split,
-          startSec:          0,
-          endSec:            0,
-          distanceM:         Math.round(distM * 10) / 10,
-          totalDurationSec:  s.elapsed_time ?? moveSec,
-          movingDurationSec: moveSec,
-          avgPaceSecKm:      avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
-          avgHr:             s.average_heartrate ?? 0,
-          maxHr:             null,
-          elevGainM:         Math.round(elevGain * 10) / 10,
-          avgGradePercent:
-            distM > 0 ? Math.round((elevGain / distM) * 100 * 10) / 10 : 0,
-          vam:
-            moveSec > 0 && elevGain > 0
-              ? Math.round((elevGain / moveSec) * 3600)
-              : 0,
-        };
-      });
   }
 
   // one-off backfill for activities synced before summaryPolyline existed;
@@ -649,7 +506,7 @@ export class StravaSyncService {
       for (let i = 0; i < recorded.length; ) {
         const activity = recorded[i];
         try {
-          const full = await this.client.get<any>(
+          const full = await this.client.get<StravaActivityDetail>(
             userId,
             `/activities/${activity.stravaId}`,
           );
@@ -713,15 +570,15 @@ export class StravaSyncService {
   private async fetchAllActivities(
     userId: string,
     after?: number,
-  ): Promise<any[]> {
-    const all: any[] = [];
+  ): Promise<StravaActivitySummary[]> {
+    const all: StravaActivitySummary[] = [];
     let page = 1;
 
     while (true) {
       const params: Record<string, string | number> = { per_page: 200, page };
       if (after) params.after = after;
 
-      const batch = await this.client.get<any[]>(
+      const batch = await this.client.get<StravaActivitySummary[]>(
         userId,
         '/athlete/activities',
         params,
@@ -739,20 +596,3 @@ export class StravaSyncService {
     return new Promise((resolve) => setTimeout(resolve, ms));
   }
 }
-
-export function classifyWorkoutType(
-    activity: any,
-  ): 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS' {
-    const description = (activity.description ?? '').toLowerCase();
-
-    const hillKeywords = ['hill', 'subida', 'elevação'];
-    if (hillKeywords.some((k) => description.includes(k))) return 'HILL_REPEATS';
-
-    const intervalKeywords = ['tiro', 'interval', 'split'];
-    if (intervalKeywords.some((k) => description.includes(k))) return 'INTERVAL';
-
-    if (/\d+\s*[xX*]\s*\d+/.test(description)) return 'INTERVAL';
-    if (/\d+\s*[xX]\s*\d+[:\']/.test(description)) return 'INTERVAL';
-
-    return 'EASY_OR_LONG';
-  }

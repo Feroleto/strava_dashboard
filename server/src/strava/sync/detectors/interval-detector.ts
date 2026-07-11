@@ -1,4 +1,4 @@
-import { ProcessedSecond } from '../strava-sync.service';
+import { ProcessedSecond } from '../types';
 import { BaseDetector, DetectedLap, ProcessedDict } from './base-detector';
 
 export class IntervalDetector extends BaseDetector {
