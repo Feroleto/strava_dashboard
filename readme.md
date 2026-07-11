@@ -102,7 +102,7 @@ strava_dashboard/
 │   │       └── sync/              # strava-sync.service (orchestration), types.ts, strava-api.types.ts
 │   │           ├── detectors/     # base, interval, hill, lap-classifier, workout-classifier
 │   │           └── processors/    # streams-processor (SQL CTE), lap-mapper (shared lap/split→createMany mapping)
-│   ├── tests/                     # Vitest unit + integration tests
+│   ├── test/                      # Vitest unit + integration tests
 │   └── .env                       # Strava + DB credentials (not committed)
 │
 └── client/                        # Vite + React SPA
@@ -191,6 +191,7 @@ Then open `http://localhost:5173` to view the dashboard.
 | `POST` | `/strava/sync` | Fire-and-forget: triggers an incremental sync, returns current progress immediately |
 | `GET` | `/strava/sync/status` | Returns live `SyncProgress` (state, phase, processed/synced/errors, ETA) |
 | `POST` | `/strava/sync/backfill-polylines` | One-off backfill of `summary_polyline` for activities synced before it was captured |
+| `POST` | `/strava/sync/backfill-lap-max-hr` | One-off backfill of `ActivityLap.maxHr` for laps synced before it was captured |
 | `GET` | `/activities` | Paginated activity list, ordered by `startDate` desc — filters: `page`, `limit`, `workoutType`, `dateFrom`, `dateTo` |
 | `GET` | `/activities/:id` | Full detail for a single activity, including laps and route polyline |
 | `GET` | `/activities/weekly-distance` | Weekly distance aggregate (Monday-start, zero-filled), same filters as the list endpoint |
