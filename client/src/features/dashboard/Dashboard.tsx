@@ -7,15 +7,14 @@ import RangeChip from './RangeChip';
 import ActivityDetailView from '@/features/activity/ActivityDetailView';
 import type { ActivitiesResponse, Activity } from '@/lib/types';
 import {
+  CHART_MAX_WEEKS,
   DAY_MS,
-  MAX_WEEKS,
   MONTHLY_THRESHOLD_DAYS,
   WEEKS_PER_PAGE,
   aggregateBins,
   aggregateWeeks,
   formatRangeLabel,
   startOfBin,
-  toISODate,
   type TypeFilter,
 } from './bins';
 
@@ -38,15 +37,9 @@ export default function Dashboard() {
     localStorage.setItem('theme', theme);
   }, [theme]);
 
-  // fetch the whole window once; period/type are applied client-side
+  // fetch the whole history once; period/type are applied client-side
   useEffect(() => {
-    const from = startOfBin(new Date(), 'week');
-    from.setDate(from.getDate() - 7 * (MAX_WEEKS - 1));
-    const params = new URLSearchParams({
-      limit: '1000',
-      dateFrom: toISODate(from),
-    });
-    fetch(`http://localhost:3000/activities?${params}`)
+    fetch(`http://localhost:3000/activities?limit=1000`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -60,7 +53,7 @@ export default function Dashboard() {
   }, [refreshKey]);
 
   const isAll = period === 'all';
-  const n = isAll ? MAX_WEEKS : parseInt(period, 10);
+  const n = isAll ? 0 : parseInt(period, 10);
   const rangeActive = dateRange != null;
   const rangeDays = dateRange
     ? Math.round((dateRange.end - dateRange.start) / DAY_MS) + 1
@@ -102,8 +95,18 @@ export default function Dashboard() {
         startOfBin(new Date(dateRange.end), 'week'),
       );
     }
+    if (isAll) {
+      // "All": every week from the first activity to now
+      return aggregateBins(
+        activities,
+        typeFilter,
+        'week',
+        earliestDate ?? new Date(),
+        startOfBin(new Date(), 'week'),
+      );
+    }
     return aggregateWeeks(activities, n, typeFilter);
-  }, [activities, inRange, dateRange, n, typeFilter]);
+  }, [activities, inRange, dateRange, isAll, earliestDate, n, typeFilter]);
 
   const chartGranularity: Granularity =
     (rangeActive && rangeDays > MONTHLY_THRESHOLD_DAYS) ||
@@ -123,11 +126,15 @@ export default function Dashboard() {
       );
     }
     if (isAll && earliestDate) {
+      // cap the chart at the last 70 weeks so months don't get squeezed;
+      // stats/list still cover everything
+      const chartFrom = startOfBin(new Date(), 'week');
+      chartFrom.setDate(chartFrom.getDate() - 7 * (CHART_MAX_WEEKS - 1));
       return aggregateBins(
         activities,
         typeFilter,
         'month',
-        earliestDate,
+        earliestDate > chartFrom ? earliestDate : chartFrom,
         startOfBin(new Date(), 'month'),
       );
     }

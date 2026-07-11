@@ -12,7 +12,8 @@ export const TYPE_OPTIONS: [TypeFilter, string][] = [
   ['HILL_REPEATS', 'Hill Repeats'],
 ];
 
-export const MAX_WEEKS = 70;
+// chart-only cap for the "All" period; stats and list still cover the full history
+export const CHART_MAX_WEEKS = 70;
 export const WEEKS_PER_PAGE = 4;
 export const DAY_MS = 86_400_000;
 export const MONTHLY_THRESHOLD_DAYS = 200;
