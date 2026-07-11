@@ -99,25 +99,21 @@ strava_dashboard/
 │   │       ├── strava.module.ts
 │   │       ├── auth/              # OAuth flow (redirect + callback)
 │   │       ├── client/            # Strava API HTTP client + token management
-│   │       └── sync/
-│   │           ├── detectors/     # base, interval, hill, lap-classifier
-│   │           └── processors/    # stream processing (steady / structured activities)
-│   ├── test/                      # Vitest unit + integration tests
+│   │       └── sync/              # strava-sync.service (orchestration), types.ts, strava-api.types.ts
+│   │           ├── detectors/     # base, interval, hill, lap-classifier, workout-classifier
+│   │           └── processors/    # streams-processor (SQL CTE), lap-mapper (shared lap/split→createMany mapping)
+│   ├── tests/                     # Vitest unit + integration tests
 │   └── .env                       # Strava + DB credentials (not committed)
 │
 └── client/                        # Vite + React SPA
     ├── src/
     │   ├── App.tsx
-    │   ├── Dashboard.tsx          # List view: rail + weekly/monthly chart + activity list
-    │   ├── ActivityDetailView.tsx # Detail view: stats grid, route map, lap table
-    │   ├── WeeklyChart.tsx        # SVG area/line chart (week or month bins)
-    │   ├── DateRangePicker.tsx    # Custom date-range popover with presets
-    │   ├── SegmentedControl.tsx   # Shared period/theme toggle
-    │   ├── SyncPanel.tsx          # Sync trigger + progress polling
-    │   ├── RouteMap.tsx           # Leaflet map + theme-aware polyline styling
-    │   ├── polyline.ts            # Strava encoded-polyline decoder
-    │   ├── activityFormat.ts      # Formatting helpers (pace, distance, dates)
-    │   └── components/ui/         # shadcn/ui primitives
+    │   ├── lib/                   # Framework-free helpers (activityFormat, polyline, API types, utils)
+    │   ├── components/            # Reusable generic UI (SegmentedControl, shadcn/ui primitives)
+    │   └── features/
+    │       ├── dashboard/         # Dashboard, Rail, ActivityList, RangeChip, WeeklyChart,
+    │       │                      # DateRangePicker, SyncPanel, bins.ts (client-side aggregation)
+    │       └── activity/          # ActivityDetailView, RouteMap
     └── index.css                  # Design tokens (light/dark theme)
 ```
 
@@ -241,10 +237,9 @@ Coverage includes workout classification, lap detectors (interval/hill), stream 
 
 ## Known Limitations
 
-- Lap-mapping logic is duplicated between the steady and structured activity processors — pending extraction into a shared helper.
 - `hasRecordedLaps` relies on matching Strava's auto-lap name string (e.g. `'Strava Auto Lap'`) — fragile as a signal, but functional today.
 - The weekly bucket in `GET /activities/weekly-distance` uses UTC dates (consistent with the `dateFrom`/`dateTo` filters); runs between 9pm and midnight BRT can land in the wrong week. The frontend aggregates in local time instead, so this only affects that one endpoint.
-- `GET /activities/weekly-distance` currently has no frontend consumer (the dashboard aggregates client-side) — kept for now, may be removed once the redesign stabilizes.
+- `GET /activities/weekly-distance` currently has no frontend consumer (the dashboard aggregates client-side, in local time) — kept for now, may be removed once the redesign stabilizes.
 
 ---
 
