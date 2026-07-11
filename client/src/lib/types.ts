@@ -25,6 +25,7 @@ export interface ActivityLap {
   distanceM: number;
   avgPaceSecKm: number;
   avgHr: number;
+  maxHr: number | null;
   elevGainM: number;
   avgCadence: number;
 }

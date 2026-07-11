@@ -34,4 +34,16 @@ export class StravaSyncController {
     const userId = this.config.getOrThrow<string>('SEED_USER_ID');
     return this.syncService.backfillPolylines(userId);
   }
+
+  @Post('backfill-lap-max-hr')
+  backfillLapMaxHr(): { started: boolean } {
+    this.logger.log('Lap maxHr backfill triggered via HTTP');
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    // fire-and-forget: one API call per activity with recorded laps, so this
+    // can run for a long while — progress goes to the server log
+    void this.syncService.backfillLapMaxHr(userId).catch((err) => {
+      this.logger.error(`Lap maxHr backfill failed: ${err.message}`);
+    });
+    return { started: true };
+  }
 }

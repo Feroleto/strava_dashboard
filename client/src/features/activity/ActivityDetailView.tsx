@@ -227,7 +227,8 @@ export default function ActivityDetailView({
             <div className="w-14 text-right">Time</div>
             <div className="w-16 text-right">Pace</div>
             <div className="w-11 text-right">SPM</div>
-            <div className="w-11 text-right">HR</div>
+            <div className="w-11 text-right">AVG HR</div>
+            <div className="w-11 text-right">MAX HR</div>
           </div>
           {activity.laps.map((lap, i) => (
             <div
@@ -266,6 +267,11 @@ export default function ActivityDetailView({
               </div>
               <div className="w-11 text-right text-[13px] text-muted-foreground">
                 {lap.avgHr > 0 ? Math.round(lap.avgHr) : '—'}
+              </div>
+              <div className="w-11 text-right text-[13px] text-muted-foreground">
+                {lap.maxHr != null && lap.maxHr > 0
+                  ? Math.round(lap.maxHr)
+                  : '—'}
               </div>
             </div>
           ))}

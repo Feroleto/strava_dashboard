@@ -44,6 +44,7 @@ interface MappedLap {
   startSec: number;
   endSec: number;
   avgHr: number;
+  maxHr: number | null;
   elevGainM: number;
   avgGradePercent: number;
   vam: number;
@@ -273,6 +274,8 @@ export class StravaSyncService {
           movingDurationSec: movingTime,
           avgPaceSecKm: avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
           avgHr: Math.round(avgHr * 10) / 10,
+          // splits_metric only carries average_heartrate, never a max
+          maxHr: null,
           elevGainM: Math.round(elevGain * 10) / 10,
           avgGradePercent:
             distance > 0
@@ -401,6 +404,7 @@ export class StravaSyncService {
         movingDurationSec: lap.movingDurationSec,
         avgPaceSecKm: lap.avgPace,
         avgHr: lap.avgHr,
+        maxHr: lap.maxHr,
         elevGainM: lap.elevGainM,
         avgGradePercent: lap.avgGradePercent,
         vam: lap.vam,
@@ -457,6 +461,7 @@ export class StravaSyncService {
         startSec: lap.start_index ?? 0,
         endSec: lap.end_index ?? 0,
         avgHr: Math.round((lap.average_heartrate ?? 0) * 10) / 10,
+        maxHr: lap.max_heartrate ?? null,
         elevGainM: Math.round(elevGain * 10) / 10,
         avgGradePercent:
           distance > 0
@@ -484,6 +489,7 @@ export class StravaSyncService {
       movingDurationSec: lap.movingDurationSec,
       avgPaceSecKm: lap.avgPace,
       avgHr: lap.avgHr,
+      maxHr: lap.maxHr,
       elevGainM: lap.elevGainM,
       avgGradePercent: lap.avgGradePercent,
       vam: lap.vam,
@@ -561,6 +567,7 @@ export class StravaSyncService {
           movingDurationSec: moveSec,
           avgPaceSecKm:      avgSpeed > 0.3 ? 1000 / avgSpeed : 0,
           avgHr:             s.average_heartrate ?? 0,
+          maxHr:             null,
           elevGainM:         Math.round(elevGain * 10) / 10,
           avgGradePercent:
             distM > 0 ? Math.round((elevGain / distM) * 100 * 10) / 10 : 0,
@@ -592,6 +599,104 @@ export class StravaSyncService {
 
     this.logger.log(`Polyline backfill complete — ${updated} activities updated`);
     return { updated };
+  }
+
+  // one-off backfill for laps synced before maxHr existed. Detected laps are
+  // recomputed from the per-second stream already stored in the DB (no API
+  // cost); natively recorded laps need one full-activity fetch each; laps
+  // built from metric splits stay null (Strava has no max HR per split)
+  async backfillLapMaxHr(
+    userId: string,
+  ): Promise<{ fromSeconds: number; fetched: number; toFetch: number }> {
+    if (this.isSyncing) {
+      this.logger.warn('Sync in progress, skipping maxHr backfill');
+      return { fromSeconds: 0, fetched: 0, toFetch: 0 };
+    }
+    this.isSyncing = true;
+
+    try {
+      const fromSeconds = await this.prisma.$executeRaw`
+        UPDATE activity_laps l
+        SET max_hr = sub.max_hr
+        FROM (
+          SELECT l2.id, MAX(s.heart_rate)::float AS max_hr
+          FROM activity_laps l2
+          JOIN activity_seconds s
+            ON s."activityId" = l2."activityId"
+           AND s.second_index BETWEEN l2.start_sec AND l2.end_sec
+          WHERE l2.max_hr IS NULL
+          GROUP BY l2.id
+        ) sub
+        WHERE l.id = sub.id
+      `;
+
+      const recorded = await this.prisma.activity.findMany({
+        where: {
+          userId,
+          seconds: { none: {} },
+          laps: { some: { maxHr: null, endSec: { gt: 0 } } },
+        },
+        select: { id: true, stravaId: true },
+        orderBy: { startDate: 'asc' },
+      });
+
+      this.logger.log(
+        `maxHr backfill: ${fromSeconds} laps updated from stored streams, ` +
+          `fetching ${recorded.length} activities with recorded laps from Strava`,
+      );
+
+      let fetched = 0;
+      for (let i = 0; i < recorded.length; ) {
+        const activity = recorded[i];
+        try {
+          const full = await this.client.get<any>(
+            userId,
+            `/activities/${activity.stravaId}`,
+          );
+          await this.sleep(1000);
+
+          for (const lap of full.laps ?? []) {
+            if (lap.max_heartrate == null) continue;
+            await this.prisma.activityLap.updateMany({
+              where: {
+                activityId: activity.id,
+                lapIndex: lap.lap_index,
+                maxHr: null,
+              },
+              data: { maxHr: lap.max_heartrate },
+            });
+          }
+
+          fetched++;
+          i++;
+          if (fetched % 25 === 0) {
+            this.logger.log(
+              `maxHr backfill: ${fetched}/${recorded.length} activities fetched`,
+            );
+          }
+        } catch (err: any) {
+          if (err.message === 'STRAVA_RATE_LIMIT') {
+            this.logger.warn(
+              'Rate limit hit during maxHr backfill, waiting 15 minutes...',
+            );
+            await this.sleep(15 * 60 * 1000);
+          } else {
+            this.logger.error(
+              `maxHr backfill failed for activity ${activity.stravaId}: ${err.message}`,
+            );
+            i++;
+          }
+        }
+      }
+
+      this.logger.log(
+        `maxHr backfill complete — ${fromSeconds} laps from streams, ` +
+          `${fetched}/${recorded.length} activities fetched from Strava`,
+      );
+      return { fromSeconds, fetched, toFetch: recorded.length };
+    } finally {
+      this.isSyncing = false;
+    }
   }
 
   private async getLastActivityTimestamp(

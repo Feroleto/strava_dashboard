@@ -29,6 +29,7 @@ export interface ActivityLapItem {
   distanceM: number;
   avgPaceSecKm: number;
   avgHr: number;
+  maxHr: number | null;
   elevGainM: number;
   avgGradePercent: number | null;
   vam: number | null;
@@ -211,6 +212,7 @@ export class ActivitiesService {
             distanceM: true,
             avgPaceSecKm: true,
             avgHr: true,
+            maxHr: true,
             elevGainM: true,
             avgGradePercent: true,
             vam: true,

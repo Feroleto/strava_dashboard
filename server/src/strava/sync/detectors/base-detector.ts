@@ -10,6 +10,7 @@ export interface DetectedLap {
   distanceM: number;
   avgPace: number;
   avgHr: number;
+  maxHr: number | null;
   elevGainM: number;
   avgGradePercent: number;
   vam: number;
@@ -64,6 +65,7 @@ export abstract class BaseDetector {
       hrValues.length > 0
         ? hrValues.reduce((a, b) => a + b, 0) / hrValues.length
         : 0;
+    const maxHr = hrValues.length > 0 ? Math.max(...hrValues) : null;
 
     return {
       type:              typeLabel,
@@ -75,6 +77,7 @@ export abstract class BaseDetector {
       distanceM:         Math.round(distance * 10) / 10,
       avgPace,
       avgHr:             Math.round(avgHr * 10) / 10,
+      maxHr,
       elevGainM:         Math.round(elevGain * 10) / 10,
       avgGradePercent:   0,
       vam:               0,

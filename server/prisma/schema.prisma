@@ -87,6 +87,7 @@ model ActivityLap {
   distanceM         Float    @map("distance_m")
   avgPaceSecKm      Float    @map("avg_pace_sec_km")
   avgHr             Float    @map("avg_hr")
+  maxHr             Float?   @map("max_hr")
   elevGainM         Float    @map("elev_gain_m")
   avgGradePercent   Float?   @map("avg_grade_percent")
   vam               Float?   @map("vam")
