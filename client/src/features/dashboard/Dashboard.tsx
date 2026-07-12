@@ -19,9 +19,6 @@ import {
 } from './bins';
 
 export default function Dashboard() {
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
-  );
   const [period, setPeriod] = useState<Period>('12');
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
@@ -31,11 +28,6 @@ export default function Dashboard() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
-  }, [theme]);
 
   // fetch the whole history once; period/type are applied client-side
   useEffect(() => {
@@ -207,7 +199,7 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="mx-auto grid min-h-screen max-w-[1120px] grid-cols-[264px_1fr] gap-11 px-12 pt-10 pb-11 tabular-nums">
+    <div className="grid grid-cols-[264px_1fr] gap-11 p-10 tabular-nums">
       <Rail
         subtitle={
           dateRange
@@ -225,8 +217,6 @@ export default function Dashboard() {
         }}
         typeCounts={typeCounts}
         onSynced={() => setRefreshKey((k) => k + 1)}
-        theme={theme}
-        onTheme={setTheme}
       />
 
       {/* right panel: detail view swaps in-place with the list */}

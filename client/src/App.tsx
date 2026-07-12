@@ -1,7 +1,77 @@
+import { useEffect, useState } from 'react';
+import Sidebar from '@/features/nav/Sidebar';
+import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
+import {
+  DEFAULT_PAGE,
+  isKnownPage,
+  type PageId,
+} from '@/features/nav/navConfig';
+
+function PageContent({ page }: { page: PageId }) {
+  switch (page) {
+    case 'overview':
+      return <PlaceholderPage title="Overview" />;
+    case 'run/personal-best':
+      return <PlaceholderPage title="Personal Best" />;
+    case 'run/shoes':
+      return <PlaceholderPage title="Shoes" />;
+    case 'run/activities':
+    default:
+      return <Dashboard />;
+  }
+}
 
 function App() {
-  return <Dashboard />;
+  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
+    localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
+  );
+  const [collapsed, setCollapsed] = useState(
+    () => localStorage.getItem('sidebar-collapsed') === 'true',
+  );
+  const [page, setPage] = useState<PageId>(() => {
+    const stored = localStorage.getItem('active-page');
+    return isKnownPage(stored) ? stored : DEFAULT_PAGE;
+  });
+
+  useEffect(() => {
+    document.documentElement.classList.toggle('dark', theme === 'dark');
+    localStorage.setItem('theme', theme);
+  }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('sidebar-collapsed', String(collapsed));
+  }, [collapsed]);
+
+  useEffect(() => {
+    localStorage.setItem('active-page', page);
+  }, [page]);
+
+  const navigate = (next: PageId, opts?: { collapse?: boolean }) => {
+    setPage(next);
+    if (opts?.collapse) setCollapsed(true);
+  };
+
+  return (
+    <div className="min-h-screen bg-page-bg p-3.5">
+      <div className="flex items-start gap-3.5">
+        <Sidebar
+          collapsed={collapsed}
+          onToggleCollapse={() => setCollapsed((c) => !c)}
+          activePage={page}
+          onNavigate={navigate}
+          theme={theme}
+          onTheme={setTheme}
+        />
+        <div
+          className="min-h-[calc(100vh-28px)] min-w-0 flex-1 rounded-2xl border border-border bg-card"
+          style={{ boxShadow: '0 8px 24px rgba(8,12,20,.06)' }}
+        >
+          <PageContent page={page} />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default App;

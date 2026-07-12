@@ -59,6 +59,7 @@
   --color-neutral-bg: var(--neutral-bg);
   --color-dot-easy: var(--dot-easy);
   --color-seg-active: var(--seg-active);
+  --color-page-bg: var(--page-bg);
 }
 
 /* shadcn "slate" base + tokens do design (layout_dashboard, Opção 2A) */
@@ -66,6 +67,7 @@
   --radius: 0.625rem;
   --rad: 14px;
   --acc: #3987e5;
+  --page-bg: #e9ecf0;
   --background: #f5f6f8;
   --foreground: #131a26;
   --card: #ffffff;
@@ -112,6 +114,7 @@
 }
 
 .dark {
+  --page-bg: #0b0f17;
   --background: #0b0f17;
   --foreground: #edf1f7;
   --card: #121826;

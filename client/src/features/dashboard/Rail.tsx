@@ -4,7 +4,6 @@ import {
   formatKm,
   formatPace,
 } from '@/lib/activityFormat';
-import SegmentedControl from '@/components/SegmentedControl';
 import SyncPanel from './SyncPanel';
 import { TYPE_OPTIONS, type TypeFilter } from './bins';
 
@@ -25,8 +24,6 @@ interface RailProps {
   onTypeFilter: (type: TypeFilter) => void;
   typeCounts: Record<string, number>;
   onSynced: () => void;
-  theme: 'light' | 'dark';
-  onTheme: (theme: 'light' | 'dark') => void;
 }
 
 export default function Rail({
@@ -37,8 +34,6 @@ export default function Rail({
   onTypeFilter,
   typeCounts,
   onSynced,
-  theme,
-  onTheme,
 }: RailProps) {
   return (
     <div className="flex flex-col">
@@ -105,17 +100,6 @@ export default function Rail({
       </div>
 
       <SyncPanel onSynced={onSynced} />
-
-      <div className="mt-auto pt-[30px] self-start">
-        <SegmentedControl
-          items={[
-            ['light', 'Light'],
-            ['dark', 'Dark'],
-          ]}
-          active={theme}
-          onPick={onTheme}
-        />
-      </div>
     </div>
   );
 }
