@@ -3,6 +3,7 @@ import Sidebar from '@/features/nav/Sidebar';
 import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
 import RunOverviewPage from '@/features/overview/RunOverviewPage';
+import RunAnalysisPage from '@/features/analysis/RunAnalysisPage';
 import {
   DEFAULT_PAGE,
   isKnownPage,
@@ -15,6 +16,8 @@ function PageContent({ page }: { page: PageId }) {
       return <PlaceholderPage title="Overview" />;
     case 'run/overview':
       return <RunOverviewPage />;
+    case 'run/analysis':
+      return <RunAnalysisPage />;
     case 'run/activities':
     default:
       return <Dashboard />;

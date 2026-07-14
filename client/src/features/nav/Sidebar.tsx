@@ -235,7 +235,7 @@ export default function Sidebar({
         <div className="mt-auto border-t border-border pt-3">
           {!collapsed && (
             <SegmentedControl
-              compact
+              size="compact"
               items={[
                 ['light', 'Light'],
                 ['dark', 'Dark'],
