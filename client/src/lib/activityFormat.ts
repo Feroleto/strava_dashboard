@@ -69,6 +69,15 @@ export function formatMinSec(sec: number): string {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+// "21:46" | "1:51:45" — best-effort times, hours shown only when ≥ 1h
+export function formatHms(sec: number): string {
+  const h = Math.floor(sec / 3600);
+  if (h === 0) return formatMinSec(sec);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = Math.round(sec % 60);
+  return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 // "DD/MM"
 export function formatDayMonth(d: Date): string {
   return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}`;
@@ -83,4 +92,19 @@ export function formatMonthShort(d: Date): string {
 export function formatMonthLong(d: Date): string {
   const s = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+// "Jul 2025"
+export function formatMonthShortYear(d: Date): string {
+  return `${formatMonthShort(d)} ${d.getFullYear()}`;
+}
+
+// "Jul 5"
+export function formatMonthDay(d: Date): string {
+  return `${formatMonthShort(d)} ${d.getDate()}`;
+}
+
+// "Jul 5, 2025"
+export function formatMonthDayYear(d: Date): string {
+  return `${formatMonthDay(d)}, ${d.getFullYear()}`;
 }

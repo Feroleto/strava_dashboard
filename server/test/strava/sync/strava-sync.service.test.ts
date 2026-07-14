@@ -13,6 +13,7 @@ const { mockPrisma } = vi.hoisted(() => {
         findUnique: vi.fn(),
         findFirst:  vi.fn(),
         create:     vi.fn(),
+        updateMany: vi.fn(),
       },
       activityLap: {
         createMany: vi.fn(),
@@ -20,6 +21,13 @@ const { mockPrisma } = vi.hoisted(() => {
       activitySecond: {
         createMany: vi.fn(),
         findMany:   vi.fn(),
+      },
+      activityBestEffort: {
+        createMany: vi.fn(),
+      },
+      gear: {
+        findUnique: vi.fn(),
+        upsert:     vi.fn(),
       },
       $transaction: vi.fn(),
       $disconnect:  vi.fn(),
@@ -122,6 +130,10 @@ describe('StravaSyncService', () => {
     mockPrisma.activityLap.createMany.mockResolvedValue({ count: 1 });
     mockPrisma.activitySecond.createMany.mockResolvedValue({ count: 100 });
     mockPrisma.activitySecond.findMany.mockResolvedValue([]);
+    mockPrisma.activityBestEffort.createMany.mockResolvedValue({ count: 0 });
+    mockPrisma.gear.findUnique.mockResolvedValue(null);
+    mockPrisma.gear.upsert.mockResolvedValue({});
+    mockPrisma.activity.updateMany.mockResolvedValue({ count: 0 });
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -534,6 +546,200 @@ describe('StravaSyncService', () => {
       const result = await service.sync(USER_ID);
 
       expect(result.synced).toBe(2);
+    });
+  });
+
+  describe('gear sync', () => {
+    function mockGetForActivity(activity: any, gearResponse?: any) {
+      let listCalled = false;
+      stravaClient.get.mockImplementation(async (_userId: string, endpoint: string) => {
+        if (endpoint.includes('/athlete/activities')) {
+          if (!listCalled) {
+            listCalled = true;
+            return [{ id: activity.id, type: 'Run', name: activity.name }];
+          }
+          return [];
+        }
+        if (endpoint.startsWith('/gear/')) {
+          if (gearResponse instanceof Error) throw gearResponse;
+          return gearResponse;
+        }
+        if (endpoint.includes('/activities/')) {
+          return activity;
+        }
+        return null;
+      });
+    }
+
+    it('fetches and upserts gear when the activity has an unseen gear_id', async () => {
+      const activity = makeStravaActivity({
+        gear_id: 'g123',
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetForActivity(activity, {
+        id: 'g123',
+        name: 'Pegasus 40',
+        brand_name: 'Nike',
+        model_name: 'Pegasus',
+        distance: 452000,
+        primary: true,
+        retired: false,
+      });
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.gear.upsert).toHaveBeenCalledWith({
+        where: { id: 'g123' },
+        create: expect.objectContaining({ id: 'g123', userId: USER_ID, name: 'Pegasus 40' }),
+        update: expect.objectContaining({ id: 'g123', userId: USER_ID, name: 'Pegasus 40' }),
+      });
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ gearId: 'g123' }) }),
+      );
+    });
+
+    it('does not re-fetch gear details when the gear already exists', async () => {
+      mockPrisma.gear.findUnique.mockResolvedValueOnce({ id: 'g123' });
+      const activity = makeStravaActivity({
+        gear_id: 'g123',
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetForActivity(activity);
+
+      await service.sync(USER_ID);
+
+      expect(stravaClient.get).not.toHaveBeenCalledWith(
+        USER_ID, expect.stringContaining('/gear/'), expect.anything(),
+      );
+      expect(mockPrisma.gear.upsert).not.toHaveBeenCalled();
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ gearId: 'g123' }) }),
+      );
+    });
+
+    it('saves the activity with gearId null when the gear fetch fails', async () => {
+      const activity = makeStravaActivity({
+        gear_id: 'g123',
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetForActivity(activity, new Error('Strava API error: 500 /gear/g123'));
+
+      const result = await service.sync(USER_ID);
+
+      expect(result.errors).toBe(0);
+      expect(result.synced).toBe(1);
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({ data: expect.objectContaining({ gearId: null }) }),
+      );
+    });
+  });
+
+  describe('best efforts incremental sync', () => {
+    it('persists best_efforts from the already-fetched detail within the same transaction', async () => {
+      const activity = makeStravaActivity({
+        splits_metric: [makeMetricSplit(1, 3.5)],
+        best_efforts: [
+          {
+            id: 555,
+            name: '5k',
+            distance: 5000,
+            moving_time: 1200,
+            elapsed_time: 1205,
+            start_date: '2024-03-15T07:00:00Z',
+            pr_rank: 1,
+          },
+        ],
+      });
+
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activity);
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.activityBestEffort.createMany).toHaveBeenCalledWith({
+        data: [
+          expect.objectContaining({
+            id: '555',
+            activityId: 'act_id_1',
+            name: '5k',
+            prRank: 1,
+          }),
+        ],
+      });
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ bestEffortsSyncedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('does not call createMany when the activity has no best_efforts', async () => {
+      const activity = makeStravaActivity({
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
+        .mockResolvedValueOnce([])
+        .mockResolvedValueOnce(activity);
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.activityBestEffort.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('backfillGear', () => {
+    it('resolves gear per unique gear_id and updates matching activities', async () => {
+      let listCalled = false;
+      stravaClient.get.mockImplementation(async (_userId: string, endpoint: string) => {
+        if (endpoint.includes('/athlete/activities')) {
+          if (!listCalled) {
+            listCalled = true;
+            return [
+              { id: 1, type: 'Run', gear_id: 'g1' },
+              { id: 2, type: 'Run', gear_id: 'g1' },
+              { id: 3, type: 'Run', gear_id: null },
+            ];
+          }
+          return [];
+        }
+        if (endpoint.startsWith('/gear/')) {
+          return { id: 'g1', name: 'Pegasus', primary: true, retired: false, distance: 1000 };
+        }
+        return null;
+      });
+      mockPrisma.activity.updateMany.mockResolvedValue({ count: 1 });
+      // simulate persistence: findUnique only misses before the first upsert
+      mockPrisma.gear.findUnique
+        .mockResolvedValueOnce(null)
+        .mockResolvedValue({ id: 'g1' });
+
+      const result = await service.backfillGear(USER_ID);
+
+      expect(mockPrisma.gear.upsert).toHaveBeenCalledTimes(1);
+      expect(mockPrisma.activity.updateMany).toHaveBeenCalledWith({
+        where: { stravaId: 1n, gearId: null },
+        data: { gearId: 'g1' },
+      });
+      expect(mockPrisma.activity.updateMany).toHaveBeenCalledWith({
+        where: { stravaId: 2n, gearId: null },
+        data: { gearId: 'g1' },
+      });
+      expect(result.updated).toBe(2);
+    });
+
+    it('skips activities without a gear_id', async () => {
+      stravaClient.get
+        .mockResolvedValueOnce([{ id: 1, type: 'Run', gear_id: null }])
+        .mockResolvedValueOnce([]);
+
+      const result = await service.backfillGear(USER_ID);
+
+      expect(mockPrisma.activity.updateMany).not.toHaveBeenCalled();
+      expect(result.updated).toBe(0);
     });
   });
 

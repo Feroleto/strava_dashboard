@@ -35,6 +35,13 @@ export class StravaSyncController {
     return this.syncService.backfillPolylines(userId);
   }
 
+  @Post('backfill-gear')
+  async backfillGear(): Promise<{ updated: number }> {
+    this.logger.log('Gear backfill triggered via HTTP');
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    return this.syncService.backfillGear(userId);
+  }
+
   @Post('backfill-lap-max-hr')
   backfillLapMaxHr(): { started: boolean } {
     this.logger.log('Lap maxHr backfill triggered via HTTP');

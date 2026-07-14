@@ -6,8 +6,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 
-export type PageId =
-  'overview' | 'run/activities' | 'run/personal-best' | 'run/shoes';
+export type PageId = 'overview' | 'run/overview' | 'run/activities';
 
 export const DEFAULT_PAGE: PageId = 'run/activities';
 
@@ -45,11 +44,10 @@ export const NAV_SECTIONS: NavSection[] = [
         id: 'run',
         label: 'Run',
         icon: Activity,
-        page: 'run/activities',
+        page: 'run/overview',
         subs: [
+          { id: 'run/overview', label: 'Overview' },
           { id: 'run/activities', label: 'Activities' },
-          { id: 'run/personal-best', label: 'Personal Best' },
-          { id: 'run/shoes', label: 'Shoes' },
         ],
       },
       {
@@ -83,9 +81,6 @@ export function activeParentId(page: PageId): string | null {
 
 export function isKnownPage(value: string | null): value is PageId {
   return (
-    value === 'overview' ||
-    value === 'run/activities' ||
-    value === 'run/personal-best' ||
-    value === 'run/shoes'
+    value === 'overview' || value === 'run/overview' || value === 'run/activities'
   );
 }

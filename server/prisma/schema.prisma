@@ -13,6 +13,7 @@ model User {
   updatedAt     DateTime       @updatedAt
   activities    Activity[]
   stravaAccount StravaAccount?
+  gear          Gear[]
 
   @@map("users")
 }
@@ -32,27 +33,31 @@ model StravaAccount {
 }
 
 model Activity {
-  id             String           @id @default(cuid())
-  userId         String
-  stravaId       BigInt           @unique
-  name           String
-  type           String
-  sportType      String?          @map("sport_type")
-  workoutType    WorkoutType      @map("workout_type")
-  startDate      DateTime         @map("start_date")
-  distanceKm     Float?           @map("distance_km")
-  movingTimeSec  Int              @map("moving_time_sec")
-  paceRawSecKm   Float?           @map("pace_raw_sec_km")
-  elevationGainM Float?           @map("elevation_gain_m")
-  averageBpm     Float?           @map("average_bpm")
-  maxBpm         Float?           @map("max_bpm")
-  averageCadence Float?           @map("average_cadence")
-  summaryPolyline String?         @map("summary_polyline")
-  createdAt      DateTime         @default(now())
-  updatedAt      DateTime         @updatedAt
-  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  laps           ActivityLap[]
-  seconds        ActivitySecond[]
+  id                  String               @id @default(cuid())
+  userId              String
+  stravaId            BigInt               @unique
+  name                String
+  type                String
+  sportType           String?              @map("sport_type")
+  workoutType         WorkoutType          @map("workout_type")
+  startDate           DateTime             @map("start_date")
+  distanceKm          Float?               @map("distance_km")
+  movingTimeSec       Int                  @map("moving_time_sec")
+  paceRawSecKm        Float?               @map("pace_raw_sec_km")
+  elevationGainM      Float?               @map("elevation_gain_m")
+  averageBpm          Float?               @map("average_bpm")
+  maxBpm              Float?               @map("max_bpm")
+  averageCadence      Float?               @map("average_cadence")
+  summaryPolyline     String?              @map("summary_polyline")
+  gearId              String?              @map("gear_id")
+  bestEffortsSyncedAt DateTime?            @map("best_efforts_synced_at")
+  createdAt           DateTime             @default(now())
+  updatedAt           DateTime             @updatedAt
+  user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gear                Gear?                @relation(fields: [gearId], references: [id], onDelete: SetNull)
+  laps                ActivityLap[]
+  seconds             ActivitySecond[]
+  bestEfforts         ActivityBestEffort[]
 
   @@index([userId, startDate])
   @@map("activities")
@@ -97,6 +102,42 @@ model ActivityLap {
   @@index([activityId, lapIndex])
   @@index([activityId, lapType])
   @@map("activity_laps")
+}
+
+model Gear {
+  id         String     @id
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  brandName  String?    @map("brand_name")
+  modelName  String?    @map("model_name")
+  distance   Int
+  primary    Boolean    @default(false)
+  retired    Boolean    @default(false)
+  createdAt  DateTime   @default(now()) @map("created_at")
+  updatedAt  DateTime   @updatedAt @map("updated_at")
+  activities Activity[]
+
+  @@index([userId])
+  @@map("gears")
+}
+
+model ActivityBestEffort {
+  id          String   @id
+  activityId  String
+  activity    Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  name        String
+  distance    Float
+  movingTime  Int      @map("moving_time")
+  elapsedTime Int      @map("elapsed_time")
+  startDate   DateTime @map("start_date")
+  prRank      Int?     @map("pr_rank")
+  startIndex  Int?     @map("start_index")
+  endIndex    Int?     @map("end_index")
+
+  @@index([name, movingTime])
+  @@index([activityId])
+  @@map("activity_best_efforts")
 }
 
 enum WorkoutType {

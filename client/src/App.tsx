@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Sidebar from '@/features/nav/Sidebar';
 import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
+import RunOverviewPage from '@/features/overview/RunOverviewPage';
 import {
   DEFAULT_PAGE,
   isKnownPage,
@@ -12,10 +13,8 @@ function PageContent({ page }: { page: PageId }) {
   switch (page) {
     case 'overview':
       return <PlaceholderPage title="Overview" />;
-    case 'run/personal-best':
-      return <PlaceholderPage title="Personal Best" />;
-    case 'run/shoes':
-      return <PlaceholderPage title="Shoes" />;
+    case 'run/overview':
+      return <RunOverviewPage />;
     case 'run/activities':
     default:
       return <Dashboard />;

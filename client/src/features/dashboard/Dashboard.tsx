@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import WeeklyChart, { type Granularity, type Period } from './WeeklyChart';
 import DateRangePicker, { type DateRange } from './DateRangePicker';
 import Rail from './Rail';
 import ActivityList from './ActivityList';
 import RangeChip from './RangeChip';
 import ActivityDetailView from '@/features/activity/ActivityDetailView';
-import type { ActivitiesResponse, Activity } from '@/lib/types';
+import { useActivities } from '@/lib/useActivities';
 import {
   CHART_MAX_WEEKS,
   DAY_MS,
@@ -24,25 +24,8 @@ export default function Dashboard() {
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
   const [detailId, setDetailId] = useState<string | null>(null);
   const [weekPage, setWeekPage] = useState(1);
-  const [activities, setActivities] = useState<Activity[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // fetch the whole history once; period/type are applied client-side
-  useEffect(() => {
-    fetch(`http://localhost:3000/activities?limit=1000`)
-      .then((res) => {
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        return res.json();
-      })
-      .then((data: ActivitiesResponse) => {
-        setActivities(data.items);
-        setError(null);
-      })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false));
-  }, [refreshKey]);
+  const { activities, loading, error } = useActivities(refreshKey);
 
   const isAll = period === 'all';
   const n = isAll ? 0 : parseInt(period, 10);

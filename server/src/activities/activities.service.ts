@@ -76,10 +76,12 @@ export class ActivitiesService {
     workoutType?: WorkoutType,
     startDate?: Date,
     endDate?: Date,
+    gearId?: string,
   ) {
     return {
       userId,
       ...(workoutType && { workoutType }),
+      ...(gearId && { gearId }),
       ...((startDate || endDate) && {
         startDate: {
           ...(startDate && { gte: startDate }),
@@ -96,6 +98,7 @@ export class ActivitiesService {
     workoutType?: WorkoutType,
     startDate?: Date,
     endDate?: Date,
+    gearId?: string,
   ): Promise<{
     items: ActivityListItem[];
     total: number;
@@ -103,7 +106,7 @@ export class ActivitiesService {
     limit: number;
   }> {
     const skip = (page - 1) * limit;
-    const where = this.buildWhere(userId, workoutType, startDate, endDate);
+    const where = this.buildWhere(userId, workoutType, startDate, endDate, gearId);
 
     const [items, total] = await Promise.all([
       this.prisma.activity.findMany({

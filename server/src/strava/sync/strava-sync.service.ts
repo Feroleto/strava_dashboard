@@ -19,10 +19,13 @@ import {
   mapRecordedLap,
   recordedLapToCreateData,
 } from './processors/lap-mapper';
+import { mapBestEfforts } from './processors/best-effort-mapper';
+import { mapGearUpsert } from './processors/gear-mapper';
 import { MappedLap, ProcessedSecond } from './types';
 import {
   StravaActivityDetail,
   StravaActivitySummary,
+  StravaGear,
   StravaStreamSet,
 } from './strava-api.types';
 
@@ -179,6 +182,8 @@ export class StravaSyncService {
     const isStructured =
       workoutType === 'INTERVAL' || workoutType === 'HILL_REPEATS';
 
+    const gearId = await this.ensureGear(userId, full.gear_id);
+
     await this.prisma.$transaction(async (tx) => {
       const activity = await tx.activity.create({
         data: {
@@ -199,8 +204,15 @@ export class StravaSyncService {
           maxBpm:         full.max_heartrate ?? null,
           averageCadence: full.average_cadence != null ? full.average_cadence * 2 : null,
           summaryPolyline: full.map?.summary_polyline || null,
+          gearId,
+          bestEffortsSyncedAt: new Date(),
         },
       });
+
+      const efforts = mapBestEfforts(activity.id, full.best_efforts);
+      if (efforts.length > 0) {
+        await tx.activityBestEffort.createMany({ data: efforts });
+      }
 
       if (isStructured) {
         await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
@@ -210,6 +222,39 @@ export class StravaSyncService {
     });
 
     this.logger.log(`Saved activity ${full.id} — ${full.name} [${workoutType}]`);
+  }
+
+  // resolves the gearId to store on the activity, upserting the Gear row
+  // from Strava the first time a given gear_id is seen. Non-rate-limit
+  // failures are swallowed so the activity still saves without a gear link —
+  // a later sync will pick it up once the gear fetch succeeds
+  private async ensureGear(
+    userId: string,
+    gearId: string | null | undefined,
+  ): Promise<string | null> {
+    if (!gearId) return null;
+
+    const existing = await this.prisma.gear.findUnique({
+      where: { id: gearId },
+    });
+    if (existing) return gearId;
+
+    try {
+      const raw = await this.client.get<StravaGear>(userId, `/gear/${gearId}`);
+      await this.sleep(300);
+
+      const data = mapGearUpsert(userId, raw);
+      await this.prisma.gear.upsert({
+        where: { id: gearId },
+        create: data,
+        update: data,
+      });
+      return gearId;
+    } catch (err: any) {
+      if (err.message === 'STRAVA_RATE_LIMIT') throw err;
+      this.logger.warn(`Failed to fetch gear ${gearId}: ${err.message}`);
+      return null;
+    }
   }
 
   // easy and long runs laps collector
@@ -455,6 +500,31 @@ export class StravaSyncService {
     }
 
     this.logger.log(`Polyline backfill complete — ${updated} activities updated`);
+    return { updated };
+  }
+
+  // one-off backfill for gear links on activities synced before Gear existed.
+  // gear_id already comes for free in the activity list, so this costs ~2 API
+  // calls for the listing plus one per not-yet-seen gear — much cheaper than
+  // a per-activity detail fetch
+  async backfillGear(userId: string): Promise<{ updated: number }> {
+    const summaries = await this.fetchAllActivities(userId);
+    let updated = 0;
+
+    for (const summary of summaries) {
+      if (!summary.gear_id) continue;
+
+      const gearId = await this.ensureGear(userId, summary.gear_id);
+      if (!gearId) continue;
+
+      const result = await this.prisma.activity.updateMany({
+        where: { stravaId: BigInt(summary.id), gearId: null },
+        data: { gearId },
+      });
+      updated += result.count;
+    }
+
+    this.logger.log(`Gear backfill complete — ${updated} activities updated`);
     return { updated };
   }
 

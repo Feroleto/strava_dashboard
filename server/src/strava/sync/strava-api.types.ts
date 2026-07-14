@@ -7,6 +7,7 @@ export interface StravaActivitySummary {
   id: number;
   type: string;
   name?: string;
+  gear_id?: string | null;
   map?: { summary_polyline?: string | null };
 }
 
@@ -47,6 +48,29 @@ export interface StravaActivityDetail extends StravaActivitySummary {
   description?: string | null;
   laps?: StravaLap[];
   splits_metric?: StravaSplitMetric[];
+  best_efforts?: StravaBestEffort[];
+}
+
+export interface StravaBestEffort {
+  id: number;
+  name: string;
+  distance: number;
+  moving_time: number;
+  elapsed_time: number;
+  start_date: string;
+  pr_rank?: number | null;
+  start_index?: number;
+  end_index?: number;
+}
+
+export interface StravaGear {
+  id: string;
+  name: string;
+  brand_name?: string | null;
+  model_name?: string | null;
+  distance: number;
+  primary: boolean;
+  retired: boolean;
 }
 
 export type StravaStreamSet = Record<string, { data: number[] } | undefined>;
