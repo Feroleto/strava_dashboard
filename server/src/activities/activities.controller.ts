@@ -48,6 +48,12 @@ export class ActivitiesController {
     );
   }
 
+  @Get('laps')
+  async laps() {
+    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
+    return this.service.listLapsForAnalysis(userId);
+  }
+
   private parseFilters(workoutType?: string, dateFrom?: string, dateTo?: string) {
     if (workoutType && !Object.values(WorkoutType).includes(workoutType as WorkoutType)) {
       throw new BadRequestException(

@@ -22,7 +22,7 @@ export default function TrainingLoadChart({ weeks }: { weeks: WeekMetrics[] }) {
   const visible = sliceByPeriod(weeks, period);
   const n = visible.length;
   const maxLoad = Math.max(1e-9, ...visible.map((w) => w.load));
-  const noHrData = visible.reduce((s, w) => s + w.hrRunCount, 0) === 0;
+  const noHrData = visible.reduce((s, w) => s + w.hrKm, 0) === 0;
 
   const x = (i: number) => ((i + 0.5) / n) * VB_W;
   const y = (v: number) => AXIS_Y - (v / maxLoad) * PLOT_H;

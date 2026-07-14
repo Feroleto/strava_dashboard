@@ -26,7 +26,7 @@ export default function Z2StackedChart({ weeks }: { weeks: WeekMetrics[] }) {
   const visible = sliceByPeriod(weeks, period);
   const n = visible.length;
   const maxKm = Math.max(1, ...visible.map((w) => w.km));
-  const noHrData = visible.reduce((s, w) => s + w.hrRunCount, 0) === 0;
+  const noHrData = visible.reduce((s, w) => s + w.hrKm, 0) === 0;
 
   const x = (i: number) => ((i + 0.5) / n) * VB_W;
   const y = (v: number) => AXIS_Y - (v / maxKm) * PLOT_H;

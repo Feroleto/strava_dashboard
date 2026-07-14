@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useActivities } from '@/lib/useActivities';
+import { useActivityLaps } from './useActivityLaps';
 import { useTrainingMetrics } from './useTrainingMetrics';
 import WeeklyVolumeChart from './WeeklyVolumeChart';
 import PaceVsVolumeChart from './PaceVsVolumeChart';
@@ -28,8 +28,8 @@ function SectionLabel({
 }
 
 export default function RunAnalysisPage() {
-  const { activities, loading, error } = useActivities();
-  const weeks = useTrainingMetrics(activities);
+  const { laps, loading, error } = useActivityLaps();
+  const weeks = useTrainingMetrics(laps);
   // the trailing partial week is a mid-week artifact (every metric plunges
   // until Sunday) — every chart reads completed weeks only, same convention
   // the app already uses elsewhere for weekly training metrics
@@ -65,7 +65,7 @@ export default function RunAnalysisPage() {
 
           <SectionLabel>Intensity zones</SectionLabel>
           <Z2StackedChart weeks={completed} />
-          <PaceZoneHistogram activities={activities} weeks={completed} />
+          <PaceZoneHistogram laps={laps} weeks={completed} />
 
           <SectionLabel>Training load</SectionLabel>
           <TrainingLoadChart weeks={completed} />

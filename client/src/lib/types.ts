@@ -35,6 +35,21 @@ export interface ActivityDetail extends Activity {
   laps: ActivityLap[];
 }
 
+// flat, cross-activity lap for GET /activities/laps (Run > Analysis) — avgHr
+// is 0 (never null) when no HR monitor was present for that lap
+export interface ActivityLapPoint {
+  activityId: string;
+  activityStartDate: string;
+  distanceM: number;
+  movingDurationSec: number;
+  avgPaceSecKm: number;
+  avgHr: number;
+}
+
+export interface ActivityLapsResponse {
+  items: ActivityLapPoint[];
+}
+
 export interface Gear {
   id: string;
   name: string;

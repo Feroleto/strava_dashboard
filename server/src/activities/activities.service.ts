@@ -36,6 +36,15 @@ export interface ActivityLapItem {
   avgCadence: number | null;
 }
 
+export interface LapForAnalysis {
+  activityId: string;
+  activityStartDate: Date;
+  distanceM: number;
+  movingDurationSec: number;
+  avgPaceSecKm: number;
+  avgHr: number; // 0 sentinel = no HR monitor for this lap, never null
+}
+
 export interface WeeklyDistancePoint {
   weekStart: string;
   totalKm: number;
@@ -173,6 +182,32 @@ export class ActivitiesService {
     }
 
     return { weeks };
+  }
+
+  async listLapsForAnalysis(userId: string): Promise<{ items: LapForAnalysis[] }> {
+    const laps = await this.prisma.activityLap.findMany({
+      where: { activity: { userId } },
+      orderBy: { activity: { startDate: 'asc' } },
+      select: {
+        activityId: true,
+        distanceM: true,
+        movingDurationSec: true,
+        avgPaceSecKm: true,
+        avgHr: true,
+        activity: { select: { startDate: true } },
+      },
+    });
+
+    return {
+      items: laps.map((l) => ({
+        activityId: l.activityId,
+        activityStartDate: l.activity.startDate,
+        distanceM: l.distanceM,
+        movingDurationSec: l.movingDurationSec,
+        avgPaceSecKm: l.avgPaceSecKm,
+        avgHr: l.avgHr,
+      })),
+    };
   }
 
   private weekStartUtc(date: Date): Date {

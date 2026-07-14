@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { Activity } from '@/lib/types';
+import type { ActivityLapPoint } from '@/lib/types';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
 import type { WeekMetrics } from './useTrainingMetrics';
 import AnalysisCard from './AnalysisCard';
@@ -26,10 +26,10 @@ const BINS: PaceBin[] = [
 ];
 
 export default function PaceZoneHistogram({
-  activities,
+  laps,
   weeks,
 }: {
-  activities: Activity[];
+  laps: ActivityLapPoint[];
   weeks: WeekMetrics[];
 }) {
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
@@ -37,19 +37,20 @@ export default function PaceZoneHistogram({
 
   const visibleWeeks = sliceByPeriod(weeks, period);
   const cutoff = visibleWeeks[0]?.start ?? new Date(0);
-  const runsInPeriod = activities.filter(
-    (a) => new Date(a.startDate) >= cutoff,
+  // bucketed per lap, not per run — an interval workout's hard-rep laps and
+  // its warmup/cooldown laps land in different bins instead of collapsing
+  // into the whole run's single average pace
+  const lapsInPeriod = laps.filter(
+    (l) => new Date(l.activityStartDate) >= cutoff,
   );
 
   const kmPerBin = BINS.map((bin) =>
-    runsInPeriod
-      .filter((r) => r.paceRawSecKm != null && bin.test(r.paceRawSecKm))
-      .reduce((s, r) => s + (r.distanceKm ?? 0), 0),
+    lapsInPeriod
+      .filter((l) => bin.test(l.avgPaceSecKm))
+      .reduce((s, l) => s + l.distanceM / 1000, 0),
   );
   const countPerBin = BINS.map(
-    (bin) =>
-      runsInPeriod.filter((r) => r.paceRawSecKm != null && bin.test(r.paceRawSecKm))
-        .length,
+    (bin) => lapsInPeriod.filter((l) => bin.test(l.avgPaceSecKm)).length,
   );
 
   const n = BINS.length;
@@ -72,7 +73,7 @@ export default function PaceZoneHistogram({
   const hov = hover !== null ? hover : null;
   const hoverReading =
     hov !== null
-      ? `${BINS[hov].label} /km · ${kmPerBin[hov].toFixed(1)} km · ${countPerBin[hov]} run${countPerBin[hov] === 1 ? '' : 's'}`
+      ? `${BINS[hov].label} /km · ${kmPerBin[hov].toFixed(1)} km · ${countPerBin[hov]} lap${countPerBin[hov] === 1 ? '' : 's'}`
       : null;
 
   return (
