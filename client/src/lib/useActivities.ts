@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ActivitiesResponse, Activity } from './types';
+import { API_BASE_URL } from './apiUrl';
 
 // fetches the whole run history once; consumers filter/aggregate client-side.
 // pass a changing refreshKey to force a refetch (e.g. after a sync completes)
@@ -9,7 +10,7 @@ export function useActivities(refreshKey = 0) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`http://localhost:3000/activities?limit=1000`)
+    fetch(`${API_BASE_URL}/activities?limit=1000`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { API_BASE_URL } from '@/lib/apiUrl';
 
 interface SyncStatus {
   state: 'idle' | 'running' | 'done' | 'error';
@@ -45,7 +46,7 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
   const running = status?.state === 'running';
 
   useEffect(() => {
-    fetch('http://localhost:3000/strava/sync/status')
+    fetch(`${API_BASE_URL}/strava/sync/status`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -62,7 +63,7 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
   useEffect(() => {
     if (!running) return;
     const id = setInterval(() => {
-      fetch('http://localhost:3000/strava/sync/status')
+      fetch(`${API_BASE_URL}/strava/sync/status`)
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`);
           return res.json();
@@ -79,7 +80,7 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
   const startSync = () => {
     setRequestError(null);
     setWatching(true);
-    fetch('http://localhost:3000/strava/sync', { method: 'POST' })
+    fetch(`${API_BASE_URL}/strava/sync`, { method: 'POST' })
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

@@ -7,6 +7,7 @@ import {
   formatMonthDayYear,
   formatPace,
 } from '@/lib/activityFormat';
+import { API_BASE_URL } from '@/lib/apiUrl';
 
 interface PersonalRecordsCardProps {
   activities: Activity[];
@@ -177,7 +178,7 @@ export default function PersonalRecordsCard({
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/personal-bests')
+    fetch(`${API_BASE_URL}/personal-bests`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

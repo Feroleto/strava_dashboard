@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { API_BASE_URL } from '@/lib/apiUrl';
 
 // fetch-once + PATCH-on-save; same shape as useActivityLaps, plus a mutator
 export function useMaxHr() {
@@ -7,7 +8,7 @@ export function useMaxHr() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch('http://localhost:3000/users/me')
+    fetch(`${API_BASE_URL}/users/me`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();
@@ -21,7 +22,7 @@ export function useMaxHr() {
   }, []);
 
   async function save(value: number): Promise<void> {
-    const res = await fetch('http://localhost:3000/users/me', {
+    const res = await fetch(`${API_BASE_URL}/users/me`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ maxHr: value }),
