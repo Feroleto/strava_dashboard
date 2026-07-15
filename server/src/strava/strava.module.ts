@@ -8,6 +8,10 @@ import { StravaSyncService } from './sync/strava-sync.service';
 import { StravaSyncController } from './sync/strava-sync.controller';
 import { BestEffortsSyncService } from './best-efforts/best-efforts-sync.service';
 import { BestEffortsSyncController } from './best-efforts/best-efforts-sync.controller';
+import { AthleteZonesSyncService } from './hr-zones/athlete-zones-sync.service';
+import { AthleteZonesSyncController } from './hr-zones/athlete-zones-sync.controller';
+import { HrZonesBackfillService } from './hr-zones/hr-zones-backfill.service';
+import { HrZonesBackfillController } from './hr-zones/hr-zones-backfill.controller';
 
 @Module({
   imports: [
@@ -18,12 +22,16 @@ import { BestEffortsSyncController } from './best-efforts/best-efforts-sync.cont
     StravaAuthController,
     StravaSyncController,
     BestEffortsSyncController,
+    AthleteZonesSyncController,
+    HrZonesBackfillController,
   ],
   providers: [
     StravaClientService,
     StravaAuthService,
     StravaSyncService,
     BestEffortsSyncService,
+    AthleteZonesSyncService,
+    HrZonesBackfillService,
   ],
   exports: [StravaClientService],
 })

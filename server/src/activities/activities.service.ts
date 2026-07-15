@@ -39,10 +39,21 @@ export interface ActivityLapItem {
 export interface LapForAnalysis {
   activityId: string;
   activityStartDate: Date;
+  lapIndex: number;
+  workoutType: string;
   distanceM: number;
   movingDurationSec: number;
   avgPaceSecKm: number;
   avgHr: number; // 0 sentinel = no HR monitor for this lap, never null
+}
+
+export interface ActivityHrZonePoint {
+  activityId: string;
+  activityStartDate: Date;
+  zoneIndex: number;
+  min: number;
+  max: number;
+  timeSec: number;
 }
 
 export interface WeeklyDistancePoint {
@@ -190,11 +201,12 @@ export class ActivitiesService {
       orderBy: { activity: { startDate: 'asc' } },
       select: {
         activityId: true,
+        lapIndex: true,
         distanceM: true,
         movingDurationSec: true,
         avgPaceSecKm: true,
         avgHr: true,
-        activity: { select: { startDate: true } },
+        activity: { select: { startDate: true, workoutType: true } },
       },
     });
 
@@ -202,10 +214,42 @@ export class ActivitiesService {
       items: laps.map((l) => ({
         activityId: l.activityId,
         activityStartDate: l.activity.startDate,
+        lapIndex: l.lapIndex,
+        workoutType: l.activity.workoutType,
         distanceM: l.distanceM,
         movingDurationSec: l.movingDurationSec,
         avgPaceSecKm: l.avgPaceSecKm,
         avgHr: l.avgHr,
+      })),
+    };
+  }
+
+  // per-activity zone time (not per-lap: Strava's zone distribution is
+  // whole-activity, no sub-activity granularity), same division of labor as
+  // listLapsForAnalysis — frontend does the weekly bucketing itself
+  async listHrZonesForAnalysis(
+    userId: string,
+  ): Promise<{ items: ActivityHrZonePoint[] }> {
+    const rows = await this.prisma.activityHrZoneTime.findMany({
+      where: { activity: { userId } },
+      orderBy: { activity: { startDate: 'asc' } },
+      select: {
+        zoneIndex: true,
+        min: true,
+        max: true,
+        timeSec: true,
+        activity: { select: { id: true, startDate: true } },
+      },
+    });
+
+    return {
+      items: rows.map((r) => ({
+        activityId: r.activity.id,
+        activityStartDate: r.activity.startDate,
+        zoneIndex: r.zoneIndex,
+        min: r.min,
+        max: r.max,
+        timeSec: r.timeSec,
       })),
     };
   }

@@ -40,6 +40,8 @@ export interface ActivityDetail extends Activity {
 export interface ActivityLapPoint {
   activityId: string;
   activityStartDate: string;
+  lapIndex: number;
+  workoutType: string;
   distanceM: number;
   movingDurationSec: number;
   avgPaceSecKm: number;
@@ -48,6 +50,21 @@ export interface ActivityLapPoint {
 
 export interface ActivityLapsResponse {
   items: ActivityLapPoint[];
+}
+
+// per-activity (not per-lap) real HR zone time from Strava, requires a
+// premium account — zoneIndex 1 = Z2 (0-based, native Strava zone order)
+export interface ActivityHrZonePoint {
+  activityId: string;
+  activityStartDate: string;
+  zoneIndex: number;
+  min: number;
+  max: number;
+  timeSec: number;
+}
+
+export interface ActivityHrZonesResponse {
+  items: ActivityHrZonePoint[];
 }
 
 export interface Gear {

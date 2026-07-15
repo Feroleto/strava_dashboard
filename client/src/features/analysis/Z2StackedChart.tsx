@@ -19,7 +19,15 @@ function pctZ2(ws: WeekMetrics[]): number {
   return km > 0 ? (z2 / km) * 100 : 0;
 }
 
-export default function Z2StackedChart({ weeks }: { weeks: WeekMetrics[] }) {
+export default function Z2StackedChart({
+  weeks,
+  hasMaxHr = true,
+}: {
+  weeks: WeekMetrics[];
+  /** false when the user hasn't configured a max HR yet — the Z2 upper bound
+   * is a 150bpm placeholder in that case, not a real %maxHR cutoff */
+  hasMaxHr?: boolean;
+}) {
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -34,9 +42,22 @@ export default function Z2StackedChart({ weeks }: { weeks: WeekMetrics[] }) {
 
   const cur = pctZ2(visible.slice(-4));
   const prev = pctZ2(visible.slice(-8, -4));
-  const insight = noHrData
-    ? `Z2 at — % of total volume · no HR data`
-    : `Z2 at ${pctZ2(visible).toFixed(0)}% of total volume · ${cur >= prev ? 'rising' : 'falling'} vs previous 4 weeks`;
+  // three tiers of confidence for the Z2 cutoff itself: real Strava zone
+  // data (no caveat) > maxHr-derived 70% estimate > 150bpm placeholder. Bars
+  // and the % shown stay distance-based (z2Km/km) in all three cases — real
+  // zone data only upgrades this trailing caveat, not the visual encoding
+  const allWeeksHaveRealZ2 =
+    visible.length > 0 && visible.every((w) => w.z2TimeSec !== null);
+  const tierCaveat = allWeeksHaveRealZ2
+    ? ''
+    : hasMaxHr
+      ? ' · some weeks estimated from max HR (no premium zone data)'
+      : ' · Z2 threshold estimated (150bpm placeholder)';
+  const insight =
+    (noHrData
+      ? `Z2 at — % of total volume · no HR data`
+      : `Z2 at ${pctZ2(visible).toFixed(0)}% of total volume · ${cur >= prev ? 'rising' : 'falling'} vs previous 4 weeks`) +
+    tierCaveat;
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =

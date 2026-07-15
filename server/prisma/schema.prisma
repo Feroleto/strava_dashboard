@@ -7,13 +7,15 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(cuid())
-  email         String         @unique
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  activities    Activity[]
-  stravaAccount StravaAccount?
-  gear          Gear[]
+  id             String          @id @default(cuid())
+  email          String          @unique
+  maxHr          Int?            @map("max_hr")
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  activities     Activity[]
+  stravaAccount  StravaAccount?
+  gear           Gear[]
+  athleteHrZones AthleteHrZones?
 
   @@map("users")
 }
@@ -51,6 +53,7 @@ model Activity {
   summaryPolyline     String?              @map("summary_polyline")
   gearId              String?              @map("gear_id")
   bestEffortsSyncedAt DateTime?            @map("best_efforts_synced_at")
+  hrZonesSyncedAt     DateTime?            @map("hr_zones_synced_at")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
   user                User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -58,6 +61,7 @@ model Activity {
   laps                ActivityLap[]
   seconds             ActivitySecond[]
   bestEfforts         ActivityBestEffort[]
+  hrZoneTimes         ActivityHrZoneTime[]
 
   @@index([userId, startDate])
   @@map("activities")
@@ -138,6 +142,32 @@ model ActivityBestEffort {
   @@index([name, movingTime])
   @@index([activityId])
   @@map("activity_best_efforts")
+}
+
+model AthleteHrZones {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  customZones Boolean  @map("custom_zones")
+  zones       Json
+  syncedAt    DateTime @map("synced_at")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("athlete_hr_zones")
+}
+
+model ActivityHrZoneTime {
+  id         String   @id @default(cuid())
+  activityId String
+  zoneIndex  Int      @map("zone_index")
+  min        Int
+  max        Int
+  timeSec    Int      @map("time_sec")
+  activity   Activity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+
+  @@unique([activityId, zoneIndex])
+  @@map("activity_hr_zone_time")
 }
 
 enum WorkoutType {

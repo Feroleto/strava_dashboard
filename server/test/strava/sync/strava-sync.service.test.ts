@@ -25,6 +25,9 @@ const { mockPrisma } = vi.hoisted(() => {
       activityBestEffort: {
         createMany: vi.fn(),
       },
+      activityHrZoneTime: {
+        createMany: vi.fn(),
+      },
       gear: {
         findUnique: vi.fn(),
         upsert:     vi.fn(),
@@ -131,6 +134,7 @@ describe('StravaSyncService', () => {
     mockPrisma.activitySecond.createMany.mockResolvedValue({ count: 100 });
     mockPrisma.activitySecond.findMany.mockResolvedValue([]);
     mockPrisma.activityBestEffort.createMany.mockResolvedValue({ count: 0 });
+    mockPrisma.activityHrZoneTime.createMany.mockResolvedValue({ count: 0 });
     mockPrisma.gear.findUnique.mockResolvedValue(null);
     mockPrisma.gear.upsert.mockResolvedValue({});
     mockPrisma.activity.updateMany.mockResolvedValue({ count: 0 });
@@ -384,6 +388,7 @@ describe('StravaSyncService', () => {
         .mockResolvedValueOnce([{ id: activity.id, type: 'Run' }])
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce(activity)
+        .mockResolvedValueOnce([]) // HR zones for this activity — none available
         .mockResolvedValueOnce({ altitude: { data: altStream } });
 
       await service.sync(USER_ID);
@@ -541,7 +546,9 @@ describe('StravaSyncService', () => {
         .mockResolvedValueOnce(page1)
         .mockResolvedValueOnce([])
         .mockResolvedValueOnce(act1)
-        .mockResolvedValueOnce(act2);
+        .mockResolvedValueOnce([]) // HR zones for act1 — none available
+        .mockResolvedValueOnce(act2)
+        .mockResolvedValueOnce([]); // HR zones for act2 — none available
 
       const result = await service.sync(USER_ID);
 
@@ -688,6 +695,94 @@ describe('StravaSyncService', () => {
       await service.sync(USER_ID);
 
       expect(mockPrisma.activityBestEffort.createMany).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('hr zones incremental sync', () => {
+    function mockGetWithZones(activity: any, zonesResponse: any) {
+      let listCalled = false;
+      stravaClient.get.mockImplementation(async (_userId: string, endpoint: string) => {
+        if (endpoint.includes('/athlete/activities')) {
+          if (!listCalled) {
+            listCalled = true;
+            return [{ id: activity.id, type: 'Run', name: activity.name }];
+          }
+          return [];
+        }
+        if (endpoint.endsWith('/zones')) {
+          if (zonesResponse instanceof Error) throw zonesResponse;
+          return zonesResponse;
+        }
+        if (endpoint.includes('/activities/')) {
+          return activity;
+        }
+        return null;
+      });
+    }
+
+    it('fetches and persists HR zone time distribution for a new activity', async () => {
+      const activity = makeStravaActivity({
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetWithZones(activity, [
+        {
+          type: 'heartrate',
+          distribution_buckets: [
+            { min: 0, max: 115, time: 120 },
+            { min: 115, max: 145, time: 900 },
+            { min: 145, max: 165, time: 300 },
+          ],
+        },
+      ]);
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.activityHrZoneTime.createMany).toHaveBeenCalledWith({
+        data: [
+          { activityId: 'act_id_1', zoneIndex: 0, min: 0, max: 115, timeSec: 120 },
+          { activityId: 'act_id_1', zoneIndex: 1, min: 115, max: 145, timeSec: 900 },
+          { activityId: 'act_id_1', zoneIndex: 2, min: 145, max: 165, timeSec: 300 },
+        ],
+      });
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ hrZonesSyncedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('marks hrZonesSyncedAt with no rows when Strava returns no zone data (non-premium account)', async () => {
+      const activity = makeStravaActivity({
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetWithZones(activity, []);
+
+      await service.sync(USER_ID);
+
+      expect(mockPrisma.activityHrZoneTime.createMany).not.toHaveBeenCalled();
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ hrZonesSyncedAt: expect.any(Date) }),
+        }),
+      );
+    });
+
+    it('saves the activity with hrZonesSyncedAt null when the zones fetch fails', async () => {
+      const activity = makeStravaActivity({
+        splits_metric: [makeMetricSplit(1, 3.5)],
+      });
+      mockGetWithZones(activity, new Error('Strava API error: 500 /activities/9876543210/zones'));
+
+      const result = await service.sync(USER_ID);
+
+      expect(result.errors).toBe(0);
+      expect(result.synced).toBe(1);
+      expect(mockPrisma.activityHrZoneTime.createMany).not.toHaveBeenCalled();
+      expect(mockPrisma.activity.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ hrZonesSyncedAt: null }),
+        }),
+      );
     });
   });
 

@@ -74,3 +74,15 @@ export interface StravaGear {
 }
 
 export type StravaStreamSet = Record<string, { data: number[] } | undefined>;
+
+export interface StravaAthleteZones {
+  heart_rate?: {
+    custom_zones: boolean;
+    zones: { min: number; max: number }[];
+  };
+}
+
+export interface StravaActivityZoneDistribution {
+  type: string;
+  distribution_buckets: { min: number; max: number; time: number }[];
+}

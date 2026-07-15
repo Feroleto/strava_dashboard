@@ -21,10 +21,15 @@ import {
 } from './processors/lap-mapper';
 import { mapBestEfforts } from './processors/best-effort-mapper';
 import { mapGearUpsert } from './processors/gear-mapper';
+import {
+  ActivityHrZoneTimeCreate,
+  mapActivityHrZones,
+} from './processors/hr-zone-mapper';
 import { MappedLap, ProcessedSecond } from './types';
 import {
   StravaActivityDetail,
   StravaActivitySummary,
+  StravaActivityZoneDistribution,
   StravaGear,
   StravaStreamSet,
 } from './strava-api.types';
@@ -183,6 +188,7 @@ export class StravaSyncService {
       workoutType === 'INTERVAL' || workoutType === 'HILL_REPEATS';
 
     const gearId = await this.ensureGear(userId, full.gear_id);
+    const hrZones = await this.fetchActivityHrZones(userId, full.id);
 
     await this.prisma.$transaction(async (tx) => {
       const activity = await tx.activity.create({
@@ -206,12 +212,19 @@ export class StravaSyncService {
           summaryPolyline: full.map?.summary_polyline || null,
           gearId,
           bestEffortsSyncedAt: new Date(),
+          hrZonesSyncedAt: hrZones != null ? new Date() : null,
         },
       });
 
       const efforts = mapBestEfforts(activity.id, full.best_efforts);
       if (efforts.length > 0) {
         await tx.activityBestEffort.createMany({ data: efforts });
+      }
+
+      if (hrZones && hrZones.length > 0) {
+        await tx.activityHrZoneTime.createMany({
+          data: hrZones.map((z) => ({ activityId: activity.id, ...z })),
+        });
       }
 
       if (isStructured) {
@@ -253,6 +266,34 @@ export class StravaSyncService {
     } catch (err: any) {
       if (err.message === 'STRAVA_RATE_LIMIT') throw err;
       this.logger.warn(`Failed to fetch gear ${gearId}: ${err.message}`);
+      return null;
+    }
+  }
+
+  // fetches per-activity HR zone time distribution (premium-only Strava
+  // feature). Non-rate-limit failures are swallowed and return null so the
+  // activity still saves without hrZonesSyncedAt set — a later backfill
+  // pass will retry it. A successful fetch that returns no data (no
+  // premium, no HR monitor) resolves to [], which IS marked as synced so it
+  // isn't retried forever — same contract as ensureGear, but degrading to
+  // "no data" instead of "no link" since there's no cached-entity shortcut
+  // to check first
+  private async fetchActivityHrZones(
+    userId: string,
+    stravaActivityId: number,
+  ): Promise<ActivityHrZoneTimeCreate[] | null> {
+    try {
+      const raw = await this.client.get<StravaActivityZoneDistribution[]>(
+        userId,
+        `/activities/${stravaActivityId}/zones`,
+      );
+      await this.sleep(300);
+      return mapActivityHrZones(raw);
+    } catch (err: any) {
+      if (err.message === 'STRAVA_RATE_LIMIT') throw err;
+      this.logger.warn(
+        `Failed to fetch HR zones for activity ${stravaActivityId}: ${err.message}`,
+      );
       return null;
     }
   }

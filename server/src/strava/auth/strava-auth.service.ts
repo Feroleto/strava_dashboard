@@ -25,7 +25,7 @@ export class StravaAuthService {
       response_type: 'code',
       redirect_uri: this.config.get<string>('STRAVA_REDIRECT_URI')!,
       approval_prompt: 'force',
-      scope: 'read,activity:read_all',
+      scope: 'read,activity:read_all,profile:read_all',
     });
 
     return `${STRAVA_AUTH_URL}?${params.toString()}`;
