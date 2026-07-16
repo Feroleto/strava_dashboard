@@ -306,7 +306,11 @@ export class StravaSyncService {
           data: lapCreateData.map((l) => ({ ...l, activityId: activity.id })),
         });
       }
-    });
+    },
+    // the auto-detection path inserts one activitySecond row per second of
+    // activity (~3600 rows/hour), which alone can exceed the default 5s
+    // interactive transaction timeout against a remote Postgres
+    { timeout: 30_000 });
 
     this.logger.log(`Saved activity ${full.id} — ${full.name} [${workoutType}]`);
   }
