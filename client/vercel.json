@@ -1,5 +1,5 @@
 {
   "rewrites": [
-    { "source": "/api/:path*", "destination": "https://socorre.onrender.com/:path*" }
+    { "source": "/api/:path*", "destination": "https://sotreina.onrender.com/:path*" }
   ]
 }
