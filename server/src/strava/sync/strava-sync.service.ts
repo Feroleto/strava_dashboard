@@ -735,6 +735,13 @@ export class StravaSyncService {
       page++;
     }
 
+    // Strava lists newest-first when `after` is absent (initial import);
+    // processing oldest-first makes max(startDate) in the DB work as a
+    // resume cursor if the import dies mid-run
+    const startMs = (a: StravaActivitySummary) =>
+      a.start_date ? new Date(a.start_date).getTime() : 0;
+    all.sort((a, b) => startMs(a) - startMs(b));
+
     return all;
   }
 

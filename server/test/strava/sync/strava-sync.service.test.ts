@@ -315,6 +315,43 @@ describe('StravaSyncService', () => {
         USER_ID, expect.stringContaining('/activities/2'), expect.anything(),
       );
     });
+
+    it('processes activities oldest-first even when the listing comes newest-first (initial import)', async () => {
+      // sem `after` (banco vazio) a Strava lista da mais recente pra mais
+      // antiga — o sync precisa reordenar pra que o max(startDate) salvo
+      // funcione como cursor de retomada se o import cair no meio
+      const activities = [
+        { id: 2, type: 'Run', name: 'Newest', start_date: '2024-03-02T07:00:00Z' },
+        { id: 1, type: 'Run', name: 'Oldest', start_date: '2024-03-01T07:00:00Z' },
+      ];
+
+      stravaClient.get
+        .mockResolvedValueOnce(activities)
+        .mockResolvedValueOnce([]);
+      stravaClient.get.mockImplementation(async (_userId: string, path: string) => {
+        if (path === '/activities/1')
+          return makeStravaActivity({
+            id: 1,
+            start_date: '2024-03-01T07:00:00Z',
+            splits_metric: [makeMetricSplit(1, 3.5)],
+          });
+        if (path === '/activities/2')
+          return makeStravaActivity({
+            id: 2,
+            start_date: '2024-03-02T07:00:00Z',
+            splits_metric: [makeMetricSplit(1, 3.5)],
+          });
+        return {};
+      });
+
+      const result = await service.sync(USER_ID);
+
+      expect(result.synced).toBe(2);
+      const detailCalls = stravaClient.get.mock.calls
+        .map((call: any[]) => call[1])
+        .filter((path: string) => /^\/activities\/\d+$/.test(path));
+      expect(detailCalls).toEqual(['/activities/1', '/activities/2']);
+    });
   });
 
   describe('syncAllAccounts()', () => {
