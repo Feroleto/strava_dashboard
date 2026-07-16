@@ -7,6 +7,7 @@ export interface StravaActivitySummary {
   id: number;
   type: string;
   name?: string;
+  start_date?: string;
   gear_id?: string | null;
   map?: { summary_polyline?: string | null };
 }

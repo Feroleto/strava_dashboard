@@ -48,6 +48,9 @@ export interface SyncProgress {
   synced: number;
   errors: number;
   etaSeconds: number | null;
+  // start_date of the activity currently being processed — lets the frontend
+  // show which year of the history the sync is working through
+  processingDate: string | null;
   startedAt: string | null;
   finishedAt: string | null;
   message: string | null;
@@ -59,7 +62,10 @@ interface SyncResult {
   rateLimited: boolean;
 }
 
-const ESTIMATED_SECONDS_PER_ACTIVITY = 9;
+// typical Strava API calls per new activity: detail + HR zones + one
+// streams fetch (altitude for recorded laps, or the full set for
+// auto-detection) — used only to project the ETA against the rate budget
+const REQUESTS_PER_ACTIVITY = 3;
 const RATE_LIMIT_MESSAGE = 'Rate limited by Strava — will resume on the next scheduled sync';
 
 function idleProgress(): SyncProgress {
@@ -71,6 +77,7 @@ function idleProgress(): SyncProgress {
     synced: 0,
     errors: 0,
     etaSeconds: null,
+    processingDate: null,
     startedAt: null,
     finishedAt: null,
     message: null,
@@ -96,7 +103,9 @@ export class StravaSyncService {
     const { total, processed, state, phase } = entry;
     const etaSeconds =
       state === 'running' && phase === 'processing' && total != null
-        ? Math.max(total - processed, 0) * ESTIMATED_SECONDS_PER_ACTIVITY
+        ? this.client.estimateEtaSeconds(
+            Math.max(total - processed, 0) * REQUESTS_PER_ACTIVITY,
+          )
         : null;
     return { ...entry, etaSeconds };
   }
@@ -170,10 +179,14 @@ export class StravaSyncService {
       this.updateProgress(userId, { total: runs.length, phase: 'processing' });
 
       for (const summary of runs) {
+        this.updateProgress(userId, {
+          processingDate: summary.start_date ?? null,
+        });
         try {
+          // pacing against the rate limit lives in StravaClientService
+          // (adaptive throttle on the usage headers) — no fixed sleep here
           await this.processActivity(userId, summary);
           synced++;
-          await this.sleep(9000);
         } catch (err: any) {
           if (err.message === 'STRAVA_RATE_LIMIT') {
             // the rate limit is app-wide — sleeping and retrying here would

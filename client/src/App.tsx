@@ -5,7 +5,12 @@ import Dashboard from '@/features/dashboard/Dashboard';
 import RunOverviewPage from '@/features/overview/RunOverviewPage';
 import RunAnalysisPage from '@/features/analysis/RunAnalysisPage';
 import LoginPage from '@/features/auth/LoginPage';
+import FirstSyncPage, {
+  FIRST_SYNC_FLAG,
+} from '@/features/onboarding/FirstSyncPage';
 import { useAuth } from '@/features/auth/AuthContext';
+import { apiFetch } from '@/lib/api';
+import type { ActivitiesResponse } from '@/lib/types';
 import {
   DEFAULT_PAGE,
   isKnownPage,
@@ -38,6 +43,22 @@ function App() {
     const stored = localStorage.getItem('active-page');
     return isKnownPage(stored) ? stored : DEFAULT_PAGE;
   });
+  // first-access gate: null while checking whether the user has any imported
+  // activity yet; onboardingDone lets FirstSyncPage hand off to the dashboard
+  const [hasActivities, setHasActivities] = useState<boolean | null>(null);
+  const [onboardingDone, setOnboardingDone] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+    apiFetch('/activities?limit=1')
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data: ActivitiesResponse) => setHasActivities(data.total > 0))
+      // fail open — the dashboard surfaces its own fetch errors
+      .catch(() => setHasActivities(true));
+  }, [user]);
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
@@ -57,12 +78,28 @@ function App() {
     if (opts?.collapse) setCollapsed(true);
   };
 
-  if (loading) {
+  if (loading || (user && hasActivities === null)) {
     return <div className="min-h-screen bg-page-bg" />;
   }
 
   if (!user) {
     return <LoginPage theme={theme} onTheme={setTheme} />;
+  }
+
+  // no imported history yet (or a first import is still running after a
+  // reload) → onboarding sync screen instead of an empty dashboard
+  if (
+    !onboardingDone &&
+    (hasActivities === false || localStorage.getItem(FIRST_SYNC_FLAG) != null)
+  ) {
+    return (
+      <FirstSyncPage
+        onDone={() => {
+          setHasActivities(true);
+          setOnboardingDone(true);
+        }}
+      />
+    );
   }
 
   return (

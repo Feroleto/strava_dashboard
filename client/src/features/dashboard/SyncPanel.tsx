@@ -1,18 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
-
-interface SyncStatus {
-  state: 'idle' | 'running' | 'done' | 'error';
-  phase: 'listing' | 'processing' | 'rate_limited' | null;
-  total: number | null;
-  processed: number;
-  synced: number;
-  errors: number;
-  etaSeconds: number | null;
-  startedAt: string | null;
-  finishedAt: string | null;
-  message: string | null;
-}
+import type { SyncStatus } from '@/lib/types';
 
 interface SyncPanelProps {
   onSynced: () => void;

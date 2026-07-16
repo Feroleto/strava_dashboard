@@ -81,6 +81,22 @@ export interface Gear {
   retired: boolean;
 }
 
+// GET /strava/sync/status — mirrors SyncProgress on the server
+export interface SyncStatus {
+  state: 'idle' | 'running' | 'done' | 'error';
+  phase: 'listing' | 'processing' | 'rate_limited' | null;
+  total: number | null;
+  processed: number;
+  synced: number;
+  errors: number;
+  etaSeconds: number | null;
+  /** start date of the activity currently being processed */
+  processingDate: string | null;
+  startedAt: string | null;
+  finishedAt: string | null;
+  message: string | null;
+}
+
 export interface PersonalBestRecord {
   name: string;
   /** 1–3, derived server-side from moving time (fastest first) */
