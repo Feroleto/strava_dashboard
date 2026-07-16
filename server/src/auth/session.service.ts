@@ -21,10 +21,19 @@ export class SessionService {
   }
 
   private get cookieOptions() {
+    // sameSite:'lax' works in both envs because the browser never talks to
+    // the API cross-site: in prod, Vercel's rewrite (client/vercel.json)
+    // proxies /api/* to Render server-side, so from the browser's point of
+    // view every request (including the OAuth callback) stays on the
+    // frontend's own origin; in dev, localhost:5173/:3000 are different
+    // ports but the same site already. This also sidesteps Safari's default
+    // third-party-cookie blocking, which drops sameSite:'none' cookies set
+    // by a genuinely different domain (onrender.com) regardless of the
+    // SameSite attribute — confirmed broken on iOS Safari, fine on Chrome
     return {
       httpOnly: true,
       secure: this.isProd,
-      sameSite: (this.isProd ? 'none' : 'lax') as 'none' | 'lax',
+      sameSite: 'lax' as const,
     };
   }
 

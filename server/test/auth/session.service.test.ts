@@ -57,12 +57,12 @@ describe('SessionService', () => {
   });
 
   describe('cookie flags by environment', () => {
-    it('uses secure + sameSite=none in production (cross-site Vercel <-> Render)', async () => {
+    it('uses secure + sameSite=lax in production (Vercel proxies /api/* to Render, so it stays same-site)', async () => {
       const service = await makeService('production');
       service.setCookie(res as any, USER_ID);
 
       const [, , options] = res.cookie.mock.calls[0];
-      expect(options).toMatchObject({ httpOnly: true, secure: true, sameSite: 'none' });
+      expect(options).toMatchObject({ httpOnly: true, secure: true, sameSite: 'lax' });
     });
 
     it('uses non-secure + sameSite=lax in dev (localhost, different ports but same site)', async () => {
@@ -81,7 +81,7 @@ describe('SessionService', () => {
 
       expect(res.clearCookie).toHaveBeenCalledWith(
         'session',
-        expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'none' }),
+        expect.objectContaining({ httpOnly: true, secure: true, sameSite: 'lax' }),
       );
     });
   });
