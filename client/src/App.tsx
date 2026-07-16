@@ -4,6 +4,8 @@ import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
 import RunOverviewPage from '@/features/overview/RunOverviewPage';
 import RunAnalysisPage from '@/features/analysis/RunAnalysisPage';
+import LoginScreen from '@/features/auth/LoginScreen';
+import { useAuth } from '@/features/auth/AuthContext';
 import {
   DEFAULT_PAGE,
   isKnownPage,
@@ -25,6 +27,7 @@ function PageContent({ page }: { page: PageId }) {
 }
 
 function App() {
+  const { user, loading } = useAuth();
   const [theme, setTheme] = useState<'light' | 'dark'>(() =>
     localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
   );
@@ -53,6 +56,14 @@ function App() {
     setPage(next);
     if (opts?.collapse) setCollapsed(true);
   };
+
+  if (loading) {
+    return <div className="min-h-screen bg-page-bg" />;
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="min-h-screen bg-page-bg p-3.5">

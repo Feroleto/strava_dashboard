@@ -8,7 +8,7 @@ import {
 } from '@/lib/activityFormat';
 import RouteMap from './RouteMap';
 import type { ActivityDetail, ActivityLap } from '@/lib/types';
-import { API_BASE_URL } from '@/lib/apiUrl';
+import { apiFetch } from '@/lib/api';
 
 const MAP_W = 640;
 const MAP_H = 240;
@@ -79,7 +79,7 @@ export default function ActivityDetailView({
 
   useEffect(() => {
     setActivity(null);
-    fetch(`${API_BASE_URL}/activities/${id}`)
+    apiFetch(`/activities/${id}`)
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

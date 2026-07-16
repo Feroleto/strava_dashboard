@@ -32,6 +32,9 @@ const { mockPrisma } = vi.hoisted(() => {
         findUnique: vi.fn(),
         upsert:     vi.fn(),
       },
+      stravaAccount: {
+        findMany: vi.fn(),
+      },
       $transaction: vi.fn(),
       $disconnect:  vi.fn(),
     }
@@ -153,12 +156,10 @@ describe('StravaSyncService', () => {
           useValue: {
             get: vi.fn((key: string) => {
               if (key === 'DATABASE_URL') return 'postgresql://test';
-              if (key === 'SEED_USER_ID')  return USER_ID;
               return undefined;
             }),
             getOrThrow: vi.fn((key: string) => {
               if (key === 'DATABASE_URL') return 'postgresql://test';
-              if (key === 'SEED_USER_ID')  return USER_ID;
               throw new Error(`Config key not found: ${key}`);
             }),
           },
@@ -179,7 +180,7 @@ describe('StravaSyncService', () => {
 
       const result = await service.sync(USER_ID);
 
-      expect(result).toEqual({ synced: 0, errors: 0 });
+      expect(result).toEqual({ synced: 0, errors: 0, rateLimited: false });
     });
 
     it('ignores activities that type is not run', async () => {
@@ -280,10 +281,73 @@ describe('StravaSyncService', () => {
       const secondSync = service.sync(USER_ID);
 
       const secondResult = await secondSync;
-      expect(secondResult).toEqual({ synced: 0, errors: 0 });
+      expect(secondResult).toEqual({ synced: 0, errors: 0, rateLimited: false });
 
       resolveSlow!([]);
       await firstSync;
+    });
+
+    it('aborts the run and reports rateLimited when Strava rate-limits activity listing', async () => {
+      stravaClient.get.mockRejectedValueOnce(new Error('STRAVA_RATE_LIMIT'));
+
+      const result = await service.sync(USER_ID);
+
+      expect(result).toEqual({ synced: 0, errors: 0, rateLimited: true });
+    });
+
+    it('aborts processing (without sleeping/retrying) when a single activity hits the rate limit', async () => {
+      const activities = [
+        { id: 1, type: 'Run', name: 'Rate limited' },
+        { id: 2, type: 'Run', name: 'Never reached' },
+      ];
+
+      stravaClient.get
+        .mockResolvedValueOnce(activities)
+        .mockResolvedValueOnce([])
+        .mockRejectedValueOnce(new Error('STRAVA_RATE_LIMIT'));
+
+      const result = await service.sync(USER_ID);
+
+      expect(result).toEqual({ synced: 0, errors: 0, rateLimited: true });
+      // only the first activity's detail fetch happened — the loop broke
+      // before reaching the second one
+      expect(stravaClient.get).not.toHaveBeenCalledWith(
+        USER_ID, expect.stringContaining('/activities/2'), expect.anything(),
+      );
+    });
+  });
+
+  describe('syncAllAccounts()', () => {
+    it('syncs every connected account sequentially', async () => {
+      mockPrisma.stravaAccount.findMany.mockResolvedValueOnce([
+        { userId: 'user_a' },
+        { userId: 'user_b' },
+      ]);
+      const syncSpy = vi.spyOn(service, 'sync').mockResolvedValue({
+        synced: 0,
+        errors: 0,
+        rateLimited: false,
+      });
+
+      await service.syncAllAccounts();
+
+      expect(syncSpy).toHaveBeenNthCalledWith(1, 'user_a');
+      expect(syncSpy).toHaveBeenNthCalledWith(2, 'user_b');
+    });
+
+    it('stops the batch as soon as one account reports rateLimited, without syncing the rest', async () => {
+      mockPrisma.stravaAccount.findMany.mockResolvedValueOnce([
+        { userId: 'user_a' },
+        { userId: 'user_b' },
+      ]);
+      const syncSpy = vi
+        .spyOn(service, 'sync')
+        .mockResolvedValueOnce({ synced: 0, errors: 0, rateLimited: true });
+
+      await service.syncAllAccounts();
+
+      expect(syncSpy).toHaveBeenCalledTimes(1);
+      expect(syncSpy).toHaveBeenCalledWith('user_a');
     });
   });
 

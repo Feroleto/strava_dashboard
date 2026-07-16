@@ -8,7 +8,9 @@ datasource db {
 
 model User {
   id             String          @id @default(cuid())
-  email          String          @unique
+  email          String?         @unique
+  firstName      String?         @map("first_name")
+  profileImgUrl  String?         @map("profile_img_url")
   maxHr          Int?            @map("max_hr")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt

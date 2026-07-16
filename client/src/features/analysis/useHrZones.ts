@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { ActivityHrZonePoint, ActivityHrZonesResponse } from '@/lib/types';
-import { API_BASE_URL } from '@/lib/apiUrl';
+import { apiFetch } from '@/lib/api';
 
 // fetches real per-activity HR zone time distribution once (Strava premium
 // only — empty for activities without it); same fetch-once pattern as
@@ -11,7 +11,7 @@ export function useHrZones() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/activities/hr-zones`)
+    apiFetch('/activities/hr-zones')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

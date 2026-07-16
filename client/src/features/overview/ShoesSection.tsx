@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Gear } from '@/lib/types';
 import { formatKm, formatMonthShortYear } from '@/lib/activityFormat';
-import { API_BASE_URL } from '@/lib/apiUrl';
+import { apiFetch } from '@/lib/api';
 
 // TODO: Strava's Gear API exposes no per-shoe mileage goal at all — this is a
 // fixed placeholder until there's a real, user-settable goal field.
@@ -12,7 +12,7 @@ export default function ShoesSection() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${API_BASE_URL}/gear`)
+    apiFetch('/gear')
       .then((res) => {
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         return res.json();

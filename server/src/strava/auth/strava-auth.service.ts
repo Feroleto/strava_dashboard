@@ -6,6 +6,17 @@ import { PrismaPg } from '@prisma/adapter-pg';
 const STRAVA_AUTH_URL = 'https://www.strava.com/oauth/authorize';
 const STRAVA_TOKEN_URL = 'https://www.strava.com/oauth/token';
 
+interface StravaTokenExchangeResponse {
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+  athlete: {
+    id: number;
+    firstname: string | null;
+    profile: string | null;
+  };
+}
+
 @Injectable()
 export class StravaAuthService {
   private readonly logger = new Logger(StravaAuthService.name);
@@ -19,7 +30,6 @@ export class StravaAuthService {
   }
 
   buildAuthUrl(): string {
-    console.log('CLIENT_ID:', this.config.get('STRAVA_CLIENT_ID'));
     const params = new URLSearchParams({
       client_id: this.config.get<string>('STRAVA_CLIENT_ID')!,
       response_type: 'code',
@@ -31,7 +41,10 @@ export class StravaAuthService {
     return `${STRAVA_AUTH_URL}?${params.toString()}`;
   }
 
-  async handleCallback(code: string, userId: string): Promise<void> {
+  // exchanges the OAuth code for tokens, then finds or creates the User
+  // whose StravaAccount matches the returned athlete id — this is both the
+  // "authorize sync" flow and the login flow, they're the same action here
+  async handleCallback(code: string): Promise<{ userId: string }> {
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -48,25 +61,48 @@ export class StravaAuthService {
       throw new Error(`Strava token exchange failed: ${response.status} — ${body}`);
     }
 
-    const data = await response.json();
+    const data = (await response.json()) as StravaTokenExchangeResponse;
+    const stravaAthleteId = BigInt(data.athlete.id);
+    const tokenFields = {
+      accessToken: data.access_token,
+      refreshToken: data.refresh_token,
+      expiresAt: new Date(data.expires_at * 1000),
+    };
 
-    await this.prisma.stravaAccount.upsert({
-      where: { userId },
-      update: {
-        stravaAthleteId: BigInt(data.athlete.id),
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: new Date(data.expires_at * 1000),
-      },
-      create: {
-        userId,
-        stravaAthleteId: BigInt(data.athlete.id),
-        accessToken: data.access_token,
-        refreshToken: data.refresh_token,
-        expiresAt: new Date(data.expires_at * 1000),
+    const existing = await this.prisma.stravaAccount.findUnique({
+      where: { stravaAthleteId },
+    });
+
+    if (existing) {
+      await this.prisma.$transaction([
+        this.prisma.stravaAccount.update({
+          where: { stravaAthleteId },
+          data: tokenFields,
+        }),
+        this.prisma.user.update({
+          where: { id: existing.userId },
+          data: {
+            firstName: data.athlete.firstname,
+            profileImgUrl: data.athlete.profile,
+          },
+        }),
+      ]);
+
+      this.logger.log(`Strava account reconnected for user ${existing.userId}`);
+      return { userId: existing.userId };
+    }
+
+    const user = await this.prisma.user.create({
+      data: {
+        firstName: data.athlete.firstname,
+        profileImgUrl: data.athlete.profile,
+        stravaAccount: {
+          create: { stravaAthleteId, ...tokenFields },
+        },
       },
     });
 
-    this.logger.log(`Strava account connected for user ${userId} (athlete ${data.athlete.id})`);
+    this.logger.log(`New user created ${user.id} (athlete ${data.athlete.id})`);
+    return { userId: user.id };
   }
 }

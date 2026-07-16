@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { ConfigService } from '@nestjs/config';
 import { LapType, PrismaClient } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { StravaClientService } from '../client/strava-client.service';
 import { IntervalDetector } from './detectors/interval-detector';
@@ -25,7 +26,7 @@ import {
   ActivityHrZoneTimeCreate,
   mapActivityHrZones,
 } from './processors/hr-zone-mapper';
-import { MappedLap, ProcessedSecond } from './types';
+import { MappedLap } from './types';
 import {
   StravaActivityDetail,
   StravaActivitySummary,
@@ -34,10 +35,10 @@ import {
   StravaStreamSet,
 } from './strava-api.types';
 
-type TxClient = Omit<
-  PrismaClient,
-  '$connect' | '$disconnect' | '$on' | '$transaction' | '$use' | '$extends'
->;
+// placeholder used while building lap/second create-data before the
+// activity row (and its generated id) exists — every use is overwritten
+// with the real id once the activity is inserted inside the transaction
+const PENDING_ACTIVITY_ID = '';
 
 export interface SyncProgress {
   state: 'idle' | 'running' | 'done' | 'error';
@@ -52,15 +53,17 @@ export interface SyncProgress {
   message: string | null;
 }
 
+interface SyncResult {
+  synced: number;
+  errors: number;
+  rateLimited: boolean;
+}
+
 const ESTIMATED_SECONDS_PER_ACTIVITY = 9;
+const RATE_LIMIT_MESSAGE = 'Rate limited by Strava — will resume on the next scheduled sync';
 
-@Injectable()
-export class StravaSyncService {
-  private readonly logger = new Logger(StravaSyncService.name);
-  private readonly prisma: PrismaClient;
-  private isSyncing = false;
-
-  private progress: SyncProgress = {
+function idleProgress(): SyncProgress {
+  return {
     state: 'idle',
     phase: null,
     total: null,
@@ -72,14 +75,35 @@ export class StravaSyncService {
     finishedAt: null,
     message: null,
   };
+}
 
-  getProgress(): SyncProgress {
-    const { total, processed, state, phase } = this.progress;
+@Injectable()
+export class StravaSyncService {
+  private readonly logger = new Logger(StravaSyncService.name);
+  private readonly prisma: PrismaClient;
+  // single global lock: the Strava rate limit is shared by the whole app, not
+  // per account, so at most one sync (manual or the multi-account cron
+  // batch) can hit the API at a time
+  private isSyncing = false;
+
+  // per-user progress, so GET /strava/sync/status can answer for the caller
+  // without leaking other accounts' state; the cron batch writes into this
+  // same map as it works through each account in turn
+  private readonly progress = new Map<string, SyncProgress>();
+
+  getProgress(userId: string): SyncProgress {
+    const entry = this.progress.get(userId) ?? idleProgress();
+    const { total, processed, state, phase } = entry;
     const etaSeconds =
       state === 'running' && phase === 'processing' && total != null
         ? Math.max(total - processed, 0) * ESTIMATED_SECONDS_PER_ACTIVITY
         : null;
-    return { ...this.progress, etaSeconds };
+    return { ...entry, etaSeconds };
+  }
+
+  private updateProgress(userId: string, patch: Partial<SyncProgress>): void {
+    const current = this.progress.get(userId) ?? idleProgress();
+    this.progress.set(userId, { ...current, ...patch });
   }
 
   constructor(
@@ -95,31 +119,47 @@ export class StravaSyncService {
   @Cron(CronExpression.EVERY_6_HOURS)
   async scheduledSync() {
     this.logger.log('Scheduled sync triggered');
-    const userId = this.config.getOrThrow<string>('SEED_USER_ID');
-    await this.sync(userId);
+    await this.syncAllAccounts();
   }
 
-  async sync(userId: string): Promise<{ synced: number; errors: number }> {
+  // iterates every connected account sequentially, sharing the single rate
+  // limit budget; aborts the whole batch (rather than moving on to the next
+  // account) the moment any account reports rateLimited — the limit is
+  // app-wide, so trying another account immediately would almost certainly
+  // hit it again too. The next scheduled run 6h later is the natural retry.
+  async syncAllAccounts(): Promise<void> {
+    const accounts = await this.prisma.stravaAccount.findMany({
+      select: { userId: true },
+    });
+
+    for (const { userId } of accounts) {
+      const result = await this.sync(userId);
+      if (result.rateLimited) {
+        this.logger.warn(
+          'Rate limited — aborting sync batch, remaining accounts will be picked up on the next scheduled run',
+        );
+        break;
+      }
+    }
+  }
+
+  async sync(userId: string): Promise<SyncResult> {
     if (this.isSyncing) {
       this.logger.warn('Sync already in progress, skipping');
-      return { synced: 0, errors: 0 };
+      return { synced: 0, errors: 0, rateLimited: false };
     }
 
     this.isSyncing = true;
-    this.progress = {
+    this.progress.set(userId, {
+      ...idleProgress(),
       state: 'running',
       phase: 'listing',
-      total: null,
-      processed: 0,
-      synced: 0,
-      errors: 0,
-      etaSeconds: null,
       startedAt: new Date().toISOString(),
-      finishedAt: null,
-      message: null,
-    };
+    });
     let synced = 0;
     let errors = 0;
+    let processed = 0;
+    let rateLimited = false;
 
     try {
       const after = await this.getLastActivityTimestamp(userId);
@@ -127,45 +167,49 @@ export class StravaSyncService {
 
       const runs = activities.filter((a) => a.type === 'Run');
       this.logger.log(`Found ${runs.length} new runs to process`);
-      this.progress.total = runs.length;
-      this.progress.phase = 'processing';
+      this.updateProgress(userId, { total: runs.length, phase: 'processing' });
 
       for (const summary of runs) {
         try {
           await this.processActivity(userId, summary);
           synced++;
-          this.progress.synced = synced;
           await this.sleep(9000);
         } catch (err: any) {
           if (err.message === 'STRAVA_RATE_LIMIT') {
-            this.logger.warn('Rate limit hit, waiting 15 minutes...');
-            this.progress.phase = 'rate_limited';
-            await this.sleep(15 * 60 * 1000);
-            this.progress.phase = 'processing';
-          } else {
-            this.logger.error(
-              `Failed to process activity ${summary.id}: ${err.message}`,
-            );
-            errors++;
-            this.progress.errors = errors;
+            // the rate limit is app-wide — sleeping and retrying here would
+            // only delay the other accounts waiting their turn in the same
+            // batch, so this account's run just stops here
+            this.logger.warn(`Rate limit hit syncing user ${userId}, aborting this run`);
+            rateLimited = true;
+            break;
           }
+          this.logger.error(`Failed to process activity ${summary.id}: ${err.message}`);
+          errors++;
         }
-        this.progress.processed++;
+        processed++;
+        this.updateProgress(userId, { synced, errors, processed });
       }
 
-      this.progress.state = 'done';
+      this.updateProgress(userId, {
+        state: rateLimited ? 'error' : 'done',
+        phase: rateLimited ? 'rate_limited' : null,
+        message: rateLimited ? RATE_LIMIT_MESSAGE : null,
+      });
     } catch (err: any) {
-      this.progress.state = 'error';
-      this.progress.message = err.message ?? 'Unknown error';
-      this.logger.error(`Sync failed: ${err.message}`);
+      rateLimited = err.message === 'STRAVA_RATE_LIMIT';
+      this.logger.error(`Sync failed for user ${userId}: ${err.message}`);
+      this.updateProgress(userId, {
+        state: 'error',
+        phase: rateLimited ? 'rate_limited' : null,
+        message: rateLimited ? RATE_LIMIT_MESSAGE : (err.message ?? 'Unknown error'),
+      });
     } finally {
       this.isSyncing = false;
-      this.progress.phase = null;
-      this.progress.finishedAt = new Date().toISOString();
+      this.updateProgress(userId, { finishedAt: new Date().toISOString() });
     }
 
-    this.logger.log(`Sync complete — ${synced} saved, ${errors} errors`);
-    return { synced, errors };
+    this.logger.log(`Sync complete for user ${userId} — ${synced} saved, ${errors} errors`);
+    return { synced, errors, rateLimited };
   }
 
   private async processActivity(
@@ -189,6 +233,15 @@ export class StravaSyncService {
 
     const gearId = await this.ensureGear(userId, full.gear_id);
     const hrZones = await this.fetchActivityHrZones(userId, full.id);
+
+    // every Strava API call for this activity happens above this line — the
+    // transaction below only performs DB writes, so a slow response (e.g.
+    // the full-activity streams fetch used for auto-detection on
+    // watch-less INTERVAL/HILL activities) can't eat into the 5s
+    // interactive transaction timeout and expire it mid-write
+    const { lapCreateData, secondsData } = isStructured
+      ? await this.prepareStructuredLaps(userId, full, workoutType)
+      : await this.prepareSteadyLaps(userId, full);
 
     await this.prisma.$transaction(async (tx) => {
       const activity = await tx.activity.create({
@@ -227,10 +280,18 @@ export class StravaSyncService {
         });
       }
 
-      if (isStructured) {
-        await this.processStructuredActivity(tx, userId, activity.id, full, workoutType);
-      } else {
-        await this.processSteadyActivity(tx, userId, activity.id, full);
+      // non-null (even if empty) only on the structured auto-detection path —
+      // steady runs and recorded-lap activities never touch activitySecond
+      if (secondsData != null) {
+        await tx.activitySecond.createMany({
+          data: secondsData.map((s) => ({ ...s, activityId: activity.id })),
+        });
+      }
+
+      if (lapCreateData.length > 0) {
+        await tx.activityLap.createMany({
+          data: lapCreateData.map((l) => ({ ...l, activityId: activity.id })),
+        });
       }
     });
 
@@ -298,59 +359,57 @@ export class StravaSyncService {
     }
   }
 
-  // easy and long runs laps collector
-  private async processSteadyActivity(
-    tx: TxClient,
+  // easy and long runs laps collector — all network calls happen here,
+  // before the DB transaction opens (see comment in processActivity)
+  private async prepareSteadyLaps(
     userId: string,
-    activityId: string,
     fullData: StravaActivityDetail,
-  ): Promise<void> {
+  ): Promise<{
+    lapCreateData: Prisma.ActivityLapCreateManyInput[];
+    secondsData: Omit<Prisma.ActivitySecondCreateManyInput, 'activityId'>[] | null;
+  }> {
     // if exists already recorded laps, use that (all STEADY)
-    const savedRecorded = await this.saveRecordedLaps(
-      tx,
+    const recorded = await this.prepareRecordedLaps(
       userId,
-      activityId,
       fullData,
       (laps) => laps.map(() => LapType.STEADY),
     );
-    if (savedRecorded) return;
+    if (recorded) return { lapCreateData: recorded, secondsData: null };
 
     // only has one recorded lap - means that the activity was recorded directly using strava
     const splits = fullData.splits_metric ?? [];
-    if (!splits.length) return;
+    if (!splits.length) return { lapCreateData: [], secondsData: null };
 
     this.logger.debug(
       `Activity ${fullData.id}: No recorded laps. Using ${splits.length} metric splits as 1km laps.`,
     );
 
-    const splitLaps = buildLapsFromSplits(activityId, splits, LapType.STEADY);
-    if (splitLaps.length > 0) {
-      await tx.activityLap.createMany({
-        data: splitLaps,
-      });
-    }
+    return {
+      lapCreateData: buildLapsFromSplits(PENDING_ACTIVITY_ID, splits, LapType.STEADY),
+      secondsData: null,
+    };
   }
 
-  // interval and hill repeats laps collector
-  private async processStructuredActivity(
-    tx: TxClient,
+  // interval and hill repeats laps collector — all network calls happen
+  // here, before the DB transaction opens (see comment in processActivity)
+  private async prepareStructuredLaps(
     userId: string,
-    activityId: string,
     fullData: StravaActivityDetail,
     workoutType: 'INTERVAL' | 'HILL_REPEATS',
-  ): Promise<void> {
+  ): Promise<{
+    lapCreateData: Prisma.ActivityLapCreateManyInput[];
+    secondsData: Omit<Prisma.ActivitySecondCreateManyInput, 'activityId'>[] | null;
+  }> {
     // if exists already recorded laps, classify and use that
-    const savedRecorded = await this.saveRecordedLaps(
-      tx,
+    const recorded = await this.prepareRecordedLaps(
       userId,
-      activityId,
       fullData,
       (laps) =>
         workoutType === 'INTERVAL'
           ? classifyIntervalLapsType(laps)
           : classifyHillLapsType(laps),
     );
-    if (savedRecorded) return;
+    if (recorded) return { lapCreateData: recorded, secondsData: null };
 
     // does not exist recorded laps - download streams
     this.logger.debug(
@@ -374,7 +433,7 @@ export class StravaSyncService {
     const hrStream    = rawStreams['heartrate']?.data ?? [];
     const altStream   = rawStreams['altitude']?.data ?? [];
 
-    const secondsData: any[] = [];
+    const secondsData: Omit<Prisma.ActivitySecondCreateManyInput, 'activityId'>[] = [];
     let prevDistance: number | null = null;
 
     for (let i = 0; i < timeStream.length; i++) {
@@ -390,7 +449,6 @@ export class StravaSyncService {
       const speed = speedStream[i] ?? null;
 
       secondsData.push({
-        activityId,
         secondIndex: timeStream[i],
         distanceTotalM: totalDist,
         distanceDeltaM: delta,
@@ -401,11 +459,8 @@ export class StravaSyncService {
       });
     }
 
-    await tx.activitySecond.createMany({
-      data: secondsData,
-    });
-
-    const processed = await this.processStreamsSQL(tx, activityId);
+    // pure TS computation over the in-memory stream — no DB round-trip needed
+    const processed = StreamProcessor.processStreams(secondsData);
 
     const processedDict: ProcessedDict = new Map(
       processed.map((s) => [s.secondIndex, s]),
@@ -418,7 +473,7 @@ export class StravaSyncService {
 
     const detectedLaps = detector.analyze(processedDict);
 
-    let lapCreateData;
+    let lapCreateData: Prisma.ActivityLapCreateManyInput[];
 
     if (!detectedLaps.length) {
       this.logger.warn(
@@ -426,34 +481,30 @@ export class StravaSyncService {
       );
 
       lapCreateData = buildLapsFromSplits(
-        activityId,
+        PENDING_ACTIVITY_ID,
         fullData.splits_metric ?? [],
         LapType.RUN,
       );
     } else {
       lapCreateData = detectedLaps.map((lap, idx) =>
-        detectedLapToCreateData(activityId, lap, idx),
+        detectedLapToCreateData(PENDING_ACTIVITY_ID, lap, idx),
       );
     }
 
-    if (lapCreateData.length > 0) {
-      await tx.activityLap.createMany({
-        data: lapCreateData,
-      });
-    }
+    return { lapCreateData, secondsData };
   }
 
   // shared recorded-laps path: detects laps recorded on the watch, maps them
-  // (fetching the altitude stream for net elevation) and persists them with
-  // the lap types returned by `classify`. Returns false when the activity has
-  // no recorded laps, so each processor can fall back to its own strategy
-  private async saveRecordedLaps(
-    tx: TxClient,
+  // (fetching the altitude stream for net elevation) and returns them with
+  // the lap types returned by `classify`. Returns null when the activity has
+  // no recorded laps, so each preparer falls back to its own strategy.
+  // No DB access — the activity doesn't exist yet, so `activityId` on the
+  // returned rows is a placeholder filled in once the transaction creates it
+  private async prepareRecordedLaps(
     userId: string,
-    activityId: string,
     fullData: StravaActivityDetail,
     classify: (laps: MappedLap[]) => LapType[],
-  ): Promise<boolean> {
+  ): Promise<Prisma.ActivityLapCreateManyInput[] | null> {
     const rawLaps = fullData.laps ?? [];
 
     const hasRecordedLaps =
@@ -461,7 +512,7 @@ export class StravaSyncService {
       typeof rawLaps[0]?.name === 'string' &&
       rawLaps[0].name.startsWith('Lap');
 
-    if (!hasRecordedLaps) return false;
+    if (!hasRecordedLaps) return null;
 
     this.logger.debug(
       `Activity ${fullData.id}: ${rawLaps.length} recorded laps, classifying`,
@@ -475,17 +526,9 @@ export class StravaSyncService {
 
     const types = classify(mappedLaps);
 
-    const lapCreateData = mappedLaps.map((lap, i) =>
-      recordedLapToCreateData(activityId, types[i], lap),
+    return mappedLaps.map((lap, i) =>
+      recordedLapToCreateData(PENDING_ACTIVITY_ID, types[i], lap),
     );
-
-    if (lapCreateData.length > 0) {
-      await tx.activityLap.createMany({
-        data: lapCreateData,
-      });
-    }
-
-    return true;
   }
 
   private async fetchAltitudeStream(
@@ -499,27 +542,6 @@ export class StravaSyncService {
     );
     await this.sleep(300);
     return rawStreams['altitude']?.data ?? [];
-  }
-
-  private async processStreamsSQL(
-    tx: TxClient,
-    activityId: string,
-  ): Promise<ProcessedSecond[]> {
-
-    // search for rawdata that is in the db
-    const rawData = await tx.activitySecond.findMany({
-      where: { activityId },
-      select: {
-        secondIndex: true,
-        distanceTotalM: true,
-        distanceDeltaM: true,
-        heartRate: true,
-        elevationM: true,
-      },
-      orderBy: { secondIndex: 'asc' },
-    });
-
-    return StreamProcessor.processStreams(rawData);
   }
 
   // one-off backfill for activities synced before summaryPolyline existed;

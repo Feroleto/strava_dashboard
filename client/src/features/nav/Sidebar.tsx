@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { ChevronLeft, Plus, type LucideIcon } from 'lucide-react';
+import { ChevronLeft, LogOut, Plus, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import SegmentedControl from '@/components/SegmentedControl';
+import { useAuth } from '@/features/auth/AuthContext';
 import {
   NAV_SECTIONS,
   activeParentId,
@@ -148,6 +149,9 @@ export default function Sidebar({
   theme,
   onTheme,
 }: SidebarProps) {
+  const { user, logout } = useAuth();
+  const initials = user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : '—';
+
   const handleNavClick = (item: NavItem) => {
     if (item.disabled) return;
     if (item.subs) {
@@ -245,17 +249,35 @@ export default function Sidebar({
             />
           )}
           <div className="mt-3 flex items-center gap-2.5 px-[9px]">
-            <div className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-chip text-[12px] font-semibold text-foreground">
-              GF
-            </div>
-            <SidebarLabel collapsed={collapsed}>
-              <div className="text-[12.5px] font-semibold text-foreground">
-                Guilherme
+            {user?.profileImgUrl ? (
+              <img
+                src={user.profileImgUrl}
+                alt=""
+                className="h-[30px] w-[30px] flex-none rounded-full object-cover"
+              />
+            ) : (
+              <div className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-full bg-chip text-[12px] font-semibold text-foreground">
+                {initials}
+              </div>
+            )}
+            <SidebarLabel collapsed={collapsed} className="flex-1">
+              <div className="truncate text-[12.5px] font-semibold text-foreground">
+                {user?.firstName ?? 'Runner'}
               </div>
               <div className="text-[11px] text-muted-foreground">
                 Your profile
               </div>
             </SidebarLabel>
+            {!collapsed && (
+              <button
+                onClick={() => void logout()}
+                title="Log out"
+                aria-label="Log out"
+                className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-[7px] text-muted-foreground hover:bg-chip hover:text-foreground"
+              >
+                <LogOut className="h-3.5 w-3.5" strokeWidth={1.7} />
+              </button>
+            )}
           </div>
         </div>
       </div>

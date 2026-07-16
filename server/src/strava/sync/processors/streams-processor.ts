@@ -2,10 +2,10 @@ import { ProcessedSecond } from '../types';
 
 export interface RawActivitySecond {
   secondIndex: number;
-  distanceTotalM: number | null;
-  distanceDeltaM: number | null;
-  heartRate: number | null;
-  elevationM: number | null;
+  distanceTotalM?: number | null;
+  distanceDeltaM?: number | null;
+  heartRate?: number | null;
+  elevationM?: number | null;
 }
 
 export class StreamProcessor {
