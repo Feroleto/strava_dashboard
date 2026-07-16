@@ -225,6 +225,33 @@ export class StravaSyncService {
     return { synced, errors, rateLimited };
   }
 
+  // re-syncs a single activity by its Strava id — recovery path for
+  // activities the incremental cursor has already moved past (a non-rate-limit
+  // failure mid-sync leaves a hole that fetchAllActivities never re-lists)
+  async syncActivityById(
+    userId: string,
+    stravaId: number,
+  ): Promise<{ saved: boolean; message: string }> {
+    if (this.isSyncing) {
+      return { saved: false, message: 'Sync already in progress' };
+    }
+
+    const exists = await this.prisma.activity.findUnique({
+      where: { stravaId: BigInt(stravaId) },
+    });
+    if (exists) {
+      return { saved: false, message: `Activity ${stravaId} already synced` };
+    }
+
+    this.isSyncing = true;
+    try {
+      await this.processActivity(userId, { id: stravaId, type: 'Run' });
+      return { saved: true, message: `Activity ${stravaId} synced` };
+    } finally {
+      this.isSyncing = false;
+    }
+  }
+
   private async processActivity(
     userId: string,
     summary: StravaActivitySummary,

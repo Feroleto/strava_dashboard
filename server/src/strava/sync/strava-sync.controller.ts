@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Logger, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Controller,
+  Get,
+  Logger,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { StravaSyncService } from './strava-sync.service';
 import type { SyncProgress } from './strava-sync.service';
 import { AuthGuard } from '../../auth/auth.guard';
@@ -22,6 +30,21 @@ export class StravaSyncController {
       this.logger.error(`Background sync failed: ${err.message}`);
     });
     return this.syncService.getProgress(user.id);
+  }
+
+  @Post('activity/:stravaId')
+  async syncActivity(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('stravaId') stravaId: string,
+  ): Promise<{ saved: boolean; message: string }> {
+    const id = Number(stravaId);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw new BadRequestException('stravaId must be a positive integer');
+    }
+    this.logger.log(`Single-activity sync triggered via HTTP for ${id}`);
+    // synchronous (not fire-and-forget): one activity is a handful of API
+    // calls, and the caller wants to know whether the recovery worked
+    return this.syncService.syncActivityById(user.id, id);
   }
 
   @Get('status')
