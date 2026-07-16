@@ -125,7 +125,10 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
       </div>
 
       {/* Right panel — login, follows the app theme */}
-      <div className="relative flex w-full flex-none flex-col justify-center bg-card px-[52px] py-[48px] md:w-[480px]">
+      {/* seam treatment against the always-dark left panel (md+ only — the seam
+          doesn't exist on mobile): dark matches its #0B0F17 + hairline border;
+          light keeps bg-card with an inset shadow as if the dark panel cast it */}
+      <div className="relative flex w-full flex-none flex-col justify-center bg-card px-[52px] py-[48px] md:w-[480px] md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] dark:bg-[#0B0F17] md:dark:border-l md:dark:border-white/[.09] dark:shadow-none">
         <div className="absolute right-[26px] top-[26px]">
           <SegmentedControl
             size="compact"
