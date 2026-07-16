@@ -4,7 +4,7 @@ import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
 import RunOverviewPage from '@/features/overview/RunOverviewPage';
 import RunAnalysisPage from '@/features/analysis/RunAnalysisPage';
-import LoginScreen from '@/features/auth/LoginScreen';
+import LoginPage from '@/features/auth/LoginPage';
 import { useAuth } from '@/features/auth/AuthContext';
 import {
   DEFAULT_PAGE,
@@ -62,7 +62,7 @@ function App() {
   }
 
   if (!user) {
-    return <LoginScreen />;
+    return <LoginPage theme={theme} onTheme={setTheme} />;
   }
 
   return (
