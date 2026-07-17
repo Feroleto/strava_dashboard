@@ -43,7 +43,7 @@ function HowItWorksPopover() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="text-[11.5px] font-medium text-acc hover:underline"
+        className="text-[11.5px] font-medium text-acc-tx hover:underline"
       >
         {t('login.howItWorks.trigger')}
       </button>
