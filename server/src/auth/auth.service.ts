@@ -21,8 +21,10 @@ export class AuthService {
     this.prisma = new PrismaClient({ adapter });
   }
 
-  async getMe(userId: string): Promise<MeResponse> {
-    return this.prisma.user.findUniqueOrThrow({
+  // null instead of throwing: a valid cookie for a since-deleted user should
+  // read as "logged out", not a 500
+  async getMe(userId: string): Promise<MeResponse | null> {
+    return this.prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, firstName: true, profileImgUrl: true, maxHr: true },
     });

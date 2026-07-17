@@ -22,9 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // /auth/me answers 200 for everyone; an empty body means "no session"
+    // (a 401 here would make the browser log a console error on every
+    // logged-out page load)
     apiFetch('/auth/me')
-      .then((res) => (res.ok ? res.json() : null))
-      .then((data: AuthUser | null) => setUser(data))
+      .then((res) => (res.ok ? res.text() : ''))
+      .then((text) => setUser(text ? (JSON.parse(text) as AuthUser) : null))
       .catch(() => setUser(null))
       .finally(() => setLoading(false));
   }, []);

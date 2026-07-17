@@ -1,10 +1,8 @@
-import { Controller, Get, HttpCode, Post, Res, UseGuards } from '@nestjs/common';
-import type { Response } from 'express';
-import { AuthGuard } from './auth.guard';
+import { Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
+import type { MeResponse } from './auth.service';
 import { SessionService } from './session.service';
-import { CurrentUser } from './current-user.decorator';
-import type { AuthenticatedUser } from './current-user.decorator';
 
 @Controller('auth')
 export class AuthController {
@@ -13,10 +11,14 @@ export class AuthController {
     private readonly session: SessionService,
   ) {}
 
+  // No AuthGuard here on purpose: "who am I" from an anonymous visitor is a
+  // valid question, not an auth failure — answering 401 makes the browser log
+  // a console error on every logged-out page load (flagged by Lighthouse)
   @Get('me')
-  @UseGuards(AuthGuard)
-  me(@CurrentUser() user: AuthenticatedUser) {
-    return this.authService.getMe(user.id);
+  async me(@Req() req: Request): Promise<MeResponse | null> {
+    const userId = this.session.extractUserId(req);
+    if (!userId) return null;
+    return this.authService.getMe(userId);
   }
 
   @Post('logout')
