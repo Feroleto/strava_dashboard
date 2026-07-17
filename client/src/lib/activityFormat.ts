@@ -1,4 +1,5 @@
 import { currentIntlLocale } from '@/lib/dateLocale';
+import type { ActivityLap } from '@/lib/types';
 
 // dot/badge colors per workout type (tokens from index.css); labelKey points
 // into the 'common' i18n namespace, translate at render time
@@ -25,6 +26,54 @@ export const WORKOUT_META: Record<
     badgeColor: 'var(--pos)',
   },
 };
+
+// values are activity.json keys, translated at render time
+const LAP_TYPE_BASE: Record<string, string> = {
+  WARMUP: 'lapType.warmup',
+  COOLDOWN: 'lapType.cooldown',
+  WORKOUT: 'lapType.workout',
+  REST: 'lapType.rest',
+  RUN: 'lapType.run',
+  STEADY: 'lapType.steady',
+  ACTIVITY: 'lapType.activity',
+};
+
+const KM_LAP_TOLERANCE_M = 100;
+
+// last lap may be a partial km (splits_metric remainder, or a native
+// "cooldown" lap) — excluded from the check
+function isKmAligned(steadyLaps: ActivityLap[]): boolean {
+  if (steadyLaps.length === 0) return true;
+  return steadyLaps
+    .slice(0, -1)
+    .every((lap) => Math.abs(lap.distanceM - 1000) <= KM_LAP_TOLERANCE_M);
+}
+
+// "Run 1", "Rec 1", "Km 3" — numbered per type; single-occurrence types
+// (Warmup, Cooldown) keep the bare label. STEADY laps that aren't actually
+// ~1km each (e.g. a progressive-pace run lapped manually on the watch)
+// fall back to the generic lapType.run label instead of a misleading "Km N"
+export function lapLabels(
+  laps: ActivityLap[],
+  t: (key: string) => string,
+): string[] {
+  const steadyIsKm = isKmAligned(laps.filter((l) => l.lapType === 'STEADY'));
+
+  const perType: Record<string, number> = {};
+  for (const lap of laps) {
+    perType[lap.lapType] = (perType[lap.lapType] ?? 0) + 1;
+  }
+  const counters: Record<string, number> = {};
+  return laps.map((lap) => {
+    const key =
+      lap.lapType === 'STEADY' && !steadyIsKm
+        ? LAP_TYPE_BASE.RUN
+        : LAP_TYPE_BASE[lap.lapType];
+    const base = key ? t(key) : lap.lapType;
+    counters[lap.lapType] = (counters[lap.lapType] ?? 0) + 1;
+    return perType[lap.lapType] > 1 ? `${base} ${counters[lap.lapType]}` : base;
+  });
+}
 
 export function formatKm(km: number): string {
   return km.toFixed(1);

@@ -6,40 +6,15 @@ import {
   formatKm,
   formatMinSec,
   formatPace,
+  lapLabels,
 } from '@/lib/activityFormat';
 import { currentIntlLocale } from '@/lib/dateLocale';
 import RouteMap from './RouteMap';
-import type { ActivityDetail, ActivityLap } from '@/lib/types';
+import type { ActivityDetail } from '@/lib/types';
 import { apiFetch } from '@/lib/api';
 
 const MAP_W = 640;
 const MAP_H = 240;
-
-// values are activity.json keys, translated at render time
-const LAP_TYPE_BASE: Record<string, string> = {
-  WARMUP: 'lapType.warmup',
-  COOLDOWN: 'lapType.cooldown',
-  WORKOUT: 'lapType.workout',
-  REST: 'lapType.rest',
-  RUN: 'lapType.run',
-  STEADY: 'lapType.steady',
-  ACTIVITY: 'lapType.activity',
-};
-
-// "Run 1", "Rec 1", "Km 3" — numbered per type; single-occurrence types
-// (Warmup, Cooldown) keep the bare label
-function lapLabels(laps: ActivityLap[], t: (key: string) => string): string[] {
-  const perType: Record<string, number> = {};
-  for (const lap of laps) {
-    perType[lap.lapType] = (perType[lap.lapType] ?? 0) + 1;
-  }
-  const counters: Record<string, number> = {};
-  return laps.map((lap) => {
-    const base = LAP_TYPE_BASE[lap.lapType] ? t(LAP_TYPE_BASE[lap.lapType]) : lap.lapType;
-    counters[lap.lapType] = (counters[lap.lapType] ?? 0) + 1;
-    return perType[lap.lapType] > 1 ? `${base} ${counters[lap.lapType]}` : base;
-  });
-}
 
 function formatDateFull(iso: string): string {
   const d = new Date(iso);
