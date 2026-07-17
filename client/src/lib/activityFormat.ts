@@ -1,28 +1,25 @@
-export const WORKOUT_LABEL: Record<string, string> = {
-  EASY_OR_LONG: 'Easy/Long',
-  INTERVAL: 'Interval',
-  HILL_REPEATS: 'Hill Repeats',
-};
+import { currentIntlLocale } from '@/lib/dateLocale';
 
-// dot/badge colors per workout type (tokens from index.css)
+// dot/badge colors per workout type (tokens from index.css); labelKey points
+// into the 'common' i18n namespace, translate at render time
 export const WORKOUT_META: Record<
   string,
-  { label: string; dot: string; badgeBg: string; badgeColor: string }
+  { labelKey: string; dot: string; badgeBg: string; badgeColor: string }
 > = {
   EASY_OR_LONG: {
-    label: 'Easy/Long',
+    labelKey: 'workout.easyLong',
     dot: 'var(--dot-easy)',
     badgeBg: 'var(--neutral-bg)',
     badgeColor: 'var(--neutral)',
   },
   INTERVAL: {
-    label: 'Interval',
+    labelKey: 'workout.interval',
     dot: 'var(--acc)',
     badgeBg: 'var(--acc-bg)',
     badgeColor: 'var(--acc-tx)',
   },
   HILL_REPEATS: {
-    label: 'Hill Repeats',
+    labelKey: 'workout.hillRepeats',
     dot: 'var(--pos)',
     badgeBg: 'var(--pos-bg)',
     badgeColor: 'var(--pos)',
@@ -85,13 +82,22 @@ export function formatDayMonth(d: Date): string {
 
 // removing dot from toLocaleDateString
 export function formatMonthShort(d: Date): string {
-  return d.toLocaleDateString('en-US', { month: 'short' }).replace('.', '');
+  return d
+    .toLocaleDateString(currentIntlLocale(), { month: 'short' })
+    .replace('.', '');
 }
 
 // January 2026
 export function formatMonthLong(d: Date): string {
-  const s = d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const s = d.toLocaleDateString(currentIntlLocale(), {
+    month: 'long',
+    year: 'numeric',
+  });
   return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+export function formatNumber(n: number): string {
+  return n.toLocaleString(currentIntlLocale());
 }
 
 // "Jul 2025"

@@ -1,0 +1,22 @@
+{
+  "sections": {
+    "overview": "Visão geral",
+    "sportsTitle": "Esportes",
+    "run": "Corrida",
+    "runOverview": "Visão geral",
+    "runActivities": "Atividades",
+    "runAnalysis": "Análise",
+    "cycling": "Ciclismo",
+    "swimming": "Natação"
+  },
+  "badges": {
+    "upcoming": "EM BREVE"
+  },
+  "addSport": "Adicionar esporte",
+  "yourProfile": "Seu perfil",
+  "logOut": "Sair",
+  "expandSidebar": "Expandir barra lateral",
+  "collapseSidebar": "Recolher barra lateral",
+  "runnerFallback": "Corredor",
+  "comingSoon": "Em breve."
+}

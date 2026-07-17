@@ -1,0 +1,118 @@
+{
+  "page": {
+    "title": "Analysis",
+    "subtitle": "Run · performance and training load",
+    "loading": "Loading…"
+  },
+  "sections": {
+    "volume": "Volume",
+    "intensityZones": "Intensity zones",
+    "trainingLoad": "Training load"
+  },
+  "maxHr": {
+    "label": "Max HR",
+    "placeholder": "e.g. 190",
+    "bpm": "bpm",
+    "save": "Save",
+    "saving": "Saving…",
+    "invalid": "Enter a whole number between 100 and 230",
+    "saveFailed": "Failed to save",
+    "helper": "optional — used as a fallback Z2/EF cutoff when Strava's real zone data (premium only) isn't available"
+  },
+  "acwr": {
+    "title": "ACWR — acute : chronic",
+    "bandLabel": "safe 0.8–1.3",
+    "insightNoData": "ACWR — not enough data",
+    "insightCurrent": "Current ACWR {{value}} — {{status}}",
+    "hoverReading": "Week of {{date}} · ACWR {{value}}",
+    "status": {
+      "below": "below — detraining risk",
+      "safe": "in the safe zone",
+      "high": "high — injury risk"
+    }
+  },
+  "weeklyVolume": {
+    "title": "Weekly volume",
+    "insightAvg": "Avg {{avg}} km/week",
+    "insightAvgTrend": "Avg {{avg}} km/week · {{sign}}{{pct}}% vs previous 4 weeks",
+    "hoverReading": "Week of {{date}} · {{km}} km · {{runs}}",
+    "runsCount_one": "{{count}} run",
+    "runsCount_other": "{{count}} runs"
+  },
+  "paceVsVolume": {
+    "title": "Pace vs weekly volume",
+    "axisAgeLegend": "muted → accent = older → recent",
+    "axisLabel": "weekly volume",
+    "hoverReading": "Week of {{date}} · {{km}} km at {{pace}} /km",
+    "insight": {
+      "notEnough": "Not enough weeks with pace data",
+      "slower": "Higher-volume weeks trend slower",
+      "faster": "Higher-volume weeks trend faster",
+      "noTradeoff": "No clear volume ↔ pace tradeoff"
+    }
+  },
+  "z2Stacked": {
+    "title": "Z2 vs non-Z2 volume",
+    "legendZ2": "Z2",
+    "legendAboveZ2": "above Z2",
+    "insightNoHr": "Z2 at — % of total volume · no HR data",
+    "insight": "Z2 at {{pct}}% of total volume · {{trend}} vs previous 4 weeks",
+    "trend": {
+      "rising": "rising",
+      "falling": "falling"
+    },
+    "tierEstimatedMaxHr": " · some weeks estimated from max HR (no premium zone data)",
+    "tierPlaceholder": " · Z2 threshold estimated (150bpm placeholder)",
+    "hoverReading": "Week of {{date}} · Z2 {{z2km}} of {{km}} km ({{pct}}%)"
+  },
+  "paceZoneHistogram": {
+    "title": "Volume by pace zone",
+    "insight": "{{pct}}% of volume at {{label}} /km",
+    "insightEmpty": "No pace data in this period",
+    "hoverReading": "{{label}} /km · {{km}} km · {{laps}}",
+    "lapsCount_one": "{{count}} lap",
+    "lapsCount_other": "{{count}} laps"
+  },
+  "trainingLoad": {
+    "title": "Weekly training load",
+    "insight": "Avg {{avg}} a.u. · last week {{sign}}{{pct}}% vs avg",
+    "insightNoHr": " · no HR data",
+    "hoverReading": "Week of {{date}} · load {{load}} a.u. · {{runs}}",
+    "runsCount_one": "{{count}} run",
+    "runsCount_other": "{{count}} runs"
+  },
+  "efficiencyFactor": {
+    "title": "Efficiency Factor",
+    "insightNoData": "EF — not enough data",
+    "insightAvg": "EF avg {{avg}}",
+    "insightTrend": " · trend {{sign}}{{pct}}% over last {{count}} weeks",
+    "insightPlaceholder": " · Z2 threshold estimated (150bpm placeholder)",
+    "hoverReading": "Week of {{date}} · EF {{value}}"
+  },
+  "monotonyStrain": {
+    "title": "Monotony & strain",
+    "barsLegend": "bars = strain",
+    "warningLine": "warning 1.5",
+    "highRiskLine": "high risk 2.0",
+    "insight": "Monotony {{value}} — {{status}} · strain {{strain}} a.u.",
+    "insightNoData": "no data",
+    "hoverReading": "Week of {{date}} · monotony {{value}} · strain {{strain}} a.u.",
+    "status": {
+      "varied": "varied training",
+      "monotonous": "getting monotonous",
+      "high": "high risk"
+    }
+  },
+  "cardiacDrift": {
+    "title": "Cardiac drift",
+    "goodLine": "good <{{max}}%",
+    "highLine": "high >{{min}}%",
+    "insightEmpty": "No eligible steady runs yet (need ≥25min with HR data)",
+    "insight": "Avg decoupling {{avg}}% over {{runs}}",
+    "insightHighSuffix": " · {{count}} above 10% (high)",
+    "runsCount_one": "{{count}} steady run",
+    "runsCount_other": "{{count}} steady runs",
+    "hoverReading": "{{date}} · decoupling {{value}}%",
+    "emptyState": "No eligible steady runs yet"
+  }
+}

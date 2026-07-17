@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth, formatMonthLong } from '@/lib/activityFormat';
 
 export interface DateRange {
@@ -14,8 +15,6 @@ interface DateRangePickerProps {
   // limits date navigation between activities date range
   minDate?: Date;
 }
-
-const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 function midnight(d: Date): Date {
   const c = new Date(d);
@@ -39,6 +38,7 @@ function lastDayOfMonth(m: Date): Date {
   return new Date(m.getFullYear(), m.getMonth() + 1, 0);
 }
 
+// first tuple element is a dashboard.json key, translated at render time
 function buildPresets(): [string, DateRange][] {
   const today = midnight(new Date());
   const thisM = monthStart(today);
@@ -48,17 +48,23 @@ function buildPresets(): [string, DateRange][] {
   const y = today.getFullYear();
   return [
     [
-      'This Month',
+      'dateRange.thisMonth',
       { start: thisM.getTime(), end: lastDayOfMonth(thisM).getTime() },
     ],
     [
-      'Last Month',
+      'dateRange.lastMonth',
       { start: lastM.getTime(), end: lastDayOfMonth(lastM).getTime() },
     ],
-    ['Last 3 Months', { start: threeAgo.getTime(), end: today.getTime() }],
-    ['This Year', { start: new Date(y, 0, 1).getTime(), end: today.getTime() }],
     [
-      'Last Year',
+      'dateRange.last3Months',
+      { start: threeAgo.getTime(), end: today.getTime() },
+    ],
+    [
+      'dateRange.thisYear',
+      { start: new Date(y, 0, 1).getTime(), end: today.getTime() },
+    ],
+    [
+      'dateRange.lastYear',
       {
         start: new Date(y - 1, 0, 1).getTime(),
         end: new Date(y - 1, 11, 31).getTime(),
@@ -92,6 +98,10 @@ export default function DateRangePicker({
   onChange,
   minDate,
 }: DateRangePickerProps) {
+  const { t } = useTranslation('dashboard');
+  const weekdays = t('dateRange.weekdaysShort', {
+    returnObjects: true,
+  }) as string[];
   const [open, setOpen] = useState(false);
   // fist month — default: last month (second month = current month)
   const [visibleMonth, setVisibleMonth] = useState<Date>(() =>
@@ -166,10 +176,10 @@ export default function DateRangePicker({
 
   const hint =
     pendingStart != null
-      ? 'Select last date'
+      ? t('dateRange.selectLastDate')
       : range
         ? `${formatDayMonth(new Date(range.start))} – ${formatDayMonth(new Date(range.end))}`
-        : 'Select start date';
+        : t('dateRange.selectStartDate');
 
   const renderMonth = (month: Date, side: 'first' | 'second') => {
     const offset = (month.getDay() + 6) % 7; // week starts on monday
@@ -185,7 +195,7 @@ export default function DateRangePicker({
             <button
               onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
               disabled={!canPrev}
-              aria-label="Mês anterior"
+              aria-label={t('dateRange.previousMonth')}
               className="h-[26px] w-[26px] cursor-pointer rounded-[7px] text-muted-foreground hover:bg-chip disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
             >
               ‹
@@ -200,7 +210,7 @@ export default function DateRangePicker({
             <button
               onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
               disabled={!canNext}
-              aria-label="Próximo mês"
+              aria-label={t('dateRange.nextMonth')}
               className="h-[26px] w-[26px] cursor-pointer rounded-[7px] text-muted-foreground hover:bg-chip disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
             >
               ›
@@ -210,7 +220,7 @@ export default function DateRangePicker({
           )}
         </div>
         <div className="mt-2 grid grid-cols-7">
-          {WEEKDAYS.map((w) => (
+          {weekdays.map((w) => (
             <div
               key={w}
               className="flex h-5 items-center justify-center text-[10px] uppercase text-muted-foreground"
@@ -279,7 +289,7 @@ export default function DateRangePicker({
         <CalendarIcon />
         {range
           ? `${formatDayMonth(new Date(range.start))} – ${formatDayMonth(new Date(range.end))}`
-          : 'Custom'}
+          : t('dateRange.custom')}
       </button>
 
       {open && (
@@ -293,16 +303,16 @@ export default function DateRangePicker({
         >
           <div className="flex">
             <div className="flex w-[132px] flex-col gap-1 border-r border-border pr-3">
-              {buildPresets().map(([label, preset]) => (
+              {buildPresets().map(([key, preset]) => (
                 <button
-                  key={label}
+                  key={key}
                   onClick={() => {
                     onChange(preset);
                     close();
                   }}
                   className="cursor-pointer rounded-[8px] px-[10px] py-[7px] text-left text-[12.5px] font-medium text-foreground hover:bg-chip"
                 >
-                  {label}
+                  {t(key)}
                 </button>
               ))}
             </div>
@@ -326,13 +336,13 @@ export default function DateRangePicker({
                 }}
                 className="cursor-pointer rounded-[8px] px-2.5 py-[5px] text-[12px] font-medium text-muted-foreground hover:text-foreground"
               >
-                Clean
+                {t('dateRange.clean')}
               </button>
               <button
                 onClick={close}
                 className="cursor-pointer rounded-[8px] bg-chip px-2.5 py-[5px] text-[12px] font-medium text-foreground hover:bg-grid-ax"
               >
-                Close
+                {t('dateRange.close')}
               </button>
             </div>
           </div>

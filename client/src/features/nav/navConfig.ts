@@ -13,58 +13,63 @@ export const DEFAULT_PAGE: PageId = 'run/activities';
 
 export interface NavSubItem {
   id: PageId;
-  label: string;
+  labelKey: string;
 }
 
 export interface NavItem {
   id: string;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   /** page navigated to when the item itself (not a sub-item) is clicked */
   page?: PageId;
   subs?: NavSubItem[];
   disabled?: boolean;
-  badge?: string;
+  badgeKey?: string;
 }
 
 export interface NavSection {
-  title?: string;
+  titleKey?: string;
   items: NavItem[];
 }
 
 export const NAV_SECTIONS: NavSection[] = [
   {
     items: [
-      { id: 'overview', label: 'Overview', icon: LayoutGrid, page: 'overview' },
+      {
+        id: 'overview',
+        labelKey: 'sections.overview',
+        icon: LayoutGrid,
+        page: 'overview',
+      },
     ],
   },
   {
-    title: 'Sports',
+    titleKey: 'sections.sportsTitle',
     items: [
       {
         id: 'run',
-        label: 'Run',
+        labelKey: 'sections.run',
         icon: Activity,
         page: 'run/overview',
         subs: [
-          { id: 'run/overview', label: 'Overview' },
-          { id: 'run/activities', label: 'Activities' },
-          { id: 'run/analysis', label: 'Analysis' },
+          { id: 'run/overview', labelKey: 'sections.runOverview' },
+          { id: 'run/activities', labelKey: 'sections.runActivities' },
+          { id: 'run/analysis', labelKey: 'sections.runAnalysis' },
         ],
       },
       {
         id: 'cycling',
-        label: 'Cycling',
+        labelKey: 'sections.cycling',
         icon: Bike,
         disabled: true,
-        badge: 'UPCOMING',
+        badgeKey: 'badges.upcoming',
       },
       {
         id: 'swimming',
-        label: 'Swimming',
+        labelKey: 'sections.swimming',
         icon: Waves,
         disabled: true,
-        badge: 'UPCOMING',
+        badgeKey: 'badges.upcoming',
       },
     ],
   },

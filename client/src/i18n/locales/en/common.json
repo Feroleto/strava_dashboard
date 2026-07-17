@@ -1,0 +1,10 @@
+{
+  "appName": "SoTreina",
+  "error": "Error: {{message}}",
+  "loading": "Loading…",
+  "workout": {
+    "easyLong": "Easy/Long",
+    "interval": "Interval",
+    "hillRepeats": "Hill Repeats"
+  }
+}

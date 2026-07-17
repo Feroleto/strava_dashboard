@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth, formatKm } from '@/lib/activityFormat';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
 import type { WeekMetrics } from './useTrainingMetrics';
@@ -28,6 +29,7 @@ export default function Z2StackedChart({
    * is a 150bpm placeholder in that case, not a real %maxHR cutoff */
   hasMaxHr?: boolean;
 }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -51,13 +53,15 @@ export default function Z2StackedChart({
   const tierCaveat = allWeeksHaveRealZ2
     ? ''
     : hasMaxHr
-      ? ' · some weeks estimated from max HR (no premium zone data)'
-      : ' · Z2 threshold estimated (150bpm placeholder)';
+      ? t('z2Stacked.tierEstimatedMaxHr')
+      : t('z2Stacked.tierPlaceholder');
   const insight =
     (noHrData
-      ? `Z2 at — % of total volume · no HR data`
-      : `Z2 at ${pctZ2(visible).toFixed(0)}% of total volume · ${cur >= prev ? 'rising' : 'falling'} vs previous 4 weeks`) +
-    tierCaveat;
+      ? t('z2Stacked.insightNoHr')
+      : t('z2Stacked.insight', {
+          pct: pctZ2(visible).toFixed(0),
+          trend: t(`z2Stacked.trend.${cur >= prev ? 'rising' : 'falling'}`),
+        })) + tierCaveat;
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
@@ -65,13 +69,18 @@ export default function Z2StackedChart({
       ? (() => {
           const w = visible[hov];
           const pct = w.km > 0 ? (w.z2Km / w.km) * 100 : 0;
-          return `Week of ${formatDayMonth(w.start)} · Z2 ${formatKm(w.z2Km)} of ${formatKm(w.km)} km (${pct.toFixed(0)}%)`;
+          return t('z2Stacked.hoverReading', {
+            date: formatDayMonth(w.start),
+            z2km: formatKm(w.z2Km),
+            km: formatKm(w.km),
+            pct: pct.toFixed(0),
+          });
         })()
       : null;
 
   return (
     <AnalysisCard
-      title="Z2 vs non-Z2 volume"
+      title={t('z2Stacked.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}
@@ -84,11 +93,11 @@ export default function Z2StackedChart({
           <g>
             <circle cx={VB_W - 132} cy={16} r={3.5} fill="var(--pos)" />
             <text x={VB_W - 124} y={19.5} fontSize="10" fill="var(--muted-foreground)">
-              Z2
+              {t('z2Stacked.legendZ2')}
             </text>
             <circle cx={VB_W - 96} cy={16} r={3.5} fill="var(--neg)" fillOpacity={0.45} />
             <text x={VB_W - 88} y={19.5} fontSize="10" fill="var(--muted-foreground)">
-              above Z2
+              {t('z2Stacked.legendAboveZ2')}
             </text>
           </g>
 

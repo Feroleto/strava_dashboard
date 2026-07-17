@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
@@ -33,13 +34,16 @@ function segments(values: (number | null)[]): number[][] {
   return segs;
 }
 
-function acwrStatus(acwr: number): string {
-  if (acwr < BAND_FROM) return 'below — detraining risk';
-  if (acwr <= BAND_TO) return 'in the safe zone';
-  return 'high — injury risk';
+type AcwrStatus = 'below' | 'safe' | 'high';
+
+function acwrStatus(acwr: number): AcwrStatus {
+  if (acwr < BAND_FROM) return 'below';
+  if (acwr <= BAND_TO) return 'safe';
+  return 'high';
 }
 
 export default function AcwrChart({ weeks }: { weeks: WeekMetrics[] }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -61,18 +65,24 @@ export default function AcwrChart({ weeks }: { weeks: WeekMetrics[] }) {
   const cur = visible.at(-1)?.acwr ?? null;
   const insight =
     cur === null
-      ? 'ACWR — not enough data'
-      : `Current ACWR ${cur.toFixed(2)} — ${acwrStatus(cur)}`;
+      ? t('acwr.insightNoData')
+      : t('acwr.insightCurrent', {
+          value: cur.toFixed(2),
+          status: t(`acwr.status.${acwrStatus(cur)}`),
+        });
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
     hov !== null
-      ? `Week of ${formatDayMonth(visible[hov].start)} · ACWR ${values[hov] !== null ? (values[hov] as number).toFixed(2) : '—'}`
+      ? t('acwr.hoverReading', {
+          date: formatDayMonth(visible[hov].start),
+          value: values[hov] !== null ? (values[hov] as number).toFixed(2) : '—',
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="ACWR — acute : chronic"
+      title={t('acwr.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}
@@ -89,7 +99,7 @@ export default function AcwrChart({ weeks }: { weeks: WeekMetrics[] }) {
           />
           <ChartGrid width={VB_W} top={TOP_Y} bottom={AXIS_Y} />
           <text x={6} y={y(BAND_TO) + 12} fontSize="10" fill="var(--pos)">
-            safe 0.8–1.3
+            {t('acwr.bandLabel')}
           </text>
           <line
             x1={0}

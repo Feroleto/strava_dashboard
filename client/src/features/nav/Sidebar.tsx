@@ -1,8 +1,10 @@
 import type { ReactNode } from 'react';
 import { ChevronLeft, LogOut, Plus, type LucideIcon } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import SegmentedControl from '@/components/SegmentedControl';
 import { useAuth } from '@/features/auth/AuthContext';
+import { useAppLanguage } from '@/i18n/useAppLanguage';
 import {
   NAV_SECTIONS,
   activeParentId,
@@ -58,12 +60,14 @@ function NavItemRow({
   active: boolean;
   onClick: () => void;
 }) {
+  const { t } = useTranslation('nav');
   const Icon = item.icon;
+  const label = t(item.labelKey);
   return (
     <button
       onClick={onClick}
       disabled={item.disabled}
-      title={collapsed ? item.label : undefined}
+      title={collapsed ? label : undefined}
       className={cn(
         'flex w-full items-center gap-2.5 rounded-[9px] px-[9px] py-2 text-[13px] font-medium',
         collapsed && 'justify-center',
@@ -76,12 +80,12 @@ function NavItemRow({
     >
       <Icon className="h-4 w-4 flex-none" strokeWidth={1.7} />
       <SidebarLabel collapsed={collapsed} className="flex-1 text-left">
-        {item.label}
+        {label}
       </SidebarLabel>
-      {item.badge && (
+      {item.badgeKey && (
         <SidebarLabel collapsed={collapsed} className="flex-none">
           <span className="rounded-[5px] bg-chip px-1.5 py-0.5 text-[9.5px] font-semibold tracking-[.02em] text-muted-foreground uppercase">
-            {item.badge}
+            {t(item.badgeKey)}
           </span>
         </SidebarLabel>
       )}
@@ -98,6 +102,7 @@ function SubList({
   activePage: PageId;
   onPick: (sub: NavSubItem) => void;
 }) {
+  const { t } = useTranslation('nav');
   return (
     <div className="mt-1 mb-1 ml-[18px] flex flex-col gap-0.5 border-l border-border pl-3">
       {subs.map((sub) => {
@@ -116,7 +121,7 @@ function SubList({
             {active && (
               <span className="absolute top-0 -left-3 h-full w-[2px] bg-acc" />
             )}
-            {sub.label}
+            {t(sub.labelKey)}
           </button>
         );
       })}
@@ -125,18 +130,19 @@ function SubList({
 }
 
 function AddSportRow({ collapsed }: { collapsed: boolean }) {
+  const { t } = useTranslation('nav');
   const Icon: LucideIcon = Plus;
   return (
     <button
       disabled
-      title={collapsed ? 'Add a Sport' : undefined}
+      title={collapsed ? t('addSport') : undefined}
       className={cn(
         'flex w-full cursor-not-allowed items-center gap-2.5 rounded-[9px] border border-dashed border-grid-ax px-[9px] py-2 text-[13px] font-medium text-muted-foreground',
         collapsed && 'justify-center',
       )}
     >
       <Icon className="h-4 w-4 flex-none" strokeWidth={1.7} />
-      <SidebarLabel collapsed={collapsed}>Add a Sport</SidebarLabel>
+      <SidebarLabel collapsed={collapsed}>{t('addSport')}</SidebarLabel>
     </button>
   );
 }
@@ -149,7 +155,9 @@ export default function Sidebar({
   theme,
   onTheme,
 }: SidebarProps) {
+  const { t } = useTranslation('nav');
   const { user, logout } = useAuth();
+  const { language, setLanguage } = useAppLanguage();
   const initials = user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : '—';
 
   const handleNavClick = (item: NavItem) => {
@@ -171,7 +179,7 @@ export default function Sidebar({
     >
       <button
         onClick={onToggleCollapse}
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? t('expandSidebar') : t('collapseSidebar')}
         className="absolute top-[27px] -right-3 z-10 flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border border-border bg-card"
         style={{ boxShadow: '0 2px 8px rgba(8,12,20,.16)' }}
       >
@@ -200,12 +208,12 @@ export default function Sidebar({
         <nav className="mt-6 flex flex-col gap-4">
           {NAV_SECTIONS.map((section, i) => (
             <div key={i}>
-              {section.title && (
+              {section.titleKey && (
                 <SidebarLabel
                   collapsed={collapsed}
                   className="mb-1.5 block px-[9px] text-[10.5px] font-semibold tracking-[.07em] text-muted-foreground uppercase"
                 >
-                  {section.title}
+                  {t(section.titleKey)}
                 </SidebarLabel>
               )}
               <div className="flex flex-col gap-1">
@@ -238,15 +246,26 @@ export default function Sidebar({
 
         <div className="mt-auto border-t border-border pt-3">
           {!collapsed && (
-            <SegmentedControl
-              size="compact"
-              items={[
-                ['light', 'Light'],
-                ['dark', 'Dark'],
-              ]}
-              active={theme}
-              onPick={onTheme}
-            />
+            <div className="flex flex-wrap items-center gap-2">
+              <SegmentedControl
+                size="compact"
+                items={[
+                  ['light', 'Light'],
+                  ['dark', 'Dark'],
+                ]}
+                active={theme}
+                onPick={onTheme}
+              />
+              <SegmentedControl
+                size="compact"
+                items={[
+                  ['pt', 'PT'],
+                  ['en', 'EN'],
+                ]}
+                active={language}
+                onPick={setLanguage}
+              />
+            </div>
           )}
           <div className="mt-3 flex items-center gap-2.5 px-[9px]">
             {user?.profileImgUrl ? (
@@ -262,17 +281,17 @@ export default function Sidebar({
             )}
             <SidebarLabel collapsed={collapsed} className="flex-1">
               <div className="truncate text-[12.5px] font-semibold text-foreground">
-                {user?.firstName ?? 'Runner'}
+                {user?.firstName ?? t('runnerFallback')}
               </div>
               <div className="text-[11px] text-muted-foreground">
-                Your profile
+                {t('yourProfile')}
               </div>
             </SidebarLabel>
             {!collapsed && (
               <button
                 onClick={() => void logout()}
-                title="Log out"
-                aria-label="Log out"
+                title={t('logOut')}
+                aria-label={t('logOut')}
                 className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-[7px] text-muted-foreground hover:bg-chip hover:text-foreground"
               >
                 <LogOut className="h-3.5 w-3.5" strokeWidth={1.7} />

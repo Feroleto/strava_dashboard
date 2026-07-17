@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth, formatMinSec } from '@/lib/activityFormat';
 import { pearson, linreg } from './statsMath';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
@@ -16,6 +17,7 @@ const PAD_X = 24;
 const PLOT_W = VB_W - PAD_X * 2;
 
 export default function PaceVsVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -41,24 +43,23 @@ export default function PaceVsVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
   const regY2 = y(m * maxKm + b);
 
   const r = pearson(kms, paces);
-  const insight =
-    n < 2
-      ? 'Not enough weeks with pace data'
-      : r > 0.25
-        ? 'Higher-volume weeks trend slower'
-        : r < -0.25
-          ? 'Higher-volume weeks trend faster'
-          : 'No clear volume ↔ pace tradeoff';
+  const verdict =
+    n < 2 ? 'notEnough' : r > 0.25 ? 'slower' : r < -0.25 ? 'faster' : 'noTradeoff';
+  const insight = t(`paceVsVolume.insight.${verdict}`);
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
     hov !== null
-      ? `Week of ${formatDayMonth(visible[hov].start)} · ${visible[hov].km.toFixed(1)} km at ${formatMinSec(visible[hov].pace)} /km`
+      ? t('paceVsVolume.hoverReading', {
+          date: formatDayMonth(visible[hov].start),
+          km: visible[hov].km.toFixed(1),
+          pace: formatMinSec(visible[hov].pace),
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Pace vs weekly volume"
+      title={t('paceVsVolume.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}
@@ -81,7 +82,7 @@ export default function PaceVsVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
             textAnchor="end"
             fill="var(--muted-foreground)"
           >
-            muted → accent = older → recent
+            {t('paceVsVolume.axisAgeLegend')}
           </text>
           <text
             x={VB_W / 2}
@@ -90,7 +91,7 @@ export default function PaceVsVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
             textAnchor="middle"
             fill="var(--muted-foreground)"
           >
-            weekly volume
+            {t('paceVsVolume.axisLabel')}
           </text>
 
           {n >= 2 && (

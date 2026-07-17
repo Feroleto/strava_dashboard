@@ -1,0 +1,94 @@
+{
+  "rail": {
+    "title": "Corridas",
+    "kmSubtitle": "km percorridos neste período",
+    "activities": "Atividades",
+    "averagePace": "Ritmo Médio",
+    "totalTime": "Tempo Total",
+    "elevationGain": "Ganho de Elevação",
+    "workoutType": "Tipo de Treino",
+    "allRuns": "Todas as corridas",
+    "lastNWeeks_one": "Última {{count}} semana",
+    "lastNWeeks_other": "Últimas {{count}} semanas"
+  },
+  "typeOptions": {
+    "all": "Todos",
+    "easyLong": "FÁCIL/LONGO",
+    "interval": "Intervalado",
+    "hillRepeats": "Subidas"
+  },
+  "sync": {
+    "title": "Strava",
+    "sync": "Sincronizar",
+    "syncing": "Sincronizando",
+    "syncNew": "Sincronizar novas atividades",
+    "searching": "Buscando atividades no Strava…",
+    "rateLimited": "Limite de requisições do Strava — aguardando 15 min",
+    "processing": "Processando atividades",
+    "savedOfTotal": "{{synced}} de {{total}} salvas",
+    "withErrors_one": ", {{count}} com erro",
+    "withErrors_other": ", {{count}} com erros",
+    "syncedNothingNew": "Sincronizado — nada novo",
+    "syncedNewActivity_one": "Sincronizado — {{count}} atividade nova",
+    "syncedNewActivity_other": "Sincronizado — {{count}} atividades novas",
+    "errorsSuffix_one": ", {{count}} erro",
+    "errorsSuffix_other": ", {{count}} erros",
+    "failureToStart": "Falha ao iniciar: {{message}}",
+    "syncFailure": "Falha na sincronização: {{message}}",
+    "unknownError": "erro desconhecido",
+    "etaHoursMin": "~{{h}}h {{m}}min restantes",
+    "etaMinSec": "~{{m}}min {{s}}s restantes",
+    "etaSec": "~{{s}}s restantes"
+  },
+  "list": {
+    "loading": "Carregando…",
+    "empty": "Nenhuma atividade neste filtro",
+    "runsCount_one": "{{count}} corrida",
+    "runsCount_other": "{{count}} corridas",
+    "closeSummary": "Fechar resumo",
+    "openSummary": "Abrir resumo",
+    "elevation": "Elevação",
+    "avgHr": "FC MÉDIA",
+    "maxHr": "FC MÁX",
+    "cadence": "Cadência",
+    "recentWeeks": "‹ Semanas recentes",
+    "previousWeeks": "Semanas anteriores ›",
+    "pageOf": "Página {{current}} de {{total}}",
+    "olderWeeks_one": "+ {{count}} semana anterior",
+    "olderWeeks_other": "+ {{count}} semanas anteriores",
+    "selectMonth": "Clique num mês no gráfico para filtrar"
+  },
+  "chart": {
+    "weeklyDistance": "Distância semanal",
+    "monthlyDistance": "Distância mensal",
+    "kmInPeriod": "{{km}} km neste período",
+    "periods": {
+      "4": "4 s",
+      "8": "8 s",
+      "12": "12 s",
+      "all": "Tudo"
+    }
+  },
+  "dateRange": {
+    "thisMonth": "Este Mês",
+    "lastMonth": "Mês Passado",
+    "last3Months": "Últimos 3 Meses",
+    "thisYear": "Este Ano",
+    "lastYear": "Ano Passado",
+    "custom": "Personalizado",
+    "clean": "Limpar",
+    "close": "Fechar",
+    "selectLastDate": "Selecione a data final",
+    "selectStartDate": "Selecione a data inicial",
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "weekdaysShort": ["Seg", "Ter", "Qua", "Qui", "Sex", "Sáb", "Dom"]
+  },
+  "rangeChip": {
+    "clearAriaLabel": "Limpar período personalizado",
+    "runsCount_one": "{{count}} corrida",
+    "runsCount_other": "{{count}} corridas",
+    "daysCount_one": "{{count}} dia",
+    "daysCount_other": "{{count}} dias"
+  }
+}

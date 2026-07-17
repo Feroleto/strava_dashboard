@@ -1,3 +1,4 @@
+import { useTranslation } from 'react-i18next';
 import { formatKm } from '@/lib/activityFormat';
 
 interface RangeChipProps {
@@ -15,6 +16,7 @@ export default function RangeChip({
   days,
   onClear,
 }: RangeChipProps) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="mb-[26px] flex">
       <div
@@ -30,12 +32,12 @@ export default function RangeChip({
           {label}
         </span>
         <span className="text-xs text-muted-foreground">
-          {count} run{count === 1 ? '' : 's'} · {formatKm(km)} km · {days} day
-          {days === 1 ? '' : 's'}
+          {t('rangeChip.runsCount', { count })} · {formatKm(km)} km ·{' '}
+          {t('rangeChip.daysCount', { count: days })}
         </span>
         <button
           onClick={onClear}
-          aria-label="Clean custom period"
+          aria-label={t('rangeChip.clearAriaLabel')}
           className="cursor-pointer text-[14px] leading-none text-muted-foreground hover:text-foreground"
         >
           ×

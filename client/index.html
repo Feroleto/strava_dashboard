@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="pt-BR">
+<html>
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
@@ -10,6 +10,17 @@
       if (localStorage.getItem('theme') === 'dark') {
         document.documentElement.classList.add('dark');
       }
+      // set <html lang> before first paint, same rule as client/src/i18n/index.ts
+      (function () {
+        var stored = localStorage.getItem('language');
+        var lang =
+          stored === 'pt' || stored === 'en'
+            ? stored
+            : (navigator.language || '').toLowerCase().indexOf('pt') === 0
+              ? 'pt'
+              : 'en';
+        document.documentElement.lang = lang === 'pt' ? 'pt-BR' : 'en-US';
+      })();
     </script>
   </head>
   <body>

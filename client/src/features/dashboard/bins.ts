@@ -5,11 +5,12 @@ import { formatDayMonth, formatMonthLong } from '@/lib/activityFormat';
 
 export type TypeFilter = 'ALL' | 'EASY_OR_LONG' | 'INTERVAL' | 'HILL_REPEATS';
 
+// second tuple element is a dashboard.json key, translated at render time
 export const TYPE_OPTIONS: [TypeFilter, string][] = [
-  ['ALL', 'All'],
-  ['EASY_OR_LONG', 'EASY/LONG'],
-  ['INTERVAL', 'Interval'],
-  ['HILL_REPEATS', 'Hill Repeats'],
+  ['ALL', 'typeOptions.all'],
+  ['EASY_OR_LONG', 'typeOptions.easyLong'],
+  ['INTERVAL', 'typeOptions.interval'],
+  ['HILL_REPEATS', 'typeOptions.hillRepeats'],
 ];
 
 // chart-only cap for the "All" period; stats and list still cover the full history

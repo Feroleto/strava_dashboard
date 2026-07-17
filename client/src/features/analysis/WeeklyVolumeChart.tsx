@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { mean, sma3 } from './statsMath';
@@ -15,18 +16,27 @@ const TOP_Y = 28;
 const AXIS_Y = 200;
 const PLOT_H = AXIS_Y - TOP_Y;
 
-function volumeInsight(visible: WeekMetrics[]): string {
+function volumeInsight(
+  visible: WeekMetrics[],
+  t: (key: string, opts?: Record<string, unknown>) => string,
+): string {
   const avg = mean(visible.map((w) => w.km));
   const last4 = visible.slice(-4);
   const prev4 = visible.slice(-8, -4);
-  if (prev4.length === 0) return `Avg ${avg.toFixed(1)} km/week`;
+  if (prev4.length === 0)
+    return t('weeklyVolume.insightAvg', { avg: avg.toFixed(1) });
   const a = mean(last4.map((w) => w.km));
   const p = mean(prev4.map((w) => w.km));
   const pct = p > 0 ? ((a - p) / p) * 100 : 0;
-  return `Avg ${avg.toFixed(1)} km/week · ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}% vs previous 4 weeks`;
+  return t('weeklyVolume.insightAvgTrend', {
+    avg: avg.toFixed(1),
+    sign: pct >= 0 ? '+' : '',
+    pct: pct.toFixed(0),
+  });
 }
 
 export default function WeeklyVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -43,14 +53,18 @@ export default function WeeklyVolumeChart({ weeks }: { weeks: WeekMetrics[] }) {
     n >= 2 ? smoothPath(trend.map((v, i) => [x(i), y(v)])) : '';
 
   const hov = hover !== null && visible[hover] ? hover : null;
-  const insight = volumeInsight(visible);
+  const insight = volumeInsight(visible, t);
   const hoverReading = hov !== null
-    ? `Week of ${formatDayMonth(visible[hov].start)} · ${visible[hov].km.toFixed(1)} km · ${visible[hov].count} run${visible[hov].count === 1 ? '' : 's'}`
+    ? t('weeklyVolume.hoverReading', {
+        date: formatDayMonth(visible[hov].start),
+        km: visible[hov].km.toFixed(1),
+        runs: t('weeklyVolume.runsCount', { count: visible[hov].count }),
+      })
     : null;
 
   return (
     <AnalysisCard
-      title="Weekly volume"
+      title={t('weeklyVolume.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}

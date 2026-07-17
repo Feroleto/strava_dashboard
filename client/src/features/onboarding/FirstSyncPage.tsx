@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api';
 import { formatKm } from '@/lib/activityFormat';
 import type { ActivitiesResponse, SyncStatus } from '@/lib/types';
@@ -76,6 +77,7 @@ interface FirstSyncPageProps {
 }
 
 export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
+  const { t } = useTranslation('onboarding');
   const { user } = useAuth();
   // null while the initial status check resolves (card hidden until then)
   const [step, setStep] = useState<Step | null>(null);
@@ -203,24 +205,25 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                 )}
                 <div className="mt-3 flex items-center gap-1.5 rounded-full bg-pos-bg px-[10px] py-1 text-[11px] font-semibold text-pos">
                   <span className="h-[6px] w-[6px] rounded-full bg-pos" />
-                  Connected to Strava
+                  {t('badge.connected')}
                 </div>
                 <h2 className="mt-[18px] text-[21px] font-semibold tracking-[-.01em] text-foreground">
-                  {firstName ? `Almost there, ${firstName}` : 'Almost there'}
+                  {firstName
+                    ? t('intro.titleWithName', { name: firstName })
+                    : t('intro.title')}
                 </h2>
                 <p className="mt-2 text-[13.5px] leading-[1.55] text-muted-foreground">
-                  We&apos;ll import your Strava activity history. This happens
-                  only once — after that, everything syncs automatically.
+                  {t('intro.body')}
                 </p>
                 <button
                   type="button"
                   onClick={startSync}
                   className={`mt-[26px] ${primaryButton}`}
                 >
-                  Import activities
+                  {t('intro.cta')}
                 </button>
                 <p className="mt-[11px] text-[11.5px] text-muted-foreground">
-                  Takes about a minute, depending on your history.
+                  {t('intro.hint')}
                 </p>
               </>
             )}
@@ -228,11 +231,11 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
             {step === 'syncing' && (
               <>
                 <h2 className="text-[16px] font-semibold text-foreground">
-                  Importing from Strava…
+                  {t('syncing.title')}
                 </h2>
                 {total == null ? (
                   <div className="mt-[22px] text-[14px] leading-[40px] text-muted-foreground">
-                    Finding your activities…
+                    {t('syncing.finding')}
                   </div>
                 ) : (
                   <div className="mt-[22px] flex items-baseline gap-2">
@@ -240,7 +243,7 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                       {processed}
                     </span>
                     <span className="text-[14px] text-muted-foreground">
-                      of {total} activities
+                      {t('syncing.ofTotal', { count: total })}
                     </span>
                   </div>
                 )}
@@ -257,23 +260,23 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                 <div className="mt-3 min-h-[19px] text-[12.5px] text-muted-foreground">
                   {failed ? (
                     <span className="text-[12px] text-neg">
-                      Import failed.{' '}
+                      {t('syncing.failed')}{' '}
                       <button
                         type="button"
                         onClick={startSync}
                         className="cursor-pointer font-medium underline underline-offset-2"
                       >
-                        Try again
+                        {t('syncing.retry')}
                       </button>
                     </span>
                   ) : processingYear != null ? (
-                    `Processing ${processingYear}…`
+                    t('syncing.processingYear', { year: processingYear })
                   ) : (
                     ' '
                   )}
                 </div>
                 <div className="mt-[26px] w-full border-t border-border pt-[18px] text-[11.5px] text-muted-foreground">
-                  Read-only access — nothing is posted to your Strava.
+                  {t('syncing.readOnlyNotice')}
                 </div>
               </>
             )}
@@ -298,13 +301,13 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                   </svg>
                 </div>
                 <h2 className="mt-[18px] text-[21px] font-semibold tracking-[-.01em] text-foreground">
-                  All set
+                  {t('done.title')}
                 </h2>
                 <p className="mt-2 text-[13.5px] leading-[1.55] text-muted-foreground tabular-nums">
                   {summary
                     ? [
-                        `${summary.count} ${summary.count === 1 ? 'activity' : 'activities'}`,
-                        `${formatKm(summary.km)} km`,
+                        t('done.activityCount', { count: summary.count }),
+                        t('done.distanceKm', { km: formatKm(summary.km) }),
                         summary.firstYear != null
                           ? summary.firstYear === summary.lastYear
                             ? `${summary.firstYear}`
@@ -320,7 +323,7 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                   onClick={openDashboard}
                   className={`mt-[26px] ${primaryButton}`}
                 >
-                  Open dashboard
+                  {t('done.cta')}
                 </button>
               </>
             )}

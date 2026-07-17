@@ -1,0 +1,36 @@
+{
+  "lapType": {
+    "warmup": "Aquecimento",
+    "cooldown": "Volta à calma",
+    "workout": "Tiro",
+    "rest": "Rec.",
+    "run": "Volta",
+    "steady": "Km",
+    "activity": "Atividade"
+  },
+  "return": "← Voltar",
+  "noGps": "Sem dados de GPS nesta atividade",
+  "stats": {
+    "distance": "Distância",
+    "time": "Tempo",
+    "pace": "Ritmo",
+    "elevation": "Elevação",
+    "avgHr": "FC MÉDIA",
+    "maxHr": "FC MÁX",
+    "cadence": "Cadência",
+    "bestPace": "Melhor Ritmo"
+  },
+  "laps": {
+    "title": "Voltas",
+    "count_one": "{{count}} Volta",
+    "count_other": "{{count}} Voltas",
+    "index": "#",
+    "lap": "Volta",
+    "dist": "Dist",
+    "time": "Tempo",
+    "pace": "Ritmo",
+    "spm": "SPM",
+    "avgHr": "FC MÉDIA",
+    "maxHr": "FC MÁX"
+  }
+}

@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { ArrowRight, Loader2, Lock } from 'lucide-react';
+import { Trans, useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/apiUrl';
 import SegmentedControl from '@/components/SegmentedControl';
+import { useAppLanguage } from '@/i18n/useAppLanguage';
 
 // TODO: swap the button for Strava's official "Connect with Strava" asset
 // (SVG/PNG from developers.strava.com/guidelines) once it's vendored into
@@ -10,6 +12,7 @@ import SegmentedControl from '@/components/SegmentedControl';
 // deliberately not tokenized.
 
 function HowItWorksPopover() {
+  const { t } = useTranslation('auth');
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
 
@@ -34,10 +37,7 @@ function HowItWorksPopover() {
     <div ref={ref} className="relative self-start">
       {open && (
         <div className="absolute bottom-full left-0 mb-2.5 w-[300px] rounded-xl border border-border bg-popover p-4 text-[12px] leading-[1.55] text-popover-foreground shadow-lg">
-          Signing in uses Strava&apos;s official OAuth flow — you authorize on
-          strava.com, and no password is ever shared with us. Your activities
-          are imported in read-only mode; nothing is posted to your profile. You
-          can disconnect at any time by revoking access in your Strava settings.
+          {t('login.howItWorks.body')}
         </div>
       )}
       <button
@@ -45,7 +45,7 @@ function HowItWorksPopover() {
         onClick={() => setOpen((o) => !o)}
         className="text-[11.5px] font-medium text-acc hover:underline"
       >
-        How it works →
+        {t('login.howItWorks.trigger')}
       </button>
     </div>
   );
@@ -57,6 +57,8 @@ interface LoginPageProps {
 }
 
 export default function LoginPage({ theme, onTheme }: LoginPageProps) {
+  const { t } = useTranslation('auth');
+  const { language, setLanguage } = useAppLanguage();
   const [connecting, setConnecting] = useState(false);
   const [authError, setAuthError] = useState(() =>
     new URLSearchParams(window.location.search).has('auth_error'),
@@ -91,12 +93,14 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
 
         <div className="my-auto py-10">
           <h1 className="text-[40px] font-bold leading-[1.16] tracking-[-.025em] text-[#EDF1F7]">
-            Your whole training,
-            <br />
-            in <span className="text-acc">one place</span>.
+            <Trans
+              t={t}
+              i18nKey="login.headline"
+              components={{ br: <br />, acc: <span className="text-acc" /> }}
+            />
           </h1>
           <p className="mt-4 text-[14.5px] leading-[1.5] text-[#8A93A5]">
-            Running today. Gym, diet and more coming soon.
+            {t('login.subheadline')}
           </p>
         </div>
 
@@ -129,7 +133,7 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
           doesn't exist on mobile): dark matches its #0B0F17 + hairline border;
           light keeps bg-card with an inset shadow as if the dark panel cast it */}
       <div className="relative flex w-full flex-none flex-col justify-center bg-card px-[52px] py-[48px] md:w-[480px] md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] dark:bg-[#0B0F17] md:dark:border-l md:dark:border-white/[.09] dark:shadow-none">
-        <div className="absolute right-[26px] top-[26px]">
+        <div className="absolute right-[26px] top-[26px] flex items-center gap-2">
           <SegmentedControl
             size="compact"
             items={[
@@ -139,18 +143,27 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
             active={theme}
             onPick={onTheme}
           />
+          <SegmentedControl
+            size="compact"
+            items={[
+              ['pt', 'PT'],
+              ['en', 'EN'],
+            ]}
+            active={language}
+            onPick={setLanguage}
+          />
         </div>
 
         <h2 className="text-[20px] font-semibold tracking-[-.01em] text-foreground">
-          Sign in
+          {t('login.signIn')}
         </h2>
         <p className="mt-[7px] text-[13px] leading-[1.55] text-muted-foreground">
-          Connect your Strava account to import your activities.
+          {t('login.signInSubtitle')}
         </p>
 
         {authError && (
           <p className="mt-[18px] text-[12px] text-neg">
-            Couldn&apos;t connect. Please try again.
+            {t('login.authError')}
           </p>
         )}
 
@@ -163,25 +176,25 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
           {connecting ? (
             <>
               <Loader2 size={15} className="animate-spin" strokeWidth={2} />
-              Connecting…
+              {t('login.connecting')}
             </>
           ) : (
             <>
-              Connect with Strava
+              {t('login.connect')}
               <ArrowRight size={15} strokeWidth={2} />
             </>
           )}
         </button>
 
         <p className="mt-[11px] text-[11.5px] text-muted-foreground">
-          You&apos;ll be redirected to Strava to authorize.
+          {t('login.redirectNotice')}
         </p>
 
         <div className="absolute bottom-[26px] left-[52px] right-[52px] flex flex-col gap-[10px]">
           <div className="flex items-start gap-[7px] text-muted-foreground">
             <Lock size={14} strokeWidth={1.7} className="mt-px shrink-0" />
             <span className="text-[11px] leading-[1.5]">
-              Read-only access. Nothing is posted to your profile.
+              {t('login.readOnlyNotice')}
             </span>
           </div>
           <HowItWorksPopover />

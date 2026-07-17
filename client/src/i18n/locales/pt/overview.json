@@ -1,0 +1,60 @@
+{
+  "title": "Visão geral",
+  "subtitle": "Corrida · todo o período",
+  "tiles": {
+    "totalRuns": "Total de corridas",
+    "since": "desde {{date}}",
+    "distance": "Distância",
+    "kmPerWeek": "{{km}} km / semana",
+    "time": "Tempo",
+    "avgPace": "{{pace}} médio",
+    "elevation": "Elevação",
+    "bestElevation": "melhor {{value}} m em uma corrida"
+  },
+  "calendar": {
+    "previousMonth": "Mês anterior",
+    "nextMonth": "Próximo mês",
+    "weekdaysMin": ["S", "T", "Q", "Q", "S", "S", "D"],
+    "dayMultiRuns_one": "{{count}} corrida · {{km}} km",
+    "dayMultiRuns_other": "{{count}} corridas · {{km}} km",
+    "daySingleRun": "{{date}} · {{name}} · {{km}} km · {{pace}}",
+    "monthSummary_one": "{{count}} corrida · {{km}} km em {{month}}",
+    "monthSummary_other": "{{count}} corridas · {{km}} km em {{month}}"
+  },
+  "records": {
+    "title": "Recordes pessoais",
+    "subtitle": "top 3 · todo o período",
+    "noRecordYet": "sem recorde ainda",
+    "prBadge": "PR",
+    "prBadgeTitle": "Foi PR na época em que foi corrido",
+    "longestRun": "Corrida mais longa",
+    "max": "MAX",
+    "distances": {
+      "400m": "400m",
+      "halfMile": "1/2 milha",
+      "1k": "1k",
+      "1mile": "1 milha",
+      "2mile": "2 milhas",
+      "5k": "5k",
+      "10k": "10k",
+      "15k": "15k",
+      "10mile": "10 milhas",
+      "20k": "20k",
+      "halfMarathon": "Meia maratona",
+      "marathon": "Maratona"
+    }
+  },
+  "shoes": {
+    "title": "Tênis",
+    "activeRetired": "{{active}} ativos · {{retired}} aposentados",
+    "empty": "Nenhum tênis sincronizado ainda.",
+    "default": "Padrão",
+    "retired": "Aposentado",
+    "ofLifespan": "de {{km}} km",
+    "dateRange": "{{start}} – {{end}}",
+    "runsSince_one": "{{count}} corrida · desde {{date}}",
+    "runsSince_other": "{{count}} corridas · desde {{date}}",
+    "runsOnly_one": "{{count}} corrida",
+    "runsOnly_other": "{{count}} corridas"
+  }
+}

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { mean } from './statsMath';
@@ -32,6 +33,7 @@ export default function DecouplingTrendChart({
 }: {
   points: DecouplingPoint[];
 }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -53,19 +55,27 @@ export default function DecouplingTrendChart({
   const highCount = values.filter((v) => v > HIGH_MIN).length;
   const insight =
     n === 0
-      ? 'No eligible steady runs yet (need ≥25min with HR data)'
-      : `Avg decoupling ${avg.toFixed(1)}% over ${n} steady run${n === 1 ? '' : 's'}` +
-        (highCount > 0 ? ` · ${highCount} above 10% (high)` : '');
+      ? t('cardiacDrift.insightEmpty')
+      : t('cardiacDrift.insight', {
+          avg: avg.toFixed(1),
+          runs: t('cardiacDrift.runsCount', { count: n }),
+        }) +
+        (highCount > 0
+          ? t('cardiacDrift.insightHighSuffix', { count: highCount })
+          : '');
 
   const hov = hover !== null && visible[hover] !== undefined ? hover : null;
   const hoverReading =
     hov !== null
-      ? `${formatDayMonth(visible[hov].date)} · decoupling ${visible[hov].decouplingPct.toFixed(1)}%`
+      ? t('cardiacDrift.hoverReading', {
+          date: formatDayMonth(visible[hov].date),
+          value: visible[hov].decouplingPct.toFixed(1),
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Cardiac drift"
+      title={t('cardiacDrift.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}
@@ -74,7 +84,7 @@ export default function DecouplingTrendChart({
     >
       {n === 0 ? (
         <p className="mt-4 py-8 text-center text-[12.5px] text-muted-foreground">
-          No eligible steady runs yet
+          {t('cardiacDrift.emptyState')}
         </p>
       ) : (
         <>
@@ -89,7 +99,7 @@ export default function DecouplingTrendChart({
               />
               <ChartGrid width={VB_W} top={TOP_Y} bottom={AXIS_Y} />
               <text x={6} y={y(GOOD_MAX) - 4} fontSize="10" fill="var(--pos)">
-                good &lt;{GOOD_MAX}%
+                {t('cardiacDrift.goodLine', { max: GOOD_MAX })}
               </text>
               <line
                 x1={0}
@@ -101,7 +111,7 @@ export default function DecouplingTrendChart({
                 strokeDasharray="2 3"
               />
               <text x={VB_W - 4} y={y(HIGH_MIN) - 4} fontSize="10" textAnchor="end" fill="var(--neg)">
-                high &gt;{HIGH_MIN}%
+                {t('cardiacDrift.highLine', { min: HIGH_MIN })}
               </text>
 
               {linePath && (

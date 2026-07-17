@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import Sidebar from '@/features/nav/Sidebar';
 import PlaceholderPage from '@/features/nav/PlaceholderPage';
 import Dashboard from '@/features/dashboard/Dashboard';
@@ -18,9 +19,10 @@ import {
 } from '@/features/nav/navConfig';
 
 function PageContent({ page }: { page: PageId }) {
+  const { t } = useTranslation('nav');
   switch (page) {
     case 'overview':
-      return <PlaceholderPage title="Overview" />;
+      return <PlaceholderPage title={t('sections.overview')} />;
     case 'run/overview':
       return <RunOverviewPage />;
     case 'run/analysis':

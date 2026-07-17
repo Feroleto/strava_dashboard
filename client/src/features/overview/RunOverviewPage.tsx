@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useActivities } from '@/lib/useActivities';
 import {
   formatDuration,
   formatKm,
   formatMonthShortYear,
+  formatNumber,
   formatPace,
 } from '@/lib/activityFormat';
 import RunCalendar from './RunCalendar';
@@ -39,6 +41,7 @@ function TotalTile({
 }
 
 export default function RunOverviewPage() {
+  const { t } = useTranslation('overview');
   const { activities, error } = useActivities();
   // snapshot "now" once per mount rather than calling Date.now() during
   // render/useMemo (React purity rule) — a stats page doesn't need
@@ -82,7 +85,9 @@ export default function RunOverviewPage() {
 
   if (error) {
     return (
-      <p className="p-10 text-center text-[13.5px] text-neg">Error: {error}</p>
+      <p className="p-10 text-center text-[13.5px] text-neg">
+        {t('common:error', { message: error })}
+      </p>
     );
   }
 
@@ -90,39 +95,49 @@ export default function RunOverviewPage() {
     <div className="p-[30px_34px_34px] tabular-nums">
       <div>
         <h1 className="text-[19px] font-semibold tracking-[-.01em] text-foreground">
-          Overview
+          {t('title')}
         </h1>
         <p className="mt-[2px] text-[12.5px] text-muted-foreground">
-          Run · all time
+          {t('subtitle')}
         </p>
       </div>
 
       <div className="mt-6 grid grid-cols-4">
         <TotalTile
-          label="Total runs"
+          label={t('tiles.totalRuns')}
           bordered={false}
           value={String(totals?.count ?? 0)}
-          sub={totals ? `since ${totals.since}` : undefined}
+          sub={totals ? t('tiles.since', { date: totals.since }) : undefined}
         />
         <TotalTile
-          label="Distance"
+          label={t('tiles.distance')}
           bordered
           value={`${formatKm(totals?.totalKm ?? 0)} km`}
-          sub={totals ? `${formatKm(totals.kmPerWeek)} km / week` : undefined}
-        />
-        <TotalTile
-          label="Time"
-          bordered
-          value={formatDuration(totals?.totalSec ?? 0)}
-          sub={totals ? `${formatPace(totals.avgPaceSecKm)} avg` : undefined}
-        />
-        <TotalTile
-          label="Elevation"
-          bordered
-          value={`${Math.round(totals?.totalElev ?? 0).toLocaleString('en-US')} m`}
           sub={
             totals
-              ? `best ${Math.round(totals.bestElev).toLocaleString('en-US')} m in a run`
+              ? t('tiles.kmPerWeek', { km: formatKm(totals.kmPerWeek) })
+              : undefined
+          }
+        />
+        <TotalTile
+          label={t('tiles.time')}
+          bordered
+          value={formatDuration(totals?.totalSec ?? 0)}
+          sub={
+            totals
+              ? t('tiles.avgPace', { pace: formatPace(totals.avgPaceSecKm) })
+              : undefined
+          }
+        />
+        <TotalTile
+          label={t('tiles.elevation')}
+          bordered
+          value={`${formatNumber(Math.round(totals?.totalElev ?? 0))} m`}
+          sub={
+            totals
+              ? t('tiles.bestElevation', {
+                  value: formatNumber(Math.round(totals.bestElev)),
+                })
               : undefined
           }
         />

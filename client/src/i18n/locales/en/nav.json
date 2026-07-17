@@ -1,0 +1,22 @@
+{
+  "sections": {
+    "overview": "Overview",
+    "sportsTitle": "Sports",
+    "run": "Run",
+    "runOverview": "Overview",
+    "runActivities": "Activities",
+    "runAnalysis": "Analysis",
+    "cycling": "Cycling",
+    "swimming": "Swimming"
+  },
+  "badges": {
+    "upcoming": "UPCOMING"
+  },
+  "addSport": "Add a Sport",
+  "yourProfile": "Your profile",
+  "logOut": "Log out",
+  "expandSidebar": "Expand sidebar",
+  "collapseSidebar": "Collapse sidebar",
+  "runnerFallback": "Runner",
+  "comingSoon": "Coming soon."
+}

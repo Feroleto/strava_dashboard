@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useActivityLaps } from './useActivityLaps';
 import { useHrZones } from './useHrZones';
 import { useMaxHr } from './useMaxHr';
@@ -39,6 +40,7 @@ function MaxHrControl({
   maxHr: number | null;
   onSave: (value: number) => Promise<void>;
 }) {
+  const { t } = useTranslation('analysis');
   const [value, setValue] = useState(maxHr != null ? String(maxHr) : '');
   const [saving, setSaving] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -50,7 +52,7 @@ function MaxHrControl({
   async function handleSave() {
     const parsed = Number(value);
     if (!Number.isInteger(parsed) || parsed < 100 || parsed > 230) {
-      setErr('Enter a whole number between 100 and 230');
+      setErr(t('maxHr.invalid'));
       return;
     }
     setSaving(true);
@@ -58,7 +60,7 @@ function MaxHrControl({
     try {
       await onSave(parsed);
     } catch {
-      setErr('Failed to save');
+      setErr(t('maxHr.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -66,36 +68,34 @@ function MaxHrControl({
 
   return (
     <div className="mt-2 flex flex-wrap items-center gap-2 text-[12.5px] text-muted-foreground">
-      <label htmlFor="max-hr-input">Max HR</label>
+      <label htmlFor="max-hr-input">{t('maxHr.label')}</label>
       <input
         id="max-hr-input"
         type="number"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="e.g. 190"
+        placeholder={t('maxHr.placeholder')}
         className="w-20 rounded-md border border-border bg-transparent px-2 py-1 text-foreground"
       />
-      <span>bpm</span>
+      <span>{t('maxHr.bpm')}</span>
       <button
         onClick={handleSave}
         disabled={saving}
         className="rounded-md border border-border px-2 py-1 text-foreground hover:bg-chip"
       >
-        {saving ? 'Saving…' : 'Save'}
+        {saving ? t('maxHr.saving') : t('maxHr.save')}
       </button>
       {err ? (
         <span className="text-neg">{err}</span>
       ) : maxHr == null ? (
-        <span>
-          optional — used as a fallback Z2/EF cutoff when Strava's real zone
-          data (premium only) isn't available
-        </span>
+        <span>{t('maxHr.helper')}</span>
       ) : null}
     </div>
   );
 }
 
 export default function RunAnalysisPage() {
+  const { t } = useTranslation('analysis');
   const { laps, loading, error } = useActivityLaps();
   const { zones: hrZones } = useHrZones();
   const { maxHr, save: saveMaxHr } = useMaxHr();
@@ -112,35 +112,37 @@ export default function RunAnalysisPage() {
 
   if (error) {
     return (
-      <p className="p-10 text-center text-[13.5px] text-neg">Error: {error}</p>
+      <p className="p-10 text-center text-[13.5px] text-neg">
+        {t('common:error', { message: error })}
+      </p>
     );
   }
 
   return (
     <div className="p-[30px_34px_34px] tabular-nums">
       <h1 className="text-[19px] font-semibold tracking-[-.01em] text-foreground">
-        Analysis
+        {t('page.title')}
       </h1>
       <p className="mt-[2px] text-[12.5px] text-muted-foreground">
-        Run · performance and training load
+        {t('page.subtitle')}
       </p>
       <MaxHrControl maxHr={maxHr} onSave={saveMaxHr} />
 
       {loading ? (
         <p className="p-10 text-center text-[13.5px] text-muted-foreground">
-          Loading…
+          {t('page.loading')}
         </p>
       ) : (
         <div className="mt-6 grid grid-cols-2 gap-4">
-          <SectionLabel first>Volume</SectionLabel>
+          <SectionLabel first>{t('sections.volume')}</SectionLabel>
           <WeeklyVolumeChart weeks={completed} />
           <PaceVsVolumeChart weeks={completed} />
 
-          <SectionLabel>Intensity zones</SectionLabel>
+          <SectionLabel>{t('sections.intensityZones')}</SectionLabel>
           <Z2StackedChart weeks={completed} hasMaxHr={hasMaxHr} />
           <PaceZoneHistogram laps={laps} weeks={completed} />
 
-          <SectionLabel>Training load</SectionLabel>
+          <SectionLabel>{t('sections.trainingLoad')}</SectionLabel>
           <TrainingLoadChart weeks={completed} />
           <AcwrChart weeks={completed} />
           <EfficiencyFactorChart weeks={completed} hasMaxHr={hasMaxHr} />

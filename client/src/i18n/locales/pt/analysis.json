@@ -1,0 +1,118 @@
+{
+  "page": {
+    "title": "Análise",
+    "subtitle": "Corrida · desempenho e carga de treino",
+    "loading": "Carregando…"
+  },
+  "sections": {
+    "volume": "Volume",
+    "intensityZones": "Zonas de intensidade",
+    "trainingLoad": "Carga de treino"
+  },
+  "maxHr": {
+    "label": "FC Máx",
+    "placeholder": "ex: 190",
+    "bpm": "bpm",
+    "save": "Salvar",
+    "saving": "Salvando…",
+    "invalid": "Digite um número inteiro entre 100 e 230",
+    "saveFailed": "Falha ao salvar",
+    "helper": "opcional — usado como corte de Z2/EF alternativo quando os dados reais de zona do Strava (só premium) não estão disponíveis"
+  },
+  "acwr": {
+    "title": "ACWR — agudo : crônico",
+    "bandLabel": "seguro 0.8–1.3",
+    "insightNoData": "ACWR — dados insuficientes",
+    "insightCurrent": "ACWR atual {{value}} — {{status}}",
+    "hoverReading": "Semana de {{date}} · ACWR {{value}}",
+    "status": {
+      "below": "abaixo — risco de destreino",
+      "safe": "na zona segura",
+      "high": "alto — risco de lesão"
+    }
+  },
+  "weeklyVolume": {
+    "title": "Volume semanal",
+    "insightAvg": "Média {{avg}} km/semana",
+    "insightAvgTrend": "Média {{avg}} km/semana · {{sign}}{{pct}}% vs. 4 semanas anteriores",
+    "hoverReading": "Semana de {{date}} · {{km}} km · {{runs}}",
+    "runsCount_one": "{{count}} corrida",
+    "runsCount_other": "{{count}} corridas"
+  },
+  "paceVsVolume": {
+    "title": "Ritmo vs volume semanal",
+    "axisAgeLegend": "opaco → destaque = mais antigo → recente",
+    "axisLabel": "volume semanal",
+    "hoverReading": "Semana de {{date}} · {{km}} km a {{pace}} /km",
+    "insight": {
+      "notEnough": "Semanas insuficientes com dados de ritmo",
+      "slower": "Semanas de maior volume tendem a ritmo mais lento",
+      "faster": "Semanas de maior volume tendem a ritmo mais rápido",
+      "noTradeoff": "Sem relação clara entre volume e ritmo"
+    }
+  },
+  "z2Stacked": {
+    "title": "Volume em Z2 vs fora de Z2",
+    "legendZ2": "Z2",
+    "legendAboveZ2": "acima de Z2",
+    "insightNoHr": "Z2 em — % do volume total · sem dados de FC",
+    "insight": "Z2 em {{pct}}% do volume total · {{trend}} vs. 4 semanas anteriores",
+    "trend": {
+      "rising": "subindo",
+      "falling": "caindo"
+    },
+    "tierEstimatedMaxHr": " · algumas semanas estimadas pela FC máx (sem dado de zona premium)",
+    "tierPlaceholder": " · corte de Z2 estimado (placeholder de 150bpm)",
+    "hoverReading": "Semana de {{date}} · Z2 {{z2km}} de {{km}} km ({{pct}}%)"
+  },
+  "paceZoneHistogram": {
+    "title": "Volume por zona de ritmo",
+    "insight": "{{pct}}% do volume a {{label}} /km",
+    "insightEmpty": "Sem dados de ritmo neste período",
+    "hoverReading": "{{label}} /km · {{km}} km · {{laps}}",
+    "lapsCount_one": "{{count}} volta",
+    "lapsCount_other": "{{count}} voltas"
+  },
+  "trainingLoad": {
+    "title": "Carga de treino semanal",
+    "insight": "Média {{avg}} u.a. · última semana {{sign}}{{pct}}% vs. média",
+    "insightNoHr": " · sem dados de FC",
+    "hoverReading": "Semana de {{date}} · carga {{load}} u.a. · {{runs}}",
+    "runsCount_one": "{{count}} corrida",
+    "runsCount_other": "{{count}} corridas"
+  },
+  "efficiencyFactor": {
+    "title": "Fator de Eficiência",
+    "insightNoData": "EF — dados insuficientes",
+    "insightAvg": "EF média {{avg}}",
+    "insightTrend": " · tendência {{sign}}{{pct}}% nas últimas {{count}} semanas",
+    "insightPlaceholder": " · corte de Z2 estimado (placeholder de 150bpm)",
+    "hoverReading": "Semana de {{date}} · EF {{value}}"
+  },
+  "monotonyStrain": {
+    "title": "Monotonia e strain",
+    "barsLegend": "barras = strain",
+    "warningLine": "alerta 1.5",
+    "highRiskLine": "risco alto 2.0",
+    "insight": "Monotonia {{value}} — {{status}} · strain {{strain}} u.a.",
+    "insightNoData": "sem dados",
+    "hoverReading": "Semana de {{date}} · monotonia {{value}} · strain {{strain}} u.a.",
+    "status": {
+      "varied": "treino variado",
+      "monotonous": "ficando monótono",
+      "high": "risco alto"
+    }
+  },
+  "cardiacDrift": {
+    "title": "Deriva cardíaca",
+    "goodLine": "bom <{{max}}%",
+    "highLine": "alto >{{min}}%",
+    "insightEmpty": "Ainda sem corridas steady elegíveis (precisa de ≥25min com dados de FC)",
+    "insight": "Deriva média de {{avg}}% em {{runs}}",
+    "insightHighSuffix": " · {{count}} acima de 10% (alto)",
+    "runsCount_one": "{{count}} corrida steady",
+    "runsCount_other": "{{count}} corridas steady",
+    "hoverReading": "{{date}} · deriva {{value}}%",
+    "emptyState": "Ainda sem corridas steady elegíveis"
+  }
+}

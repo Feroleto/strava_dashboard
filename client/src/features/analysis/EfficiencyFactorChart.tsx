@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { mean, linreg } from './statsMath';
@@ -41,6 +42,7 @@ export default function EfficiencyFactorChart({
    * EF) is computed against the 150bpm placeholder in that case */
   hasMaxHr?: boolean;
 }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -75,22 +77,29 @@ export default function EfficiencyFactorChart({
 
   const insight =
     finite.length === 0
-      ? 'EF — not enough data'
-      : `EF avg ${avg.toFixed(2)}` +
+      ? t('efficiencyFactor.insightNoData')
+      : t('efficiencyFactor.insightAvg', { avg: avg.toFixed(2) }) +
         (trendPct !== null
-          ? ` · trend ${trendPct >= 0 ? '+' : ''}${trendPct.toFixed(0)}% over last ${trendPoints.length} weeks`
+          ? t('efficiencyFactor.insightTrend', {
+              sign: trendPct >= 0 ? '+' : '',
+              pct: trendPct.toFixed(0),
+              count: trendPoints.length,
+            })
           : '') +
-        (hasMaxHr ? '' : ' · Z2 threshold estimated (150bpm placeholder)');
+        (hasMaxHr ? '' : t('efficiencyFactor.insightPlaceholder'));
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
     hov !== null
-      ? `Week of ${formatDayMonth(visible[hov].start)} · EF ${values[hov] !== null ? (values[hov] as number).toFixed(2) : '—'}`
+      ? t('efficiencyFactor.hoverReading', {
+          date: formatDayMonth(visible[hov].start),
+          value: values[hov] !== null ? (values[hov] as number).toFixed(2) : '—',
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Efficiency Factor"
+      title={t('efficiencyFactor.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}

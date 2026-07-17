@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   formatDayMonth,
   formatKm,
@@ -19,11 +20,12 @@ export type Granularity = 'week' | 'month';
 
 export type Period = '4' | '8' | '12' | 'all';
 
-const PERIODS: [Period, string][] = [
-  ['4', '4 w'],
-  ['8', '8 w'],
-  ['12', '12 w'],
-  ['all', 'All'],
+// second tuple element is a dashboard.json key, translated at render time
+const PERIOD_KEYS: [Period, string][] = [
+  ['4', 'chart.periods.4'],
+  ['8', 'chart.periods.8'],
+  ['12', 'chart.periods.12'],
+  ['all', 'chart.periods.all'],
 ];
 
 const VB_W = 720;
@@ -61,7 +63,12 @@ export default function WeeklyChart({
   onSelect,
   children,
 }: WeeklyChartProps) {
+  const { t } = useTranslation('dashboard');
   const [hover, setHover] = useState<number | null>(null);
+  const periods: [Period, string][] = PERIOD_KEYS.map(([k, key]) => [
+    k,
+    t(key),
+  ]);
 
   const monthly = granularity === 'month';
   const n = bins.length;
@@ -81,21 +88,21 @@ export default function WeeklyChart({
   const reading =
     hov !== null
       ? monthly
-        ? `${formatMonthLong(bins[hov].start)} · ${formatKm(bins[hov].km)} km · ${bins[hov].count} run${bins[hov].count === 1 ? '' : 's'}`
+        ? `${formatMonthLong(bins[hov].start)} · ${formatKm(bins[hov].km)} km · ${t('list.runsCount', { count: bins[hov].count })}`
         : `${formatWeekRange(bins[hov].start)} · ${formatKm(bins[hov].km)} km`
-      : `${formatKm(totalKm)} km in this period`;
+      : t('chart.kmInPeriod', { km: formatKm(totalKm) });
 
   return (
     <div className="mb-9 rounded-[var(--rad)] border border-border bg-card px-7 pt-6 pb-4 transition-[background] duration-[250ms]">
       <div className="mb-1.5 flex items-center justify-between">
         <div className="text-sm font-semibold text-foreground">
-          {monthly ? 'Monthly distance' : 'Weekly distance'}
+          {monthly ? t('chart.monthlyDistance') : t('chart.weeklyDistance')}
         </div>
         <div className="flex items-center gap-3.5">
           <div className="text-[12.5px] text-muted-foreground">{reading}</div>
           <SegmentedControl
             size="compact"
-            items={PERIODS}
+            items={periods}
             active={period}
             onPick={onPeriodChange}
           />

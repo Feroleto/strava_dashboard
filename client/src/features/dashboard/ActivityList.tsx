@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   WORKOUT_META,
   formatDayMonth,
@@ -41,19 +42,20 @@ export default function ActivityList({
   onPageChange,
   allModeFooter,
 }: ActivityListProps) {
+  const { t } = useTranslation('dashboard');
   const [peekId, setPeekId] = useState<string | null>(null);
 
   if (loading) {
     return (
       <p className="py-10 text-center text-[13.5px] text-muted-foreground">
-        Carregando…
+        {t('list.loading')}
       </p>
     );
   }
   if (groups.length === 0) {
     return (
       <p className="py-10 text-center text-[13.5px] text-muted-foreground">
-        Nenhuma atividade neste filtro
+        {t('list.empty')}
       </p>
     );
   }
@@ -74,7 +76,7 @@ export default function ActivityList({
               )}
             </div>
             <div className="text-[12.5px] text-muted-foreground">
-              {week.count} run{week.count === 1 ? '' : 's'} ·{' '}
+              {t('list.runsCount', { count: week.count })} ·{' '}
               {formatKm(week.km)} km
             </div>
           </div>
@@ -123,7 +125,9 @@ export default function ActivityList({
                     style={{
                       transform: peek ? 'rotate(90deg)' : 'rotate(0deg)',
                     }}
-                    aria-label={peek ? 'Fechar resumo' : 'Abrir resumo'}
+                    aria-label={
+                      peek ? t('list.closeSummary') : t('list.openSummary')
+                    }
                     aria-expanded={peek}
                   >
                     ›
@@ -132,7 +136,7 @@ export default function ActivityList({
                 {peek && (
                   <div className="grid grid-cols-4 gap-2.5 px-5 pt-0.5 pb-4">
                     <PeekCard
-                      label="Elevation"
+                      label={t('list.elevation')}
                       value={
                         a.elevationGainM != null
                           ? `${Math.round(a.elevationGainM)} m`
@@ -140,7 +144,7 @@ export default function ActivityList({
                       }
                     />
                     <PeekCard
-                      label="AVG HR"
+                      label={t('list.avgHr')}
                       value={
                         a.averageBpm != null
                           ? `${Math.round(a.averageBpm)} bpm`
@@ -148,13 +152,13 @@ export default function ActivityList({
                       }
                     />
                     <PeekCard
-                      label="MAX HR"
+                      label={t('list.maxHr')}
                       value={
                         a.maxBpm != null ? `${Math.round(a.maxBpm)} bpm` : '—'
                       }
                     />
                     <PeekCard
-                      label="Cadence"
+                      label={t('list.cadence')}
                       value={
                         a.averageCadence != null
                           ? `${Math.round(a.averageCadence)} spm`
@@ -175,17 +179,17 @@ export default function ActivityList({
             disabled={currentPage <= 1}
             className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
           >
-            ‹ Recent weeks
+            {t('list.recentWeeks')}
           </button>
           <span className="text-[12.5px] text-muted-foreground">
-            Page {currentPage} of {totalPages}
+            {t('list.pageOf', { current: currentPage, total: totalPages })}
           </span>
           <button
             onClick={() => onPageChange(currentPage + 1)}
             disabled={currentPage >= totalPages}
             className="cursor-pointer rounded-[9px] bg-chip px-[13px] py-[7px] text-[13px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-chip"
           >
-            Previous weeks ›
+            {t('list.previousWeeks')}
           </button>
         </div>
       )}

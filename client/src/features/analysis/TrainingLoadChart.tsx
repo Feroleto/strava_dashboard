@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { mean } from './statsMath';
@@ -16,6 +17,7 @@ const AXIS_Y = 200;
 const PLOT_H = AXIS_Y - TOP_Y;
 
 export default function TrainingLoadChart({ weeks }: { weeks: WeekMetrics[] }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -38,18 +40,25 @@ export default function TrainingLoadChart({ weeks }: { weeks: WeekMetrics[] }) {
   const lastWeek = visible.at(-1)?.load ?? 0;
   const pct = avg > 0 ? ((lastWeek - avg) / avg) * 100 : 0;
   const insight =
-    `Avg ${avg.toFixed(1)} a.u. · last week ${pct >= 0 ? '+' : ''}${pct.toFixed(0)}% vs avg` +
-    (noHrData ? ' · no HR data' : '');
+    t('trainingLoad.insight', {
+      avg: avg.toFixed(1),
+      sign: pct >= 0 ? '+' : '',
+      pct: pct.toFixed(0),
+    }) + (noHrData ? t('trainingLoad.insightNoHr') : '');
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
     hov !== null
-      ? `Week of ${formatDayMonth(visible[hov].start)} · load ${Math.round(visible[hov].load)} a.u. · ${visible[hov].count} run${visible[hov].count === 1 ? '' : 's'}`
+      ? t('trainingLoad.hoverReading', {
+          date: formatDayMonth(visible[hov].start),
+          load: Math.round(visible[hov].load),
+          runs: t('trainingLoad.runsCount', { count: visible[hov].count }),
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Weekly training load"
+      title={t('trainingLoad.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}

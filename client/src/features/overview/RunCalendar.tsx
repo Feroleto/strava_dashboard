@@ -1,12 +1,12 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Activity } from '@/lib/types';
 import { formatKm, formatMonthDay, formatPace } from '@/lib/activityFormat';
+import { currentIntlLocale } from '@/lib/dateLocale';
 
 interface RunCalendarProps {
   activities: Activity[];
 }
-
-const WEEKDAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
 function midnight(d: Date): Date {
   const c = new Date(d);
@@ -38,6 +38,10 @@ function dayKey(d: Date): string {
 }
 
 export default function RunCalendar({ activities }: RunCalendarProps) {
+  const { t } = useTranslation('overview');
+  const weekdays = t('calendar.weekdaysMin', {
+    returnObjects: true,
+  }) as string[];
   const earliestDate = useMemo(
     () =>
       activities.length > 0
@@ -97,7 +101,7 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
     ...Array.from({ length: total }, (_, i) => i + 1),
   ];
 
-  const monthLabel = visibleMonth.toLocaleDateString('en-US', {
+  const monthLabel = visibleMonth.toLocaleDateString(currentIntlLocale(), {
     month: 'long',
     year: 'numeric',
   });
@@ -105,9 +109,23 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
   const hoverList = hoverDay ? byDay.get(hoverDay) : undefined;
   const footer = hoverList
     ? hoverList.length > 1
-      ? `${hoverList.length} runs · ${formatKm(hoverList.reduce((s, a) => s + (a.distanceKm ?? 0), 0))} km`
-      : `${formatMonthDay(new Date(hoverList[0].startDate))} · ${hoverList[0].name} · ${formatKm(hoverList[0].distanceKm ?? 0)} km · ${formatPace(hoverList[0].paceRawSecKm)}`
-    : `${monthTotals.count} runs · ${formatKm(monthTotals.km)} km in ${visibleMonth.toLocaleDateString('en-US', { month: 'long' })}`;
+      ? t('calendar.dayMultiRuns', {
+          count: hoverList.length,
+          km: formatKm(hoverList.reduce((s, a) => s + (a.distanceKm ?? 0), 0)),
+        })
+      : t('calendar.daySingleRun', {
+          date: formatMonthDay(new Date(hoverList[0].startDate)),
+          name: hoverList[0].name,
+          km: formatKm(hoverList[0].distanceKm ?? 0),
+          pace: formatPace(hoverList[0].paceRawSecKm),
+        })
+    : t('calendar.monthSummary', {
+        count: monthTotals.count,
+        km: formatKm(monthTotals.km),
+        month: visibleMonth.toLocaleDateString(currentIntlLocale(), {
+          month: 'long',
+        }),
+      });
 
   return (
     <div className="rounded-[12px] border border-border p-[18px]">
@@ -119,7 +137,7 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
           <button
             onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
             disabled={!canPrev}
-            aria-label="Previous month"
+            aria-label={t('calendar.previousMonth')}
             className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30"
           >
             ‹
@@ -127,7 +145,7 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
           <button
             onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
             disabled={!canNext}
-            aria-label="Next month"
+            aria-label={t('calendar.nextMonth')}
             className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30"
           >
             ›
@@ -136,7 +154,7 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
       </div>
 
       <div className="mt-3 grid grid-cols-7">
-        {WEEKDAYS.map((w, i) => (
+        {weekdays.map((w, i) => (
           <div
             key={i}
             className="flex h-5 items-center justify-center text-[10px] font-semibold text-muted-foreground"

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { ActivityLapPoint } from '@/lib/types';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
 import type { WeekMetrics } from './useTrainingMetrics';
@@ -32,6 +33,7 @@ export default function PaceZoneHistogram({
   laps: ActivityLapPoint[];
   weeks: WeekMetrics[];
 }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -67,18 +69,25 @@ export default function PaceZoneHistogram({
   );
   const insight =
     totalKm > 0
-      ? `${((kmPerBin[maxBinIdx] / totalKm) * 100).toFixed(0)}% of volume at ${BINS[maxBinIdx].label} /km`
-      : 'No pace data in this period';
+      ? t('paceZoneHistogram.insight', {
+          pct: ((kmPerBin[maxBinIdx] / totalKm) * 100).toFixed(0),
+          label: BINS[maxBinIdx].label,
+        })
+      : t('paceZoneHistogram.insightEmpty');
 
   const hov = hover !== null ? hover : null;
   const hoverReading =
     hov !== null
-      ? `${BINS[hov].label} /km · ${kmPerBin[hov].toFixed(1)} km · ${countPerBin[hov]} lap${countPerBin[hov] === 1 ? '' : 's'}`
+      ? t('paceZoneHistogram.hoverReading', {
+          label: BINS[hov].label,
+          km: kmPerBin[hov].toFixed(1),
+          laps: t('paceZoneHistogram.lapsCount', { count: countPerBin[hov] }),
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Volume by pace zone"
+      title={t('paceZoneHistogram.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}

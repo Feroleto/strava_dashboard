@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { formatDayMonth } from '@/lib/activityFormat';
 import { smoothPath } from '@/lib/chartPath';
 import { sliceByPeriod, type AnalysisPeriod } from './period';
@@ -15,13 +16,16 @@ const AXIS_Y = 146;
 const PLOT_H = AXIS_Y - TOP_Y;
 const MONOTONY_MAX = 2.3;
 
-function monotonyStatus(m: number): string {
-  if (m < 1.5) return 'varied training';
-  if (m <= 2.0) return 'getting monotonous';
-  return 'high risk';
+type MonotonyStatus = 'varied' | 'monotonous' | 'high';
+
+function monotonyStatus(m: number): MonotonyStatus {
+  if (m < 1.5) return 'varied';
+  if (m <= 2.0) return 'monotonous';
+  return 'high';
 }
 
 export default function MonotonyStrainChart({ weeks }: { weeks: WeekMetrics[] }) {
+  const { t } = useTranslation('analysis');
   const [period, setPeriod] = useState<AnalysisPeriod>('12');
   const [hover, setHover] = useState<number | null>(null);
 
@@ -41,18 +45,26 @@ export default function MonotonyStrainChart({ weeks }: { weeks: WeekMetrics[] })
 
   const last = visible.at(-1);
   const insight = last
-    ? `Monotony ${last.monotony.toFixed(2)} — ${monotonyStatus(last.monotony)} · strain ${Math.round(last.strain)} a.u.`
-    : 'no data';
+    ? t('monotonyStrain.insight', {
+        value: last.monotony.toFixed(2),
+        status: t(`monotonyStrain.status.${monotonyStatus(last.monotony)}`),
+        strain: Math.round(last.strain),
+      })
+    : t('monotonyStrain.insightNoData');
 
   const hov = hover !== null && visible[hover] ? hover : null;
   const hoverReading =
     hov !== null
-      ? `Week of ${formatDayMonth(visible[hov].start)} · monotony ${visible[hov].monotony.toFixed(2)} · strain ${Math.round(visible[hov].strain)} a.u.`
+      ? t('monotonyStrain.hoverReading', {
+          date: formatDayMonth(visible[hov].start),
+          value: visible[hov].monotony.toFixed(2),
+          strain: Math.round(visible[hov].strain),
+        })
       : null;
 
   return (
     <AnalysisCard
-      title="Monotony & strain"
+      title={t('monotonyStrain.title')}
       period={period}
       onPeriodChange={setPeriod}
       insight={insight}
@@ -63,7 +75,7 @@ export default function MonotonyStrainChart({ weeks }: { weeks: WeekMetrics[] })
         <svg viewBox={`0 0 ${VB_W} ${VB_H}`} className="block w-full">
           <ChartGrid width={VB_W} top={TOP_Y} bottom={AXIS_Y} />
           <text x={6} y={16} fontSize="10" fill="var(--muted-foreground)">
-            bars = strain
+            {t('monotonyStrain.barsLegend')}
           </text>
 
           {visible.map((w, i) => (
@@ -87,7 +99,7 @@ export default function MonotonyStrainChart({ weeks }: { weeks: WeekMetrics[] })
             strokeDasharray="2 3"
           />
           <text x={VB_W - 4} y={yLine(1.5) - 4} fontSize="10" textAnchor="end" fill="var(--muted-foreground)">
-            warning 1.5
+            {t('monotonyStrain.warningLine')}
           </text>
           <line
             x1={0}
@@ -99,7 +111,7 @@ export default function MonotonyStrainChart({ weeks }: { weeks: WeekMetrics[] })
             strokeDasharray="2 3"
           />
           <text x={VB_W - 4} y={yLine(2.0) - 4} fontSize="10" textAnchor="end" fill="var(--neg)">
-            high risk 2.0
+            {t('monotonyStrain.highRiskLine')}
           </text>
 
           {linePath && (

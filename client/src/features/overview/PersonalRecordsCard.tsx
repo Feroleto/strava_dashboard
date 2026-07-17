@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Activity, PersonalBestRecord } from '@/lib/types';
 import {
   formatDurationShort,
@@ -13,19 +14,24 @@ interface PersonalRecordsCardProps {
   activities: Activity[];
 }
 
-const DISTANCES: { key: string; chip: string; title: string }[] = [
-  { key: '400m', chip: '400M', title: '400m' },
-  { key: '1/2 mile', chip: '½ MI', title: '1/2 mile' },
-  { key: '1k', chip: '1K', title: '1k' },
-  { key: '1 mile', chip: '1 MI', title: '1 mile' },
-  { key: '2 mile', chip: '2 MI', title: '2 miles' },
-  { key: '5k', chip: '5K', title: '5k' },
-  { key: '10k', chip: '10K', title: '10k' },
-  { key: '15k', chip: '15K', title: '15k' },
-  { key: '10 mile', chip: '10 MI', title: '10 miles' },
-  { key: '20k', chip: '20K', title: '20k' },
-  { key: 'half-marathon', chip: 'HM', title: 'Half marathon' },
-  { key: 'marathon', chip: 'MAR', title: 'Marathon' },
+// titleKey points into the 'overview' i18n namespace, translated at render time
+const DISTANCES: { key: string; chip: string; titleKey: string }[] = [
+  { key: '400m', chip: '400M', titleKey: 'records.distances.400m' },
+  { key: '1/2 mile', chip: '½ MI', titleKey: 'records.distances.halfMile' },
+  { key: '1k', chip: '1K', titleKey: 'records.distances.1k' },
+  { key: '1 mile', chip: '1 MI', titleKey: 'records.distances.1mile' },
+  { key: '2 mile', chip: '2 MI', titleKey: 'records.distances.2mile' },
+  { key: '5k', chip: '5K', titleKey: 'records.distances.5k' },
+  { key: '10k', chip: '10K', titleKey: 'records.distances.10k' },
+  { key: '15k', chip: '15K', titleKey: 'records.distances.15k' },
+  { key: '10 mile', chip: '10 MI', titleKey: 'records.distances.10mile' },
+  { key: '20k', chip: '20K', titleKey: 'records.distances.20k' },
+  {
+    key: 'half-marathon',
+    chip: 'HM',
+    titleKey: 'records.distances.halfMarathon',
+  },
+  { key: 'marathon', chip: 'MAR', titleKey: 'records.distances.marathon' },
 ];
 
 const COLUMNS = 3;
@@ -63,6 +69,7 @@ function RecordCell({
   onToggle: () => void;
   last: boolean;
 }) {
+  const { t } = useTranslation('overview');
   const best = records[0];
   const runnersUp = records.slice(1);
   const bestActivity = best ? activityById.get(best.activityId) : undefined;
@@ -79,7 +86,7 @@ function RecordCell({
         <Chip label={def.chip} muted={!best} />
         <div className="min-w-0 flex-1">
           <div className="truncate text-[12.5px] font-semibold text-foreground">
-            {def.title}
+            {t(def.titleKey)}
           </div>
           {/* name and date on separate lines — the narrow cell can't fit
               both inline, and the date must never be the part that truncates */}
@@ -99,7 +106,7 @@ function RecordCell({
             </>
           ) : (
             <div className="mt-[1px] text-[11px] text-muted-foreground">
-              no record yet
+              {t('records.noRecordYet')}
             </div>
           )}
         </div>
@@ -157,9 +164,9 @@ function RecordCell({
                       background:
                         'color-mix(in oklab, var(--acc) 10%, transparent)',
                     }}
-                    title="PR at the time it was run"
+                    title={t('records.prBadgeTitle')}
                   >
-                    PR
+                    {t('records.prBadge')}
                   </span>
                 )}
               </div>
@@ -174,6 +181,7 @@ function RecordCell({
 export default function PersonalRecordsCard({
   activities,
 }: PersonalRecordsCardProps) {
+  const { t } = useTranslation('overview');
   const [records, setRecords] = useState<PersonalBestRecord[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
 
@@ -213,10 +221,10 @@ export default function PersonalRecordsCard({
     <div className="rounded-[12px] border border-border p-[18px_20px]">
       <div className="flex items-center justify-between">
         <div className="text-[13.5px] font-semibold text-foreground">
-          Personal records
+          {t('records.title')}
         </div>
         <div className="text-[11.5px] text-muted-foreground">
-          top 3 · all time
+          {t('records.subtitle')}
         </div>
       </div>
 
@@ -248,11 +256,11 @@ export default function PersonalRecordsCard({
               background: 'color-mix(in oklab, var(--acc) 10%, transparent)',
             }}
           >
-            MAX
+            {t('records.max')}
           </div>
           <div className="min-w-0 flex-1">
             <div className="text-[12.5px] font-semibold text-foreground">
-              Longest run
+              {t('records.longestRun')}
             </div>
             <div className="mt-[1px] truncate text-[11px] text-muted-foreground">
               {longest.name} · {formatMonthDayYear(new Date(longest.startDate))}

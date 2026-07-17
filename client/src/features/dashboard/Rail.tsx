@@ -1,7 +1,9 @@
+import { useTranslation } from 'react-i18next';
 import {
   WORKOUT_META,
   formatDuration,
   formatKm,
+  formatNumber,
   formatPace,
 } from '@/lib/activityFormat';
 import SyncPanel from './SyncPanel';
@@ -35,10 +37,11 @@ export default function Rail({
   typeCounts,
   onSynced,
 }: RailProps) {
+  const { t } = useTranslation('dashboard');
   return (
     <div className="flex flex-col">
       <div className="text-2xl font-semibold tracking-[-.02em] text-foreground">
-        Runs
+        {t('rail.title')}
       </div>
       <div className="mt-[3px] text-[13px] text-muted-foreground">
         {subtitle}
@@ -49,26 +52,26 @@ export default function Rail({
           {formatKm(totals.km)}
         </div>
         <div className="mt-1.5 text-[13.5px] text-muted-foreground">
-          km covered in this period
+          {t('rail.kmSubtitle')}
         </div>
       </div>
 
       <div className="mt-7 border-t border-border">
-        <RailStat label="Activities" value={String(totals.count)} />
-        <RailStat label="Average Pace" value={formatPace(avgPace)} />
-        <RailStat label="Total Time" value={formatDuration(totals.sec)} />
+        <RailStat label={t('rail.activities')} value={String(totals.count)} />
+        <RailStat label={t('rail.averagePace')} value={formatPace(avgPace)} />
+        <RailStat label={t('rail.totalTime')} value={formatDuration(totals.sec)} />
         <RailStat
-          label="Elevation Gain"
-          value={`${Math.round(totals.elev).toLocaleString('pt-BR')} m`}
+          label={t('rail.elevationGain')}
+          value={`${formatNumber(Math.round(totals.elev))} m`}
         />
       </div>
 
       <div className="mt-[26px]">
         <div className="mb-2.5 text-[11.5px] font-medium tracking-[.05em] uppercase text-muted-foreground">
-          Workout Type
+          {t('rail.workoutType')}
         </div>
         <div className="flex flex-col gap-1.5">
-          {TYPE_OPTIONS.map(([key, label]) => {
+          {TYPE_OPTIONS.map(([key, labelKey]) => {
             const active = typeFilter === key;
             return (
               <button
@@ -89,7 +92,7 @@ export default function Rail({
                         : WORKOUT_META[key].dot,
                   }}
                 />
-                {label}
+                {t(labelKey)}
                 <span className="ml-auto font-normal text-muted-foreground">
                   {typeCounts[key] ?? 0}
                 </span>

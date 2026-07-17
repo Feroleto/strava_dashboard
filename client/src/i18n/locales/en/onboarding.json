@@ -1,0 +1,29 @@
+{
+  "badge": {
+    "connected": "Connected to Strava"
+  },
+  "intro": {
+    "titleWithName": "Almost there, {{name}}",
+    "title": "Almost there",
+    "body": "We'll import your Strava activity history. This happens only once — after that, everything syncs automatically.",
+    "cta": "Import activities",
+    "hint": "Takes about a minute, depending on your history."
+  },
+  "syncing": {
+    "title": "Importing from Strava…",
+    "finding": "Finding your activities…",
+    "ofTotal_one": "of {{count}} activity",
+    "ofTotal_other": "of {{count}} activities",
+    "failed": "Import failed.",
+    "retry": "Try again",
+    "processingYear": "Processing {{year}}…",
+    "readOnlyNotice": "Read-only access — nothing is posted to your Strava."
+  },
+  "done": {
+    "title": "All set",
+    "activityCount_one": "{{count}} activity",
+    "activityCount_other": "{{count}} activities",
+    "distanceKm": "{{km}} km",
+    "cta": "Open dashboard"
+  }
+}

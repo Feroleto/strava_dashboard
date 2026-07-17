@@ -1,0 +1,36 @@
+{
+  "lapType": {
+    "warmup": "Warmup",
+    "cooldown": "Cooldown",
+    "workout": "Run",
+    "rest": "Rec",
+    "run": "Lap",
+    "steady": "Km",
+    "activity": "Activity"
+  },
+  "return": "← Return",
+  "noGps": "No GPS data for this activity",
+  "stats": {
+    "distance": "Distance",
+    "time": "Time",
+    "pace": "Pace",
+    "elevation": "Elevation",
+    "avgHr": "AVG HR",
+    "maxHr": "MAX HR",
+    "cadence": "Cadence",
+    "bestPace": "Best Pace"
+  },
+  "laps": {
+    "title": "Laps",
+    "count_one": "{{count}} Lap",
+    "count_other": "{{count}} Laps",
+    "index": "#",
+    "lap": "Lap",
+    "dist": "Dist",
+    "time": "Time",
+    "pace": "Pace",
+    "spm": "SPM",
+    "avgHr": "AVG HR",
+    "maxHr": "MAX HR"
+  }
+}

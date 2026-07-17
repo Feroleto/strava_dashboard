@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import WeeklyChart, { type Granularity, type Period } from './WeeklyChart';
 import DateRangePicker, { type DateRange } from './DateRangePicker';
 import Rail from './Rail';
@@ -19,6 +20,7 @@ import {
 } from './bins';
 
 export default function Dashboard() {
+  const { t } = useTranslation('dashboard');
   const [period, setPeriod] = useState<Period>('12');
   const [dateRange, setDateRange] = useState<DateRange | null>(null);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>('ALL');
@@ -177,7 +179,9 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <p className="p-10 text-center text-[13.5px] text-neg">Erro: {error}</p>
+      <p className="p-10 text-center text-[13.5px] text-neg">
+        {t('common:error', { message: error })}
+      </p>
     );
   }
 
@@ -188,8 +192,8 @@ export default function Dashboard() {
           dateRange
             ? formatRangeLabel(dateRange)
             : isAll
-              ? 'All runs'
-              : `Last ${n} weeks`
+              ? t('rail.allRuns')
+              : t('rail.lastNWeeks', { count: n })
         }
         totals={totals}
         avgPace={avgPace}
@@ -262,8 +266,8 @@ export default function Dashboard() {
             allModeFooter={
               isAll && !rangeActive
                 ? olderWeeks > 0
-                  ? `+ ${olderWeeks} previous weeks · Select a month in the graph to filter`
-                  : 'Select a month in the graph to filter'
+                  ? `${t('list.olderWeeks', { count: olderWeeks })} · ${t('list.selectMonth')}`
+                  : t('list.selectMonth')
                 : null
             }
           />

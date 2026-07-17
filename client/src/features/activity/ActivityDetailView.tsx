@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import {
   WORKOUT_META,
   formatDurationShort,
@@ -6,6 +7,7 @@ import {
   formatMinSec,
   formatPace,
 } from '@/lib/activityFormat';
+import { currentIntlLocale } from '@/lib/dateLocale';
 import RouteMap from './RouteMap';
 import type { ActivityDetail, ActivityLap } from '@/lib/types';
 import { apiFetch } from '@/lib/api';
@@ -13,26 +15,27 @@ import { apiFetch } from '@/lib/api';
 const MAP_W = 640;
 const MAP_H = 240;
 
+// values are activity.json keys, translated at render time
 const LAP_TYPE_BASE: Record<string, string> = {
-  WARMUP: 'Warmup',
-  COOLDOWN: 'Cooldown',
-  WORKOUT: 'Run',
-  REST: 'Rec',
-  RUN: 'Volta',
-  STEADY: 'Km',
-  ACTIVITY: 'Activity',
+  WARMUP: 'lapType.warmup',
+  COOLDOWN: 'lapType.cooldown',
+  WORKOUT: 'lapType.workout',
+  REST: 'lapType.rest',
+  RUN: 'lapType.run',
+  STEADY: 'lapType.steady',
+  ACTIVITY: 'lapType.activity',
 };
 
 // "Run 1", "Rec 1", "Km 3" — numbered per type; single-occurrence types
 // (Warmup, Cooldown) keep the bare label
-function lapLabels(laps: ActivityLap[]): string[] {
+function lapLabels(laps: ActivityLap[], t: (key: string) => string): string[] {
   const perType: Record<string, number> = {};
   for (const lap of laps) {
     perType[lap.lapType] = (perType[lap.lapType] ?? 0) + 1;
   }
   const counters: Record<string, number> = {};
   return laps.map((lap) => {
-    const base = LAP_TYPE_BASE[lap.lapType] ?? lap.lapType;
+    const base = LAP_TYPE_BASE[lap.lapType] ? t(LAP_TYPE_BASE[lap.lapType]) : lap.lapType;
     counters[lap.lapType] = (counters[lap.lapType] ?? 0) + 1;
     return perType[lap.lapType] > 1 ? `${base} ${counters[lap.lapType]}` : base;
   });
@@ -40,12 +43,13 @@ function lapLabels(laps: ActivityLap[]): string[] {
 
 function formatDateFull(iso: string): string {
   const d = new Date(iso);
-  const date = d.toLocaleDateString('en-US', {
+  const locale = currentIntlLocale();
+  const date = d.toLocaleDateString(locale, {
     weekday: 'long',
     day: '2-digit',
     month: 'long',
   });
-  const time = d.toLocaleTimeString('pt-BR', {
+  const time = d.toLocaleTimeString(locale, {
     hour: '2-digit',
     minute: '2-digit',
   });
@@ -74,6 +78,7 @@ export default function ActivityDetailView({
   id,
   onBack,
 }: ActivityDetailViewProps) {
+  const { t } = useTranslation('activity');
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -90,13 +95,15 @@ export default function ActivityDetailView({
 
   if (error) {
     return (
-      <p className="py-10 text-center text-[13.5px] text-neg">Erro: {error}</p>
+      <p className="py-10 text-center text-[13.5px] text-neg">
+        {t('common:error', { message: error })}
+      </p>
     );
   }
   if (!activity) {
     return (
       <p className="py-10 text-center text-[13.5px] text-muted-foreground">
-        Carregando…
+        {t('common:loading')}
       </p>
     );
   }
@@ -107,38 +114,38 @@ export default function ActivityDetailView({
     timedLaps.length > 0
       ? Math.min(...timedLaps.map((l) => l.avgPaceSecKm))
       : null;
-  const labels = lapLabels(activity.laps);
+  const labels = lapLabels(activity.laps, t);
 
   const stats: [string, string][] = [
     [
-      'Distance',
+      t('stats.distance'),
       activity.distanceKm != null ? `${formatKm(activity.distanceKm)} km` : '—',
     ],
-    ['Time', formatDurationShort(activity.movingTimeSec)],
-    ['Pace', formatPace(activity.paceRawSecKm)],
+    [t('stats.time'), formatDurationShort(activity.movingTimeSec)],
+    [t('stats.pace'), formatPace(activity.paceRawSecKm)],
     [
-      'Elevetaion',
+      t('stats.elevation'),
       activity.elevationGainM != null
         ? `${Math.round(activity.elevationGainM)} m`
         : '—',
     ],
     [
-      'AVG HR',
+      t('stats.avgHr'),
       activity.averageBpm != null
         ? `${Math.round(activity.averageBpm)} bpm`
         : '—',
     ],
     [
-      'MAX HR',
+      t('stats.maxHr'),
       activity.maxBpm != null ? `${Math.round(activity.maxBpm)} bpm` : '—',
     ],
     [
-      'Cadence',
+      t('stats.cadence'),
       activity.averageCadence != null
         ? `${Math.round(activity.averageCadence)} spm`
         : '—',
     ],
-    ['Best Pace', formatPace(fastestPace)],
+    [t('stats.bestPace'), formatPace(fastestPace)],
   ];
 
   return (
@@ -148,13 +155,13 @@ export default function ActivityDetailView({
           onClick={onBack}
           className="cursor-pointer rounded-[9px] bg-chip py-[7px] pr-[13px] pl-2.5 text-[13px] font-medium text-foreground hover:bg-grid-ax"
         >
-          ← Return
+          {t('return')}
         </button>
         <div
           className="rounded-full px-2.5 py-1 text-[11.5px] font-semibold"
           style={{ background: meta?.badgeBg, color: meta?.badgeColor }}
         >
-          {meta?.label ?? activity.workoutType}
+          {meta ? t(`common:${meta.labelKey}`) : activity.workoutType}
         </div>
       </div>
 
@@ -203,7 +210,7 @@ export default function ActivityDetailView({
               fontSize="13"
               fill="var(--muted-foreground)"
             >
-              Sem dados de GPS nesta atividade
+              {t('noGps')}
             </text>
           </svg>
         )}
@@ -213,23 +220,22 @@ export default function ActivityDetailView({
         <>
           <div className="mt-7 flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
             <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
-              Voltas
+              {t('laps.title')}
             </div>
             <div className="text-[12.5px] text-muted-foreground">
-              {activity.laps.length}{' '}
-              {activity.laps.length === 1 ? 'Lap' : 'Laps'}
+              {t('laps.count', { count: activity.laps.length })}
             </div>
           </div>
           <div className="flex items-center gap-[13px] px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground">
-            <div className="w-[22px]">#</div>
-            <div className="w-[110px]">Lap</div>
+            <div className="w-[22px]">{t('laps.index')}</div>
+            <div className="w-[110px]">{t('laps.lap')}</div>
             <div className="flex-1" />
-            <div className="w-[66px] text-right">Dist</div>
-            <div className="w-14 text-right">Time</div>
-            <div className="w-16 text-right">Pace</div>
-            <div className="w-11 text-right">SPM</div>
-            <div className="w-11 text-right">AVG HR</div>
-            <div className="w-11 text-right">MAX HR</div>
+            <div className="w-[66px] text-right">{t('laps.dist')}</div>
+            <div className="w-14 text-right">{t('laps.time')}</div>
+            <div className="w-16 text-right">{t('laps.pace')}</div>
+            <div className="w-11 text-right">{t('laps.spm')}</div>
+            <div className="w-11 text-right">{t('laps.avgHr')}</div>
+            <div className="w-11 text-right">{t('laps.maxHr')}</div>
           </div>
           {activity.laps.map((lap, i) => (
             <div

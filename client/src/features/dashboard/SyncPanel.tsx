@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api';
 import type { SyncStatus } from '@/lib/types';
 
@@ -8,21 +9,23 @@ interface SyncPanelProps {
 
 const POLL_MS = 2000;
 
-function formatEta(sec: number): string {
-  if (sec >= 3600) {
-    const h = Math.floor(sec / 3600);
-    const m = Math.round((sec % 3600) / 60);
-    return `~${h}h ${m}min restantes`;
-  }
-  if (sec >= 60) {
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return `~${m}min ${s}s restantes`;
-  }
-  return `~${sec}s restantes`;
-}
-
 export default function SyncPanel({ onSynced }: SyncPanelProps) {
+  const { t } = useTranslation('dashboard');
+
+  const formatEta = (sec: number): string => {
+    if (sec >= 3600) {
+      const h = Math.floor(sec / 3600);
+      const m = Math.round((sec % 3600) / 60);
+      return t('sync.etaHoursMin', { h, m });
+    }
+    if (sec >= 60) {
+      const m = Math.floor(sec / 60);
+      const s = sec % 60;
+      return t('sync.etaMinSec', { m, s });
+    }
+    return t('sync.etaSec', { s: sec });
+  };
+
   const [status, setStatus] = useState<SyncStatus | null>(null);
   // whether this session watched the current/last sync run (avoids showing a
   // stale "sync complete" message from a run that finished before page load)
@@ -87,34 +90,38 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
   let statusLine: string;
   let statusTone = 'text-muted-foreground';
   if (requestError) {
-    statusLine = `Failure to start: ${requestError}`;
+    statusLine = t('sync.failureToStart', { message: requestError });
     statusTone = 'text-neg';
   } else if (running && status?.phase === 'listing') {
-    statusLine = 'Search activities on Strava…';
+    statusLine = t('sync.searching');
   } else if (running && status?.phase === 'rate_limited') {
-    statusLine = 'Strava fetch limit — waiting 15 min';
+    statusLine = t('sync.rateLimited');
     statusTone = 'text-neg';
   } else if (running) {
     statusLine =
       total != null
-        ? `${synced} of ${total} saved${errors > 0 ? `, ${errors} with error` : ''}`
-        : 'Processing activities';
+        ? t('sync.savedOfTotal', { synced, total }) +
+          (errors > 0 ? t('sync.withErrors', { count: errors }) : '')
+        : t('sync.processing');
   } else if (watching && status?.state === 'done') {
     statusLine =
       total === 0
-        ? 'Synced — nothing new'
-        : `Synced — ${synced} ${synced === 1 ? 'new activity' : 'new activities'}${errors > 0 ? `, ${errors} errors` : ''}`;
+        ? t('sync.syncedNothingNew')
+        : t('sync.syncedNewActivity', { count: synced }) +
+          (errors > 0 ? t('sync.errorsSuffix', { count: errors }) : '');
   } else if (watching && status?.state === 'error') {
-    statusLine = `Sync failure: ${status.message ?? 'unknown error'}`;
+    statusLine = t('sync.syncFailure', {
+      message: status.message ?? t('sync.unknownError'),
+    });
     statusTone = 'text-neg';
   } else {
-    statusLine = 'Sync new activities';
+    statusLine = t('sync.syncNew');
   }
 
   return (
     <div className="mt-[26px]">
       <div className="mb-2.5 text-[11.5px] font-medium tracking-[.05em] uppercase text-muted-foreground">
-        Strava
+        {t('sync.title')}
       </div>
       <div className="flex items-center justify-between gap-2.5">
         <p className={`min-w-0 text-[12.5px] ${statusTone}`}>{statusLine}</p>
@@ -123,7 +130,7 @@ export default function SyncPanel({ onSynced }: SyncPanelProps) {
           disabled={running}
           className="shrink-0 cursor-pointer rounded-[9px] bg-chip px-[13px] py-1.5 text-[12.5px] font-medium text-foreground hover:bg-grid-ax disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {running ? 'Syncing' : 'Sync'}
+          {running ? t('sync.syncing') : t('sync.sync')}
         </button>
       </div>
 

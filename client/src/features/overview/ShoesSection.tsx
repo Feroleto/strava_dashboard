@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import type { Gear } from '@/lib/types';
 import { formatKm, formatMonthShortYear } from '@/lib/activityFormat';
 import { apiFetch } from '@/lib/api';
@@ -8,6 +9,7 @@ import { apiFetch } from '@/lib/api';
 const SHOE_LIFESPAN_M = 800_000;
 
 export default function ShoesSection() {
+  const { t } = useTranslation('overview');
   const [gear, setGear] = useState<Gear[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -31,10 +33,13 @@ export default function ShoesSection() {
     <div>
       <div className="flex items-center justify-between">
         <div className="text-[13.5px] font-semibold text-foreground">
-          Shoes
+          {t('shoes.title')}
         </div>
         <div className="text-[11.5px] text-muted-foreground">
-          {activeCount} active · {retiredCount} retired
+          {t('shoes.activeRetired', {
+            active: activeCount,
+            retired: retiredCount,
+          })}
         </div>
       </div>
 
@@ -44,7 +49,7 @@ export default function ShoesSection() {
         ))}
         {gear.length === 0 && (
           <p className="col-span-3 py-6 text-center text-[12.5px] text-muted-foreground">
-            No shoes synced yet.
+            {t('shoes.empty')}
           </p>
         )}
       </div>
@@ -53,6 +58,7 @@ export default function ShoesSection() {
 }
 
 function ShoeCard({ gear }: { gear: Gear }) {
+  const { t } = useTranslation('overview');
   const pct = Math.min(100, (gear.computedDistanceM / SHOE_LIFESPAN_M) * 100);
   const barColor = gear.retired
     ? 'var(--muted-foreground)'
@@ -63,17 +69,23 @@ function ShoeCard({ gear }: { gear: Gear }) {
   // no "Race Day" tier: Strava's Gear API only has primary/retired, nothing
   // in between — a shoe that's neither gets no badge
   const badge = gear.primary
-    ? { label: 'Default', bg: 'bg-acc-bg', text: 'text-acc-tx' }
+    ? { label: t('shoes.default'), bg: 'bg-acc-bg', text: 'text-acc-tx' }
     : gear.retired
-      ? { label: 'Retired', bg: 'bg-neutral-bg', text: 'text-neutral' }
+      ? { label: t('shoes.retired'), bg: 'bg-neutral-bg', text: 'text-neutral' }
       : null;
 
   const meta =
     gear.retired && gear.firstUseDate && gear.lastUseDate
-      ? `${formatMonthShortYear(new Date(gear.firstUseDate))} – ${formatMonthShortYear(new Date(gear.lastUseDate))}`
+      ? t('shoes.dateRange', {
+          start: formatMonthShortYear(new Date(gear.firstUseDate)),
+          end: formatMonthShortYear(new Date(gear.lastUseDate)),
+        })
       : gear.firstUseDate
-        ? `${gear.runCount} runs · since ${formatMonthShortYear(new Date(gear.firstUseDate))}`
-        : `${gear.runCount} runs`;
+        ? t('shoes.runsSince', {
+            count: gear.runCount,
+            date: formatMonthShortYear(new Date(gear.firstUseDate)),
+          })
+        : t('shoes.runsOnly', { count: gear.runCount });
 
   return (
     <div
@@ -103,7 +115,9 @@ function ShoeCard({ gear }: { gear: Gear }) {
           {formatKm(gear.computedDistanceM / 1000)} km
         </span>
         <span className="text-[11.5px] text-muted-foreground">
-          of {Math.round(SHOE_LIFESPAN_M / 1000)} km
+          {t('shoes.ofLifespan', {
+            km: Math.round(SHOE_LIFESPAN_M / 1000),
+          })}
         </span>
       </div>
 

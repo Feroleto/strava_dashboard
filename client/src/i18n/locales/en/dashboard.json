@@ -1,0 +1,94 @@
+{
+  "rail": {
+    "title": "Runs",
+    "kmSubtitle": "km covered in this period",
+    "activities": "Activities",
+    "averagePace": "Average Pace",
+    "totalTime": "Total Time",
+    "elevationGain": "Elevation Gain",
+    "workoutType": "Workout Type",
+    "allRuns": "All runs",
+    "lastNWeeks_one": "Last {{count}} week",
+    "lastNWeeks_other": "Last {{count}} weeks"
+  },
+  "typeOptions": {
+    "all": "All",
+    "easyLong": "EASY/LONG",
+    "interval": "Interval",
+    "hillRepeats": "Hill Repeats"
+  },
+  "sync": {
+    "title": "Strava",
+    "sync": "Sync",
+    "syncing": "Syncing",
+    "syncNew": "Sync new activities",
+    "searching": "Search activities on Strava…",
+    "rateLimited": "Strava fetch limit — waiting 15 min",
+    "processing": "Processing activities",
+    "savedOfTotal": "{{synced}} of {{total}} saved",
+    "withErrors_one": ", {{count}} with error",
+    "withErrors_other": ", {{count}} with errors",
+    "syncedNothingNew": "Synced — nothing new",
+    "syncedNewActivity_one": "Synced — {{count}} new activity",
+    "syncedNewActivity_other": "Synced — {{count}} new activities",
+    "errorsSuffix_one": ", {{count}} error",
+    "errorsSuffix_other": ", {{count}} errors",
+    "failureToStart": "Failure to start: {{message}}",
+    "syncFailure": "Sync failure: {{message}}",
+    "unknownError": "unknown error",
+    "etaHoursMin": "~{{h}}h {{m}}min remaining",
+    "etaMinSec": "~{{m}}min {{s}}s remaining",
+    "etaSec": "~{{s}}s remaining"
+  },
+  "list": {
+    "loading": "Loading…",
+    "empty": "No activities in this filter",
+    "runsCount_one": "{{count}} run",
+    "runsCount_other": "{{count}} runs",
+    "closeSummary": "Close summary",
+    "openSummary": "Open summary",
+    "elevation": "Elevation",
+    "avgHr": "AVG HR",
+    "maxHr": "MAX HR",
+    "cadence": "Cadence",
+    "recentWeeks": "‹ Recent weeks",
+    "previousWeeks": "Previous weeks ›",
+    "pageOf": "Page {{current}} of {{total}}",
+    "olderWeeks_one": "+ {{count}} previous week",
+    "olderWeeks_other": "+ {{count}} previous weeks",
+    "selectMonth": "Select a month in the graph to filter"
+  },
+  "chart": {
+    "weeklyDistance": "Weekly distance",
+    "monthlyDistance": "Monthly distance",
+    "kmInPeriod": "{{km}} km in this period",
+    "periods": {
+      "4": "4 w",
+      "8": "8 w",
+      "12": "12 w",
+      "all": "All"
+    }
+  },
+  "dateRange": {
+    "thisMonth": "This Month",
+    "lastMonth": "Last Month",
+    "last3Months": "Last 3 Months",
+    "thisYear": "This Year",
+    "lastYear": "Last Year",
+    "custom": "Custom",
+    "clean": "Clean",
+    "close": "Close",
+    "selectLastDate": "Select last date",
+    "selectStartDate": "Select start date",
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "weekdaysShort": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+  },
+  "rangeChip": {
+    "clearAriaLabel": "Clean custom period",
+    "runsCount_one": "{{count}} run",
+    "runsCount_other": "{{count}} runs",
+    "daysCount_one": "{{count}} day",
+    "daysCount_other": "{{count}} days"
+  }
+}

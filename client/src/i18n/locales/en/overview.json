@@ -1,0 +1,60 @@
+{
+  "title": "Overview",
+  "subtitle": "Run · all time",
+  "tiles": {
+    "totalRuns": "Total runs",
+    "since": "since {{date}}",
+    "distance": "Distance",
+    "kmPerWeek": "{{km}} km / week",
+    "time": "Time",
+    "avgPace": "{{pace}} avg",
+    "elevation": "Elevation",
+    "bestElevation": "best {{value}} m in a run"
+  },
+  "calendar": {
+    "previousMonth": "Previous month",
+    "nextMonth": "Next month",
+    "weekdaysMin": ["M", "T", "W", "T", "F", "S", "S"],
+    "dayMultiRuns_one": "{{count}} run · {{km}} km",
+    "dayMultiRuns_other": "{{count}} runs · {{km}} km",
+    "daySingleRun": "{{date}} · {{name}} · {{km}} km · {{pace}}",
+    "monthSummary_one": "{{count}} run · {{km}} km in {{month}}",
+    "monthSummary_other": "{{count}} runs · {{km}} km in {{month}}"
+  },
+  "records": {
+    "title": "Personal records",
+    "subtitle": "top 3 · all time",
+    "noRecordYet": "no record yet",
+    "prBadge": "PR",
+    "prBadgeTitle": "PR at the time it was run",
+    "longestRun": "Longest run",
+    "max": "MAX",
+    "distances": {
+      "400m": "400m",
+      "halfMile": "1/2 mile",
+      "1k": "1k",
+      "1mile": "1 mile",
+      "2mile": "2 miles",
+      "5k": "5k",
+      "10k": "10k",
+      "15k": "15k",
+      "10mile": "10 miles",
+      "20k": "20k",
+      "halfMarathon": "Half marathon",
+      "marathon": "Marathon"
+    }
+  },
+  "shoes": {
+    "title": "Shoes",
+    "activeRetired": "{{active}} active · {{retired}} retired",
+    "empty": "No shoes synced yet.",
+    "default": "Default",
+    "retired": "Retired",
+    "ofLifespan": "of {{km}} km",
+    "dateRange": "{{start}} – {{end}}",
+    "runsSince_one": "{{count}} run · since {{date}}",
+    "runsSince_other": "{{count}} runs · since {{date}}",
+    "runsOnly_one": "{{count}} run",
+    "runsOnly_other": "{{count}} runs"
+  }
+}
