@@ -1,7 +1,7 @@
 {
   "lapType": {
     "warmup": "Aquecimento",
-    "cooldown": "Volta à calma",
+    "cooldown": "Desaquecimento",
     "workout": "Tiro",
     "rest": "Rec.",
     "run": "Volta",
@@ -13,12 +13,12 @@
   "stats": {
     "distance": "Distância",
     "time": "Tempo",
-    "pace": "Ritmo",
+    "pace": "Pace",
     "elevation": "Elevação",
     "avgHr": "FC MÉDIA",
     "maxHr": "FC MÁX",
     "cadence": "Cadência",
-    "bestPace": "Melhor Ritmo"
+    "bestPace": "Melhor Pace"
   },
   "laps": {
     "title": "Voltas",
@@ -28,7 +28,7 @@
     "lap": "Volta",
     "dist": "Dist",
     "time": "Tempo",
-    "pace": "Ritmo",
+    "pace": "Pace",
     "spm": "SPM",
     "avgHr": "FC MÉDIA",
     "maxHr": "FC MÁX"

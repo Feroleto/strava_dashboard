@@ -3,7 +3,7 @@
     "title": "Corridas",
     "kmSubtitle": "km percorridos neste período",
     "activities": "Atividades",
-    "averagePace": "Ritmo Médio",
+    "averagePace": "Pace Médio",
     "totalTime": "Tempo Total",
     "elevationGain": "Ganho de Elevação",
     "workoutType": "Tipo de Treino",
@@ -15,7 +15,7 @@
     "all": "Todos",
     "easyLong": "FÁCIL/LONGO",
     "interval": "Intervalado",
-    "hillRepeats": "Subidas"
+    "hillRepeats": "Tiros em Subida"
   },
   "sync": {
     "title": "Strava",
@@ -42,7 +42,7 @@
   },
   "list": {
     "loading": "Carregando…",
-    "empty": "Nenhuma atividade neste filtro",
+    "empty": "Nenhuma atividade com este filtro",
     "runsCount_one": "{{count}} corrida",
     "runsCount_other": "{{count}} corridas",
     "closeSummary": "Fechar resumo",

@@ -7,7 +7,7 @@
     "title": "Quase lá",
     "body": "Vamos importar o histórico de atividades do seu Strava. Isso acontece só uma vez — depois disso, tudo sincroniza automaticamente.",
     "cta": "Importar atividades",
-    "hint": "Leva cerca de um minuto, dependendo do seu histórico."
+    "hint": "O tempo de download depende da quantidade de atividades que você tem."
   },
   "syncing": {
     "title": "Importando do Strava…",
