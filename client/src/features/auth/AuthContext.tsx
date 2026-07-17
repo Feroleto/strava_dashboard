@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { apiFetch } from '@/lib/api';
+import { authMe, clearBootHints } from '@/lib/boot';
 
 export interface AuthUser {
   id: string;
@@ -22,23 +23,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // /auth/me answers 200 for everyone; an empty body means "no session"
-    // (a 401 here would make the browser log a console error on every
-    // logged-out page load)
-    apiFetch('/auth/me')
-      .then((res) => (res.ok ? res.text() : ''))
-      .then((text) => setUser(text ? (JSON.parse(text) as AuthUser) : null))
-      .catch(() => setUser(null))
-      .finally(() => setLoading(false));
+    // the request itself fired at module eval in lib/boot.ts (in parallel
+    // with the boot prefetches) — this effect only consumes the shared
+    // promise, which also spares the duplicate StrictMode fetch in dev
+    let cancelled = false;
+    authMe.then((u) => {
+      if (!cancelled) {
+        setUser(u);
+        setLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   async function logout(): Promise<void> {
     await apiFetch('/auth/logout', { method: 'POST' });
+    // drop the optimistic-boot hints so the next (logged-out) load doesn't
+    // fire gated fetches; FIRST_SYNC_FLAG stays — a relogin mid-first-import
+    // relies on it to resume the progress card
+    clearBootHints();
     setUser(null);
   }
 
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ user, loading, logout }}>
+      {children}
+    </AuthContext.Provider>
   );
 }
 

@@ -4,11 +4,7 @@ import { apiFetch } from '@/lib/api';
 import { formatKm } from '@/lib/activityFormat';
 import type { ActivitiesResponse, SyncStatus } from '@/lib/types';
 import { useAuth } from '@/features/auth/AuthContext';
-
-// set when the first import is kicked off, cleared on "Open dashboard" — lets
-// a mid-sync reload land back on the progress card even though some
-// activities already exist in the database by then
-export const FIRST_SYNC_FLAG = 'first-sync-pending';
+import { FIRST_SYNC_FLAG } from './firstSyncFlag';
 
 const POLL_MS = 2000;
 
@@ -192,10 +188,13 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
           <div className="flex w-[430px] flex-col items-center rounded-[20px] border border-border bg-card px-[44px] pb-[32px] pt-[40px] text-center shadow-[0_24px_60px_rgba(8,12,20,.22)]">
             {step === 'intro' && (
               <>
+                {/* keeps large.jpg: 52px at 2x DPR needs 104px, medium (62px) would blur */}
                 {user?.profileImgUrl ? (
                   <img
                     src={user.profileImgUrl}
                     alt=""
+                    width={52}
+                    height={52}
                     className="h-[52px] w-[52px] rounded-full object-cover"
                   />
                 ) : (

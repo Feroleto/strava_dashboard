@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { ChevronLeft, LogOut, Plus, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
+import { avatarMediumUrl } from '@/lib/avatarUrl';
 import SegmentedControl from '@/components/SegmentedControl';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
@@ -270,8 +271,10 @@ export default function Sidebar({
           <div className="mt-3 flex items-center gap-2.5 px-[9px]">
             {user?.profileImgUrl ? (
               <img
-                src={user.profileImgUrl}
+                src={avatarMediumUrl(user.profileImgUrl)}
                 alt=""
+                width={30}
+                height={30}
                 className="h-[30px] w-[30px] flex-none rounded-full object-cover"
               />
             ) : (

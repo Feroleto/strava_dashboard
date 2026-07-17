@@ -11,6 +11,9 @@ export type PageId =
 
 export const DEFAULT_PAGE: PageId = 'run/activities';
 
+/** localStorage key holding the persisted active page */
+export const ACTIVE_PAGE_KEY = 'active-page';
+
 export interface NavSubItem {
   id: PageId;
   labelKey: string;
