@@ -1,5 +1,6 @@
 import { Controller, Get, Query, Redirect, Logger, Res } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Throttle } from '@nestjs/throttler';
 import type { Response } from 'express';
 import { StravaAuthService } from './strava-auth.service';
 import { SessionService } from '../../auth/session.service';
@@ -14,6 +15,7 @@ export class StravaAuthController {
     private readonly config: ConfigService,
   ) {}
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Get()
   @Redirect()
   authorize() {
@@ -22,9 +24,16 @@ export class StravaAuthController {
     return { url };
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Get('callback')
-  async callback(@Query('code') code: string, @Res() res: Response): Promise<void> {
-    const frontendUrl = this.config.get<string>('FRONTEND_URL', 'http://localhost:5173');
+  async callback(
+    @Query('code') code: string,
+    @Res() res: Response,
+  ): Promise<void> {
+    const frontendUrl = this.config.get<string>(
+      'FRONTEND_URL',
+      'http://localhost:5173',
+    );
 
     try {
       const { userId } = await this.authService.handleCallback(code);

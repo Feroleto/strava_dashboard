@@ -1,4 +1,5 @@
 import { Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import type { MeResponse } from './auth.service';
@@ -21,6 +22,7 @@ export class AuthController {
     return this.authService.getMe(userId);
   }
 
+  @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('logout')
   @HttpCode(204)
   logout(@Res({ passthrough: true }) res: Response): void {

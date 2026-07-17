@@ -6,6 +6,7 @@ import { StravaWebhookController } from 'src/strava/webhook/strava-webhook.contr
 import { StravaWebhookService } from 'src/strava/webhook/strava-webhook.service';
 
 const VERIFY_TOKEN = 'test-verify-token';
+const SUBSCRIPTION_ID = '999888';
 
 describe('StravaWebhookController', () => {
   let controller: StravaWebhookController;
@@ -23,6 +24,8 @@ describe('StravaWebhookController', () => {
           useValue: {
             getOrThrow: vi.fn((key: string) => {
               if (key === 'STRAVA_WEBHOOK_VERIFY_TOKEN') return VERIFY_TOKEN;
+              if (key === 'STRAVA_WEBHOOK_SUBSCRIPTION_ID')
+                return SUBSCRIPTION_ID;
               throw new Error(`Config key not found: ${key}`);
             }),
           },
@@ -61,6 +64,9 @@ describe('StravaWebhookController', () => {
         object_type: 'athlete',
         aspect_type: 'update',
         object_id: 105494700,
+        subscription_id: Number(SUBSCRIPTION_ID),
+        owner_id: 105494700,
+        event_time: 1700000000,
         updates: { authorized: 'false' },
       });
 
@@ -72,6 +78,24 @@ describe('StravaWebhookController', () => {
         object_type: 'activity',
         aspect_type: 'create',
         object_id: 999,
+        subscription_id: Number(SUBSCRIPTION_ID),
+        owner_id: 105494700,
+        event_time: 1700000000,
+      });
+
+      expect(service.handleDeauthorization).not.toHaveBeenCalled();
+      expect(result).toEqual({ received: true });
+    });
+
+    it('ignores events with an unexpected subscription_id, even a forged deauthorization', async () => {
+      const result = await controller.handleEvent({
+        object_type: 'athlete',
+        aspect_type: 'update',
+        object_id: 105494700,
+        subscription_id: 111222,
+        owner_id: 105494700,
+        event_time: 1700000000,
+        updates: { authorized: 'false' },
       });
 
       expect(service.handleDeauthorization).not.toHaveBeenCalled();
