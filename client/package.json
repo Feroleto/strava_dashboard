@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "csp:hash": "node -e \"const c=require('crypto');const html=require('fs').readFileSync('index.html','utf8').replace(/<!--[\\s\\S]*?-->/g,'');const m=html.match(/<script>([\\s\\S]*?)<\\/script>/);console.log('sha256-'+c.createHash('sha256').update(m[1],'utf8').digest('base64'))\"",
     "format": "prettier --write \"src/**/*.{ts,tsx,css}\""
   },
   "dependencies": {

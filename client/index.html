@@ -5,6 +5,11 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>SoTreina</title>
+    <!--
+      CSP: the inline script below is allowlisted by sha256 hash in vercel.json
+      (script-src). Any byte change to it (even whitespace) breaks it in prod —
+      recompute with `npm run csp:hash` and update vercel.json accordingly.
+    -->
     <script>
       // apply persisted theme before first paint to avoid flash
       if (localStorage.getItem('theme') === 'dark') {
