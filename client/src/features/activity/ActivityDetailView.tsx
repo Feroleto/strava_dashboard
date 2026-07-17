@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   WORKOUT_META,
@@ -9,9 +9,11 @@ import {
   lapLabels,
 } from '@/lib/activityFormat';
 import { currentIntlLocale } from '@/lib/dateLocale';
-import RouteMap from './RouteMap';
 import type { ActivityDetail } from '@/lib/types';
 import { apiFetch } from '@/lib/api';
+
+// lazy so Leaflet is only fetched when a GPS activity detail is opened
+const RouteMap = lazy(() => import('./RouteMap'));
 
 const MAP_W = 640;
 const MAP_H = 240;
@@ -155,7 +157,9 @@ export default function ActivityDetailView({
 
       <div className="mt-[22px] overflow-hidden rounded-[var(--rad)] border border-border bg-card transition-[background] duration-[250ms]">
         {activity.summaryPolyline ? (
-          <RouteMap polyline={activity.summaryPolyline} />
+          <Suspense fallback={<div className="aspect-8/3 w-full" />}>
+            <RouteMap polyline={activity.summaryPolyline} />
+          </Suspense>
         ) : (
           <svg viewBox={`0 0 ${MAP_W} ${MAP_H}`} className="block w-full">
             {[80, 160, 240, 320, 400, 480, 560].map((x) => (

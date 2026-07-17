@@ -1,10 +1,7 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '@/features/nav/Sidebar';
 import PlaceholderPage from '@/features/nav/PlaceholderPage';
-import Dashboard from '@/features/dashboard/Dashboard';
-import RunOverviewPage from '@/features/overview/RunOverviewPage';
-import RunAnalysisPage from '@/features/analysis/RunAnalysisPage';
 import LoginPage from '@/features/auth/LoginPage';
 import FirstSyncPage, {
   FIRST_SYNC_FLAG,
@@ -17,6 +14,12 @@ import {
   isKnownPage,
   type PageId,
 } from '@/features/nav/navConfig';
+
+// code-split per page: keeps Leaflet, the analysis charts and the dashboard
+// out of the entry chunk that the logged-out LoginPage visitor downloads
+const Dashboard = lazy(() => import('@/features/dashboard/Dashboard'));
+const RunOverviewPage = lazy(() => import('@/features/overview/RunOverviewPage'));
+const RunAnalysisPage = lazy(() => import('@/features/analysis/RunAnalysisPage'));
 
 function PageContent({ page }: { page: PageId }) {
   const { t } = useTranslation('nav');
@@ -80,8 +83,21 @@ function App() {
     if (opts?.collapse) setCollapsed(true);
   };
 
+  // real text content (not a bare background) so the first paint counts as
+  // FCP while the auth check waits on a possibly cold backend
   if (loading || (user && hasActivities === null)) {
-    return <div className="min-h-screen bg-page-bg" />;
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-page-bg">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[14px] font-bold text-white">
+            ST
+          </div>
+          <span className="text-[15px] font-semibold text-foreground">
+            SoTreina
+          </span>
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
@@ -119,7 +135,9 @@ function App() {
           className="min-h-[calc(100vh-28px)] min-w-0 flex-1 rounded-2xl border border-border bg-card"
           style={{ boxShadow: '0 8px 24px rgba(8,12,20,.06)' }}
         >
-          <PageContent page={page} />
+          <Suspense fallback={<div className="min-h-[calc(100vh-28px)]" />}>
+            <PageContent page={page} />
+          </Suspense>
         </div>
       </div>
     </div>
