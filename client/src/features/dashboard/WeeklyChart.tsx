@@ -85,12 +85,13 @@ export default function WeeklyChart({
   const labelEvery = monthly ? 1 : Math.max(1, Math.ceil(n / 8));
 
   const hov = hover !== null && bins[hover] ? hover : null;
-  const reading =
+  const hoverReading =
     hov !== null
       ? monthly
         ? `${formatMonthLong(bins[hov].start)} · ${formatKm(bins[hov].km)} km · ${t('list.runsCount', { count: bins[hov].count })}`
         : `${formatWeekRange(bins[hov].start)} · ${formatKm(bins[hov].km)} km`
-      : t('chart.kmInPeriod', { km: formatKm(totalKm) });
+      : null;
+  const totalReading = t('chart.kmInPeriod', { km: formatKm(totalKm) });
 
   return (
     <div className="mb-9 rounded-[var(--rad)] border border-border bg-card px-7 pt-6 pb-4 transition-[background] duration-[250ms]">
@@ -99,7 +100,9 @@ export default function WeeklyChart({
           {monthly ? t('chart.monthlyDistance') : t('chart.weeklyDistance')}
         </div>
         <div className="flex items-center gap-3.5">
-          <div className="text-[12.5px] text-muted-foreground">{reading}</div>
+          <div className="text-[12.5px] text-muted-foreground">
+            {totalReading}
+          </div>
           <SegmentedControl
             size="compact"
             items={periods}
@@ -160,6 +163,15 @@ export default function WeeklyChart({
                 margin: '-4.5px 0 0 -4.5px',
               }}
             />
+            <div
+              className="pointer-events-none absolute z-10 -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-md border border-border bg-card px-2.5 py-1.5 text-[11.5px] whitespace-nowrap text-foreground shadow-md"
+              style={{
+                left: `clamp(56px, ${(((hov + 0.5) / n) * 100).toFixed(2)}%, calc(100% - 56px))`,
+                top: `${((pts[hov][1] / VB_H) * 100).toFixed(2)}%`,
+              }}
+            >
+              {hoverReading}
+            </div>
           </>
         )}
 
