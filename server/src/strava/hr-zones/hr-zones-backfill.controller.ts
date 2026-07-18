@@ -1,11 +1,12 @@
 import { Controller, Post, Logger, UseGuards } from '@nestjs/common';
 import { HrZonesBackfillService } from './hr-zones-backfill.service';
 import { AuthGuard } from '../../auth/auth.guard';
+import { AccountThrottlerGuard } from '../../auth/account-throttler.guard';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/current-user.decorator';
 
 @Controller('strava/hr-zones')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AccountThrottlerGuard)
 export class HrZonesBackfillController {
   private readonly logger = new Logger(HrZonesBackfillController.name);
 

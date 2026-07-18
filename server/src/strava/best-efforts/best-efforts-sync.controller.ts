@@ -1,11 +1,12 @@
 import { Controller, Post, Logger, UseGuards } from '@nestjs/common';
 import { BestEffortsSyncService } from './best-efforts-sync.service';
 import { AuthGuard } from '../../auth/auth.guard';
+import { AccountThrottlerGuard } from '../../auth/account-throttler.guard';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/current-user.decorator';
 
 @Controller('strava/best-efforts')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, AccountThrottlerGuard)
 export class BestEffortsSyncController {
   private readonly logger = new Logger(BestEffortsSyncController.name);
 

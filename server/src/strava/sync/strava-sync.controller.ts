@@ -10,6 +10,7 @@ import {
 import { StravaSyncService } from './strava-sync.service';
 import type { SyncProgress } from './strava-sync.service';
 import { AuthGuard } from '../../auth/auth.guard';
+import { AccountThrottlerGuard } from '../../auth/account-throttler.guard';
 import { CurrentUser } from '../../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../../auth/current-user.decorator';
 
@@ -20,6 +21,7 @@ export class StravaSyncController {
 
   constructor(private readonly syncService: StravaSyncService) {}
 
+  @UseGuards(AccountThrottlerGuard)
   @Post()
   triggerSync(@CurrentUser() user: AuthenticatedUser): SyncProgress {
     this.logger.log('Manual sync triggered via HTTP');
@@ -32,6 +34,7 @@ export class StravaSyncController {
     return this.syncService.getProgress(user.id);
   }
 
+  @UseGuards(AccountThrottlerGuard)
   @Post('activity/:stravaId')
   async syncActivity(
     @CurrentUser() user: AuthenticatedUser,
@@ -52,20 +55,29 @@ export class StravaSyncController {
     return this.syncService.getProgress(user.id);
   }
 
+  @UseGuards(AccountThrottlerGuard)
   @Post('backfill-polylines')
-  async backfillPolylines(@CurrentUser() user: AuthenticatedUser): Promise<{ updated: number }> {
+  async backfillPolylines(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ updated: number }> {
     this.logger.log('Polyline backfill triggered via HTTP');
     return this.syncService.backfillPolylines(user.id);
   }
 
+  @UseGuards(AccountThrottlerGuard)
   @Post('backfill-gear')
-  async backfillGear(@CurrentUser() user: AuthenticatedUser): Promise<{ updated: number }> {
+  async backfillGear(
+    @CurrentUser() user: AuthenticatedUser,
+  ): Promise<{ updated: number }> {
     this.logger.log('Gear backfill triggered via HTTP');
     return this.syncService.backfillGear(user.id);
   }
 
+  @UseGuards(AccountThrottlerGuard)
   @Post('backfill-lap-max-hr')
-  backfillLapMaxHr(@CurrentUser() user: AuthenticatedUser): { started: boolean } {
+  backfillLapMaxHr(@CurrentUser() user: AuthenticatedUser): {
+    started: boolean;
+  } {
     this.logger.log('Lap maxHr backfill triggered via HTTP');
     // fire-and-forget: one API call per activity with recorded laps, so this
     // can run for a long while — progress goes to the server log

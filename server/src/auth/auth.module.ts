@@ -5,6 +5,7 @@ import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import { AuthGuard } from './auth.guard';
+import { AccountThrottlerGuard } from './account-throttler.guard';
 
 @Module({
   imports: [
@@ -21,7 +22,7 @@ import { AuthGuard } from './auth.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [SessionService, AuthGuard, AuthService],
-  exports: [SessionService, AuthGuard],
+  providers: [SessionService, AuthGuard, AccountThrottlerGuard, AuthService],
+  exports: [SessionService, AuthGuard, AccountThrottlerGuard],
 })
 export class AuthModule {}
