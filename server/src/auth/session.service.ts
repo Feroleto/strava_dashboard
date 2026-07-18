@@ -1,3 +1,4 @@
+import { randomBytes } from 'crypto';
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
@@ -8,6 +9,11 @@ const COOKIE_NAME = 'session';
 // maxAge can't be derived from that string without pulling in a date-math lib
 // for this one field, so both default to 30 days and must be changed together
 const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
+
+const OAUTH_STATE_COOKIE = 'oauth_state';
+// long enough for the user to complete the Strava authorize screen, short
+// enough that a stale state can't be replayed much later
+const OAUTH_STATE_MAX_AGE_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class SessionService {
@@ -47,6 +53,28 @@ export class SessionService {
 
   clearCookie(res: Response): void {
     res.clearCookie(COOKIE_NAME, this.cookieOptions);
+  }
+
+  // CSRF protection for the OAuth flow: the state travels both in the
+  // authorize URL (echoed back by Strava on the callback) and in this cookie;
+  // the callback only proceeds if the two match, so an attacker-supplied
+  // callback URL (login CSRF) fails — the victim's browser has no matching
+  // cookie. Rides the same first-party path as the session cookie (Vercel
+  // proxy in prod), so sameSite:'lax' is sent on the top-level redirect back
+  setOauthState(res: Response): string {
+    const state = randomBytes(32).toString('hex');
+    res.cookie(OAUTH_STATE_COOKIE, state, {
+      ...this.cookieOptions,
+      maxAge: OAUTH_STATE_MAX_AGE_MS,
+    });
+    return state;
+  }
+
+  // single-use: reading the state always clears the cookie, match or not
+  consumeOauthState(req: Request, res: Response): string | null {
+    const state: string | undefined = req.cookies?.[OAUTH_STATE_COOKIE];
+    res.clearCookie(OAUTH_STATE_COOKIE, this.cookieOptions);
+    return state ?? null;
   }
 
   extractSession(req: Request): { userId: string; tokenVersion: number } | null {

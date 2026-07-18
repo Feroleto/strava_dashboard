@@ -63,6 +63,18 @@ export class StravaWebhookController {
   async handleEvent(
     @Body() event: StravaWebhookEvent,
   ): Promise<{ received: true }> {
+    // the @Body type is a compile-time fiction on a public unauthenticated
+    // endpoint — a forged/garbage body must not reach BigInt() below, which
+    // throws on anything that isn't an integer (uncaught 500). Malformed
+    // events get the same fast 200 ack as ignored ones
+    if (
+      typeof event?.subscription_id !== 'number' ||
+      !Number.isInteger(event.object_id)
+    ) {
+      this.logger.warn('Ignored malformed webhook event');
+      return { received: true };
+    }
+
     const expectedSubscriptionId = this.config.getOrThrow<string>(
       'STRAVA_WEBHOOK_SUBSCRIPTION_ID',
     );

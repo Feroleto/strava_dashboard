@@ -9,6 +9,7 @@ import {
 } from '@nestjs/common';
 import { WorkoutType } from '@prisma/client';
 import { ActivitiesService } from './activities.service';
+import { parsePagination } from './pagination';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
@@ -28,11 +29,12 @@ export class ActivitiesController {
     @Query('dateTo') dateTo?: string,
   ) {
     const filters = this.parseFilters(workoutType, dateFrom, dateTo);
+    const pagination = parsePagination(page, limit);
 
     return this.service.list(
       user.id,
-      page ? parseInt(page, 10) : 1,
-      limit ? parseInt(limit, 10) : 20,
+      pagination.page,
+      pagination.limit,
       filters.workoutType,
       filters.startDate,
       filters.endDate,

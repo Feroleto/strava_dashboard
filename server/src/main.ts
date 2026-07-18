@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { NestExpressApplication } from '@nestjs/platform-express';
 import cookieParser from 'cookie-parser';
+import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
@@ -20,6 +21,11 @@ async function bootstrap() {
     'FRONTEND_URL',
     'http://localhost:5173',
   );
+  // covers direct access to the Render domain, which bypasses the security
+  // headers configured in client/vercel.json (those only exist on the Vercel
+  // domain). CSP stays off here: the API serves JSON only, and the real CSP
+  // belongs to the frontend that serves HTML
+  app.use(helmet({ contentSecurityPolicy: false }));
   app.use(cookieParser());
   app.enableCors({ origin: frontendUrl, credentials: true });
   const port = config.get<number>('PORT', 3000);

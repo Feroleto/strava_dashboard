@@ -29,13 +29,14 @@ export class StravaAuthService {
     this.prisma = new PrismaClient({ adapter });
   }
 
-  buildAuthUrl(): string {
+  buildAuthUrl(state: string): string {
     const params = new URLSearchParams({
       client_id: this.config.get<string>('STRAVA_CLIENT_ID')!,
       response_type: 'code',
       redirect_uri: this.config.get<string>('STRAVA_REDIRECT_URI')!,
       approval_prompt: 'force',
       scope: 'read,activity:read_all,profile:read_all',
+      state,
     });
 
     return `${STRAVA_AUTH_URL}?${params.toString()}`;

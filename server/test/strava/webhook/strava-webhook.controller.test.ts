@@ -87,6 +87,21 @@ describe('StravaWebhookController', () => {
       expect(result).toEqual({ received: true });
     });
 
+    it('acks malformed bodies without throwing (public endpoint, forged garbage must not 500)', async () => {
+      for (const body of [
+        undefined,
+        {},
+        { subscription_id: 'not-a-number', object_id: 1 },
+        { subscription_id: Number(SUBSCRIPTION_ID), object_id: 'abc' },
+        { subscription_id: Number(SUBSCRIPTION_ID), object_id: 1.5 },
+      ]) {
+        const result = await controller.handleEvent(body as any);
+        expect(result).toEqual({ received: true });
+      }
+
+      expect(service.handleDeauthorization).not.toHaveBeenCalled();
+    });
+
     it('ignores events with an unexpected subscription_id, even a forged deauthorization', async () => {
       const result = await controller.handleEvent({
         object_type: 'athlete',

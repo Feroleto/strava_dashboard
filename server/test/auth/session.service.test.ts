@@ -99,6 +99,40 @@ describe('SessionService', () => {
     });
   });
 
+  describe('OAuth state cookie', () => {
+    it('sets a random hex state as a short-lived httpOnly cookie and returns it', async () => {
+      const service = await makeService('development');
+      const state = service.setOauthState(res as any);
+
+      expect(state).toMatch(/^[0-9a-f]{64}$/);
+      const [name, value, options] = res.cookie.mock.calls[0];
+      expect(name).toBe('oauth_state');
+      expect(value).toBe(state);
+      expect(options).toMatchObject({ httpOnly: true, sameSite: 'lax' });
+      expect(options.maxAge).toBeLessThanOrEqual(10 * 60 * 1000);
+    });
+
+    it('generates a different state on every call', async () => {
+      const service = await makeService('development');
+      expect(service.setOauthState(res as any)).not.toBe(service.setOauthState(res as any));
+    });
+
+    it('consumeOauthState returns the cookie value and always clears the cookie', async () => {
+      const service = await makeService('development');
+      const req = { cookies: { oauth_state: 'abc123' } };
+
+      expect(service.consumeOauthState(req as any, res as any)).toBe('abc123');
+      expect(res.clearCookie).toHaveBeenCalledWith('oauth_state', expect.any(Object));
+    });
+
+    it('consumeOauthState returns null when no state cookie exists, still clearing', async () => {
+      const service = await makeService('development');
+
+      expect(service.consumeOauthState({ cookies: {} } as any, res as any)).toBeNull();
+      expect(res.clearCookie).toHaveBeenCalledWith('oauth_state', expect.any(Object));
+    });
+  });
+
   describe('clearCookie', () => {
     it('clears the session cookie with matching flags', async () => {
       const service = await makeService('production');
