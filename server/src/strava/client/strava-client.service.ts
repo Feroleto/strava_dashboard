@@ -50,6 +50,9 @@ export class StravaClientService {
   // latest rate-limit headers seen from Strava; shared across all consumers
   // (sync + backfills) since the budget is app-wide
   private rateLimit: RateLimitSnapshot | null = null;
+  // set while throttle() is sleeping out a spent 15-min window, so callers
+  // (SyncProgress) can surface a "resumes at" countdown instead of looking stalled
+  private waitUntil: number | null = null;
 
   constructor(private readonly config: ConfigService) {
     const adapter = new PrismaPg({
@@ -163,7 +166,19 @@ export class StravaClientService {
     this.logger.log(
       `15-min Strava budget nearly spent (${rl.shortUsage}/${rl.shortLimit} overall, ${rl.readShortUsage ?? '—'}/${rl.readShortLimit ?? '—'} read) — waiting ${Math.round(waitMs / 1000)}s for the next window`,
     );
-    await this.sleep(waitMs);
+    this.waitUntil = now + waitMs;
+    try {
+      await this.sleep(waitMs);
+    } finally {
+      this.waitUntil = null;
+    }
+  }
+
+  // timestamp (ms epoch) the throttle is currently sleeping until, or null
+  // when no window wait is in progress — used to drive a "resumes in…"
+  // countdown on the frontend during a large initial import
+  getWaitUntil(): number | null {
+    return this.waitUntil;
   }
 
   private captureRateLimit(response: { headers: Headers }): void {

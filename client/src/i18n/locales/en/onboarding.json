@@ -16,6 +16,7 @@
     "ofTotal_other": "of {{count}} activities",
     "failed": "Import failed.",
     "retry": "Try again",
+    "rateLimited": "Strava rate limit reached — resuming in {{time}}…",
     "processingYear": "Processing {{year}}…",
     "readOnlyNotice": "Read-only access — nothing is posted to your Strava."
   },

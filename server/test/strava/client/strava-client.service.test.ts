@@ -191,6 +191,37 @@ describe('StravaClientService', () => {
         'STRAVA_RATE_LIMIT',
       );
     });
+
+    it('exposes the window-reset timestamp via getWaitUntil while sleeping, then clears it', async () => {
+      fetchMock.mockResolvedValue(
+        stravaResponse(
+          { id: 1 },
+          {
+            'x-ratelimit-limit': '200,2000',
+            'x-ratelimit-usage': '197,300',
+          },
+        ),
+      );
+      await service.get(USER_ID, '/activities/1');
+      expect(service.getWaitUntil()).toBeNull();
+
+      // hold the sleep open so we can observe getWaitUntil() mid-wait
+      let releaseSleep: () => void = () => {};
+      sleepSpy.mockImplementationOnce(
+        () => new Promise<void>((resolve) => (releaseSleep = resolve)),
+      );
+
+      const before = Date.now();
+      const pending = service.get(USER_ID, '/activities/2');
+
+      await vi.waitFor(() => expect(service.getWaitUntil()).not.toBeNull());
+      expect(service.getWaitUntil()!).toBeGreaterThan(before);
+
+      releaseSleep();
+      await pending;
+
+      expect(service.getWaitUntil()).toBeNull();
+    });
   });
 
   describe('estimateEtaSeconds', () => {

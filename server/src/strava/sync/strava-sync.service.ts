@@ -54,6 +54,10 @@ export interface SyncProgress {
   startedAt: string | null;
   finishedAt: string | null;
   message: string | null;
+  // set while phase is the transient 'rate_limited' wait (state stays
+  // 'running' — the throttle resumes on its own): ISO timestamp the client
+  // is currently sleeping until, so the frontend can render a countdown
+  rateLimitResetAt: string | null;
 }
 
 interface SyncResult {
@@ -81,6 +85,7 @@ function idleProgress(): SyncProgress {
     startedAt: null,
     finishedAt: null,
     message: null,
+    rateLimitResetAt: null,
   };
 }
 
@@ -101,13 +106,29 @@ export class StravaSyncService {
   getProgress(userId: string): SyncProgress {
     const entry = this.progress.get(userId) ?? idleProgress();
     const { total, processed, state, phase } = entry;
+
+    // the adaptive throttle sleeps out a spent 15-min window transparently
+    // (state stays 'running', no error) — surface it as its own phase with a
+    // live countdown instead of leaving the frontend looking stalled
+    if (state === 'running') {
+      const waitUntil = this.client.getWaitUntil();
+      if (waitUntil != null) {
+        return {
+          ...entry,
+          phase: 'rate_limited',
+          etaSeconds: Math.max(Math.round((waitUntil - Date.now()) / 1000), 0),
+          rateLimitResetAt: new Date(waitUntil).toISOString(),
+        };
+      }
+    }
+
     const etaSeconds =
       state === 'running' && phase === 'processing' && total != null
         ? this.client.estimateEtaSeconds(
             Math.max(total - processed, 0) * REQUESTS_PER_ACTIVITY,
           )
         : null;
-    return { ...entry, etaSeconds };
+    return { ...entry, etaSeconds, rateLimitResetAt: null };
   }
 
   private updateProgress(userId: string, patch: Partial<SyncProgress>): void {

@@ -16,6 +16,7 @@
     "ofTotal_other": "de {{count}} atividades",
     "failed": "Falha na importação.",
     "retry": "Tentar novamente",
+    "rateLimited": "Limite de requisições do Strava atingido — retomando em {{time}}…",
     "processingYear": "Processando {{year}}…",
     "readOnlyNotice": "Acesso somente leitura — nada é publicado no seu Strava."
   },

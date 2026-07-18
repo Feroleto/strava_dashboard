@@ -10,6 +10,12 @@ const POLL_MS = 2000;
 
 type Step = 'intro' | 'syncing' | 'done';
 
+function formatCountdown(totalSeconds: number): string {
+  const m = Math.floor(totalSeconds / 60);
+  const s = totalSeconds % 60;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
+
 interface HistorySummary {
   count: number;
   km: number;
@@ -80,6 +86,9 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
   const [status, setStatus] = useState<SyncStatus | null>(null);
   const [failed, setFailed] = useState(false);
   const [summary, setSummary] = useState<HistorySummary | null>(null);
+  // ticks every second while rate-limited so the countdown moves smoothly
+  // between the 2s status polls, instead of jumping in POLL_MS increments
+  const [now, setNow] = useState(() => Date.now());
 
   // resume where the backend actually is: a reload mid-sync goes straight to
   // the progress card, a reload after completion goes to "All set"
@@ -122,6 +131,12 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
     }, POLL_MS);
     return () => clearInterval(id);
   }, [step, failed]);
+
+  useEffect(() => {
+    if (status?.phase !== 'rate_limited' || !status.rateLimitResetAt) return;
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [status?.phase, status?.rateLimitResetAt]);
 
   useEffect(() => {
     if (step !== 'done') return;
@@ -175,6 +190,11 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
   const processingYear = status?.processingDate
     ? new Date(status.processingDate).getFullYear()
     : null;
+  const isRateLimited = status?.phase === 'rate_limited';
+  const rateLimitSecondsLeft =
+    isRateLimited && status?.rateLimitResetAt
+      ? Math.max(0, Math.round((new Date(status.rateLimitResetAt).getTime() - now) / 1000))
+      : null;
 
   const primaryButton =
     'w-full cursor-pointer rounded-[11px] bg-acc py-[13px] text-[14.5px] font-semibold text-white hover:brightness-[.93]';
@@ -267,6 +287,12 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
                       >
                         {t('syncing.retry')}
                       </button>
+                    </span>
+                  ) : isRateLimited && rateLimitSecondsLeft != null ? (
+                    <span className="tabular-nums">
+                      {t('syncing.rateLimited', {
+                        time: formatCountdown(rateLimitSecondsLeft),
+                      })}
                     </span>
                   ) : processingYear != null ? (
                     t('syncing.processingYear', { year: processingYear })

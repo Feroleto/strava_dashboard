@@ -95,6 +95,7 @@ export interface SyncStatus {
   startedAt: string | null;
   finishedAt: string | null;
   message: string | null;
+  rateLimitResetAt: string | null;
 }
 
 export interface PersonalBestRecord {

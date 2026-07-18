@@ -972,4 +972,58 @@ describe('StravaSyncService', () => {
       );
     });
   });
+
+  describe('getProgress()', () => {
+    it('surfaces the client throttle wait as a running rate_limited phase with a countdown', () => {
+      (service as any).progress.set(USER_ID, {
+        state: 'running',
+        phase: 'processing',
+        total: 50,
+        processed: 10,
+        synced: 10,
+        errors: 0,
+        etaSeconds: null,
+        processingDate: null,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        message: null,
+        rateLimitResetAt: null,
+      });
+      const waitUntil = Date.now() + 12_345;
+      stravaClient.getWaitUntil = vi.fn().mockReturnValue(waitUntil);
+
+      const progress = service.getProgress(USER_ID);
+
+      expect(progress.state).toBe('running');
+      expect(progress.phase).toBe('rate_limited');
+      expect(progress.etaSeconds).toBeGreaterThan(0);
+      expect(progress.etaSeconds).toBeLessThanOrEqual(13);
+      expect(progress.rateLimitResetAt).toBe(new Date(waitUntil).toISOString());
+    });
+
+    it('does not report rate_limited when the client has no active wait', () => {
+      (service as any).progress.set(USER_ID, {
+        state: 'running',
+        phase: 'processing',
+        total: 50,
+        processed: 10,
+        synced: 10,
+        errors: 0,
+        etaSeconds: null,
+        processingDate: null,
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        message: null,
+        rateLimitResetAt: null,
+      });
+      stravaClient.getWaitUntil = vi.fn().mockReturnValue(null);
+      stravaClient.estimateEtaSeconds = vi.fn().mockReturnValue(42);
+
+      const progress = service.getProgress(USER_ID);
+
+      expect(progress.phase).toBe('processing');
+      expect(progress.rateLimitResetAt).toBeNull();
+      expect(progress.etaSeconds).toBe(42);
+    });
+  });
 });
