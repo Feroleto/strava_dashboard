@@ -21,12 +21,34 @@ export class AuthService {
     this.prisma = new PrismaClient({ adapter });
   }
 
-  // null instead of throwing: a valid cookie for a since-deleted user should
-  // read as "logged out", not a 500
-  async getMe(userId: string): Promise<MeResponse | null> {
-    return this.prisma.user.findUnique({
+  // null instead of throwing: a valid cookie for a since-deleted user (or one
+  // whose tokenVersion no longer matches, e.g. after logout) should read as
+  // "logged out", not a 500
+  async authenticate(
+    session: { userId: string; tokenVersion: number } | null,
+  ): Promise<MeResponse | null> {
+    if (!session) return null;
+
+    const user = await this.prisma.user.findUnique({
+      where: { id: session.userId },
+      select: {
+        id: true,
+        firstName: true,
+        profileImgUrl: true,
+        maxHr: true,
+        tokenVersion: true,
+      },
+    });
+    if (!user || user.tokenVersion !== session.tokenVersion) return null;
+
+    const { tokenVersion: _tokenVersion, ...me } = user;
+    return me;
+  }
+
+  async invalidateSessions(userId: string): Promise<void> {
+    await this.prisma.user.update({
       where: { id: userId },
-      select: { id: true, firstName: true, profileImgUrl: true, maxHr: true },
+      data: { tokenVersion: { increment: 1 } },
     });
   }
 }

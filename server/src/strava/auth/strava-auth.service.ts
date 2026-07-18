@@ -44,7 +44,7 @@ export class StravaAuthService {
   // exchanges the OAuth code for tokens, then finds or creates the User
   // whose StravaAccount matches the returned athlete id — this is both the
   // "authorize sync" flow and the login flow, they're the same action here
-  async handleCallback(code: string): Promise<{ userId: string }> {
+  async handleCallback(code: string): Promise<{ userId: string; tokenVersion: number }> {
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -74,7 +74,7 @@ export class StravaAuthService {
     });
 
     if (existing) {
-      await this.prisma.$transaction([
+      const [, updatedUser] = await this.prisma.$transaction([
         this.prisma.stravaAccount.update({
           where: { stravaAthleteId },
           data: tokenFields,
@@ -89,7 +89,7 @@ export class StravaAuthService {
       ]);
 
       this.logger.log(`Strava account reconnected for user ${existing.userId}`);
-      return { userId: existing.userId };
+      return { userId: existing.userId, tokenVersion: updatedUser.tokenVersion };
     }
 
     const user = await this.prisma.user.create({
@@ -103,6 +103,6 @@ export class StravaAuthService {
     });
 
     this.logger.log(`New user created ${user.id} (athlete ${data.athlete.id})`);
-    return { userId: user.id };
+    return { userId: user.id, tokenVersion: user.tokenVersion };
   }
 }

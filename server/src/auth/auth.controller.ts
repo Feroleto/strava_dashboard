@@ -17,15 +17,18 @@ export class AuthController {
   // a console error on every logged-out page load (flagged by Lighthouse)
   @Get('me')
   async me(@Req() req: Request): Promise<MeResponse | null> {
-    const userId = this.session.extractUserId(req);
-    if (!userId) return null;
-    return this.authService.getMe(userId);
+    return this.authService.authenticate(this.session.extractSession(req));
   }
 
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('logout')
   @HttpCode(204)
-  logout(@Res({ passthrough: true }) res: Response): void {
-    this.session.clearCookie(res);
+  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+    const session = this.session.extractSession(req);
+    try {
+      if (session) await this.authService.invalidateSessions(session.userId);
+    } finally {
+      this.session.clearCookie(res);
+    }
   }
 }

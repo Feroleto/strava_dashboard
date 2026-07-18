@@ -36,8 +36,8 @@ export class StravaAuthController {
     );
 
     try {
-      const { userId } = await this.authService.handleCallback(code);
-      this.session.setCookie(res, userId);
+      const { userId, tokenVersion } = await this.authService.handleCallback(code);
+      this.session.setCookie(res, userId, tokenVersion);
       res.redirect(frontendUrl);
     } catch (err: any) {
       this.logger.error(`Strava OAuth callback failed: ${err.message}`);

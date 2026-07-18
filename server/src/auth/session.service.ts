@@ -37,8 +37,8 @@ export class SessionService {
     };
   }
 
-  setCookie(res: Response, userId: string): void {
-    const token = this.jwt.sign({ sub: userId });
+  setCookie(res: Response, userId: string, tokenVersion: number): void {
+    const token = this.jwt.sign({ sub: userId, tv: tokenVersion });
     res.cookie(COOKIE_NAME, token, {
       ...this.cookieOptions,
       maxAge: SESSION_MAX_AGE_MS,
@@ -49,13 +49,13 @@ export class SessionService {
     res.clearCookie(COOKIE_NAME, this.cookieOptions);
   }
 
-  extractUserId(req: Request): string | null {
+  extractSession(req: Request): { userId: string; tokenVersion: number } | null {
     const token = req.cookies?.[COOKIE_NAME];
     if (!token) return null;
 
     try {
-      const payload = this.jwt.verify<{ sub: string }>(token);
-      return payload.sub;
+      const payload = this.jwt.verify<{ sub: string; tv: number }>(token);
+      return { userId: payload.sub, tokenVersion: payload.tv };
     } catch {
       return null;
     }

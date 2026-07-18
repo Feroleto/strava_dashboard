@@ -23,6 +23,6 @@ import { AccountThrottlerGuard } from './account-throttler.guard';
   ],
   controllers: [AuthController],
   providers: [SessionService, AuthGuard, AccountThrottlerGuard, AuthService],
-  exports: [SessionService, AuthGuard, AccountThrottlerGuard],
+  exports: [SessionService, AuthGuard, AccountThrottlerGuard, AuthService],
 })
 export class AuthModule {}
