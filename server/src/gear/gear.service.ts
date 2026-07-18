@@ -32,6 +32,15 @@ export class GearService {
     const [gear, aggregates] = await Promise.all([
       this.prisma.gear.findMany({
         where: { userId },
+        select: {
+          id: true,
+          name: true,
+          brandName: true,
+          modelName: true,
+          distance: true,
+          primary: true,
+          retired: true,
+        },
         orderBy: [{ retired: 'asc' }, { primary: 'desc' }, { name: 'asc' }],
       }),
       this.prisma.activity.groupBy({
