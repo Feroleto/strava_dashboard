@@ -37,6 +37,9 @@ const DISTANCES: { key: string; chip: string; titleKey: string }[] = [
 const COLUMNS = 3;
 const PER_COLUMN = Math.ceil(DISTANCES.length / COLUMNS);
 
+// mobile shows only the headline distances (plus the MAX row below)
+const MOBILE_KEYS = ['1k', '5k', '10k'];
+
 function Chip({ label, muted }: { label: string; muted?: boolean }) {
   return (
     <div
@@ -50,6 +53,57 @@ function Chip({ label, muted }: { label: string; muted?: boolean }) {
       }
     >
       {label}
+    </div>
+  );
+}
+
+function MobileRecordRow({
+  def,
+  best,
+  activityById,
+}: {
+  def: (typeof DISTANCES)[number];
+  best: PersonalBestRecord | undefined;
+  activityById: Map<string, Activity>;
+}) {
+  const { t } = useTranslation('overview');
+  const bestActivity = best ? activityById.get(best.activityId) : undefined;
+  return (
+    <div className="flex items-center gap-3 border-b border-border py-[11px]">
+      <div
+        className={`flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] text-[10.5px] font-bold ${
+          best ? 'text-acc' : 'bg-chip text-muted-foreground'
+        }`}
+        style={
+          best
+            ? { background: 'color-mix(in oklab, var(--acc) 10%, transparent)' }
+            : undefined
+        }
+      >
+        {def.chip}
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-[13.5px] font-semibold text-foreground">
+          {t(def.titleKey)}
+        </div>
+        <div className="mt-[1px] truncate text-[11.5px] text-muted-foreground">
+          {best
+            ? [bestActivity?.name, formatMonthDayYear(new Date(best.startDate))]
+                .filter(Boolean)
+                .join(' · ')
+            : t('records.noRecordYet')}
+        </div>
+      </div>
+      <div className="flex-none text-right">
+        <div className="text-[15px] font-bold text-foreground">
+          {best ? formatHms(best.movingTime) : '—'}
+        </div>
+        {best && (
+          <div className="mt-[1px] text-[11.5px] text-muted-foreground">
+            {formatPace(best.movingTime / (best.distance / 1000))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -218,7 +272,7 @@ export default function PersonalRecordsCard({
   );
 
   return (
-    <div className="rounded-[12px] border border-border p-[18px_20px]">
+    <div className="rounded-[12px] border border-border bg-card p-[18px_20px]">
       <div className="flex items-center justify-between">
         <div className="text-[13.5px] font-semibold text-foreground">
           {t('records.title')}
@@ -228,7 +282,19 @@ export default function PersonalRecordsCard({
         </div>
       </div>
 
-      <div className="mt-1 grid grid-cols-3 gap-x-5">
+      {/* mobile — headline distances only, single column */}
+      <div className="mt-1 md:hidden">
+        {DISTANCES.filter((d) => MOBILE_KEYS.includes(d.key)).map((def) => (
+          <MobileRecordRow
+            key={def.key}
+            def={def}
+            best={byName.get(def.key)?.[0]}
+            activityById={activityById}
+          />
+        ))}
+      </div>
+
+      <div className="mt-1 hidden grid-cols-3 gap-x-5 md:grid">
         {columns.map((defs, c) => (
           <div key={c} className={c > 0 ? 'border-l border-border pl-5' : ''}>
             {defs.map((def, i) => (
@@ -249,9 +315,9 @@ export default function PersonalRecordsCard({
       </div>
 
       {longest && (
-        <div className="flex items-center gap-3 border-t border-border pt-3">
+        <div className="flex items-center gap-3 pt-3 md:border-t md:border-border">
           <div
-            className="flex h-[34px] w-[42px] flex-none items-center justify-center rounded-[10px] text-[10.5px] font-bold text-acc"
+            className="flex h-[38px] w-[38px] flex-none items-center justify-center rounded-[10px] text-[10.5px] font-bold text-acc md:h-[34px] md:w-[42px]"
             style={{
               background: 'color-mix(in oklab, var(--acc) 10%, transparent)',
             }}
@@ -259,10 +325,10 @@ export default function PersonalRecordsCard({
             {t('records.max')}
           </div>
           <div className="min-w-0 flex-1">
-            <div className="text-[12.5px] font-semibold text-foreground">
+            <div className="text-[13.5px] font-semibold text-foreground md:text-[12.5px]">
               {t('records.longestRun')}
             </div>
-            <div className="mt-[1px] truncate text-[11px] text-muted-foreground">
+            <div className="mt-[1px] truncate text-[11.5px] text-muted-foreground md:text-[11px]">
               {longest.name} · {formatMonthDayYear(new Date(longest.startDate))}
             </div>
           </div>

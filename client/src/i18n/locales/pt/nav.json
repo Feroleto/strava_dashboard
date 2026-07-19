@@ -12,6 +12,14 @@
   "badges": {
     "upcoming": "EM BREVE"
   },
+  "openMenu": "Abrir menu",
+  "profile": {
+    "title": "Perfil",
+    "units": "Unidades",
+    "unitsKm": "Quilômetros (km)",
+    "theme": "Tema",
+    "language": "Idioma"
+  },
   "addSport": "Adicionar esporte",
   "yourProfile": "Seu perfil",
   "logOut": "Sair",

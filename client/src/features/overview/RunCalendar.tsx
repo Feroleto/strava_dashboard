@@ -59,6 +59,8 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
     monthStart(new Date()),
   );
   const [hoverDay, setHoverDay] = useState<string | null>(null);
+  // touch: tapping an active day toggles its reading in the footer (no hover)
+  const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   const minMonth = earliestDate ? monthStart(earliestDate) : null;
   const maxMonth = monthStart(new Date());
@@ -106,7 +108,8 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
     year: 'numeric',
   });
 
-  const hoverList = hoverDay ? byDay.get(hoverDay) : undefined;
+  const activeDay = hoverDay ?? selectedDay;
+  const hoverList = activeDay ? byDay.get(activeDay) : undefined;
   const footer = hoverList
     ? hoverList.length > 1
       ? t('calendar.dayMultiRuns', {
@@ -128,25 +131,31 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
       });
 
   return (
-    <div className="rounded-[12px] border border-border p-[18px]">
+    <div className="rounded-[12px] border border-border bg-card p-[18px]">
       <div className="flex items-center justify-between">
         <div className="text-[13.5px] font-semibold text-foreground">
           {monthLabel}
         </div>
         <div className="flex gap-1">
           <button
-            onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
+            onClick={() => {
+              setSelectedDay(null);
+              setVisibleMonth(addMonths(visibleMonth, -1));
+            }}
             disabled={!canPrev}
             aria-label={t('calendar.previousMonth')}
-            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30 md:h-6 md:w-6"
           >
             ‹
           </button>
           <button
-            onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
+            onClick={() => {
+              setSelectedDay(null);
+              setVisibleMonth(addMonths(visibleMonth, 1));
+            }}
             disabled={!canNext}
             aria-label={t('calendar.nextMonth')}
-            className="flex h-6 w-6 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30"
+            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-[7px] bg-chip text-muted-foreground disabled:cursor-default disabled:opacity-30 md:h-6 md:w-6"
           >
             ›
           </button>
@@ -167,7 +176,7 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
       <div className="grid grid-cols-7" onMouseLeave={() => setHoverDay(null)}>
         {cells.map((day, i) => {
           if (day == null) {
-            return <div key={`empty-${i}`} className="h-[35px]" />;
+            return <div key={`empty-${i}`} className="h-10 md:h-[35px]" />;
           }
           const date = new Date(
             visibleMonth.getFullYear(),
@@ -183,11 +192,16 @@ export default function RunCalendar({ activities }: RunCalendarProps) {
           return (
             <div
               key={key}
-              className="flex h-[35px] items-center justify-center"
+              className="flex h-10 cursor-pointer items-center justify-center md:h-[35px]"
               onMouseEnter={() => hasActivity && setHoverDay(key)}
+              onClick={() => {
+                if (!hasActivity) return;
+                setHoverDay(null);
+                setSelectedDay((cur) => (cur === key ? null : key));
+              }}
             >
               <div
-                className={`flex h-[30px] w-[30px] items-center justify-center rounded-full text-[12.5px] ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full text-[13px] md:h-[30px] md:w-[30px] md:text-[12.5px] ${
                   hasActivity
                     ? 'bg-acc font-semibold text-white'
                     : isToday

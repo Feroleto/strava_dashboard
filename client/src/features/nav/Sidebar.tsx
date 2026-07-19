@@ -3,6 +3,7 @@ import { ChevronLeft, LogOut, Plus, type LucideIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
 import { avatarMediumUrl } from '@/lib/avatarUrl';
+import { THEME_OPTIONS, type ThemePref } from '@/lib/theme';
 import SegmentedControl from '@/components/SegmentedControl';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
@@ -19,8 +20,8 @@ interface SidebarProps {
   onToggleCollapse: () => void;
   activePage: PageId;
   onNavigate: (page: PageId, opts?: { collapse?: boolean }) => void;
-  theme: 'light' | 'dark';
-  onTheme: (theme: 'light' | 'dark') => void;
+  themePref: ThemePref;
+  onThemePref: (pref: ThemePref) => void;
 }
 
 function SidebarLabel({
@@ -153,13 +154,15 @@ export default function Sidebar({
   onToggleCollapse,
   activePage,
   onNavigate,
-  theme,
-  onTheme,
+  themePref,
+  onThemePref,
 }: SidebarProps) {
   const { t } = useTranslation('nav');
   const { user, logout } = useAuth();
   const { language, setLanguage } = useAppLanguage();
-  const initials = user?.firstName ? user.firstName.slice(0, 2).toUpperCase() : '—';
+  const initials = user?.firstName
+    ? user.firstName.slice(0, 2).toUpperCase()
+    : '—';
 
   const handleNavClick = (item: NavItem) => {
     if (item.disabled) return;
@@ -173,7 +176,7 @@ export default function Sidebar({
   return (
     <div
       className={cn(
-        'sticky top-3.5 h-[calc(100vh-28px)] flex-none rounded-2xl border border-border bg-card transition-[width] duration-[280ms] ease-in-out',
+        'sticky top-3.5 h-[calc(100vh-28px)] flex-none rounded-2xl border border-border bg-card transition-[width] duration-[280ms] ease-in-out max-md:hidden',
         collapsed ? 'w-[66px]' : 'w-[226px]',
       )}
       style={{ boxShadow: '0 8px 24px rgba(8,12,20,.08)' }}
@@ -250,12 +253,11 @@ export default function Sidebar({
             <div className="flex flex-wrap items-center gap-2">
               <SegmentedControl
                 size="compact"
-                items={[
-                  ['light', 'Light'],
-                  ['dark', 'Dark'],
-                ]}
-                active={theme}
-                onPick={onTheme}
+                items={THEME_OPTIONS.map(
+                  ([k, key]) => [k, t(`common:${key}`)] as [ThemePref, string],
+                )}
+                active={themePref}
+                onPick={onThemePref}
               />
               <SegmentedControl
                 size="compact"

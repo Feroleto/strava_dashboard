@@ -4,6 +4,7 @@ import { Trans, useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/apiUrl';
 import SegmentedControl from '@/components/SegmentedControl';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
+import { THEME_OPTIONS, type ThemePref } from '@/lib/theme';
 
 // TODO: swap the button for Strava's official "Connect with Strava" asset
 // (SVG/PNG from developers.strava.com/guidelines) once it's vendored into
@@ -34,9 +35,9 @@ function HowItWorksPopover() {
   }, [open]);
 
   return (
-    <div ref={ref} className="relative self-start">
+    <div ref={ref} className="relative self-center md:self-start">
       {open && (
-        <div className="absolute bottom-full left-0 mb-2.5 w-[300px] rounded-xl border border-border bg-popover p-4 text-[12px] leading-[1.55] text-popover-foreground shadow-lg">
+        <div className="absolute bottom-full left-1/2 mb-2.5 w-[300px] -translate-x-1/2 rounded-xl border border-border bg-popover p-4 text-left text-[12px] leading-[1.55] text-popover-foreground shadow-lg md:left-0 md:translate-x-0">
           {t('login.howItWorks.body')}
         </div>
       )}
@@ -52,11 +53,11 @@ function HowItWorksPopover() {
 }
 
 interface LoginPageProps {
-  theme: 'light' | 'dark';
-  onTheme: (theme: 'light' | 'dark') => void;
+  themePref: ThemePref;
+  onThemePref: (pref: ThemePref) => void;
 }
 
-export default function LoginPage({ theme, onTheme }: LoginPageProps) {
+export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
   const { t } = useTranslation('auth');
   const { language, setLanguage } = useAppLanguage();
   const [connecting, setConnecting] = useState(false);
@@ -79,9 +80,11 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
   };
 
   return (
-    <div className="flex h-screen">
-      {/* Left panel — editorial, always dark regardless of app theme */}
-      <div className="hidden min-w-0 flex-[1.25] flex-col bg-[#0B0F17] px-[44px] pt-[36px] md:flex">
+    <div className="flex min-h-svh flex-col md:h-screen md:min-h-0 md:flex-row">
+      {/* Hero — editorial, always dark regardless of app theme; on mobile it
+          fills the space above the bottom sheet (76px top accommodates the
+          status bar / safe area) */}
+      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[76px] md:flex-[1.25] md:px-[44px] md:pt-[36px]">
         <div className="flex items-center gap-[10px]">
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
             ST
@@ -91,15 +94,15 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
           </span>
         </div>
 
-        <div className="my-auto py-10">
-          <h1 className="text-[40px] font-bold leading-[1.16] tracking-[-.025em] text-[#EDF1F7]">
+        <div className="my-auto py-8 md:py-10">
+          <h1 className="text-[33px] leading-[1.18] font-bold tracking-[-.025em] text-[#EDF1F7] md:text-[40px] md:leading-[1.16]">
             <Trans
               t={t}
               i18nKey="login.headline"
               components={{ br: <br />, acc: <span className="text-acc" /> }}
             />
           </h1>
-          <p className="mt-4 text-[14.5px] leading-[1.5] text-[#8A93A5]">
+          <p className="mt-3.5 text-[14px] leading-[1.5] text-[#8A93A5] md:mt-4 md:text-[14.5px]">
             {t('login.subheadline')}
           </p>
         </div>
@@ -128,20 +131,20 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
         </svg>
       </div>
 
-      {/* Right panel — login, follows the app theme */}
-      {/* seam treatment against the always-dark left panel (md+ only — the seam
-          doesn't exist on mobile): dark matches its #0B0F17 + hairline border;
-          light keeps bg-card with an inset shadow as if the dark panel cast it */}
-      <div className="relative flex w-full flex-none flex-col justify-center bg-card px-[52px] py-[48px] md:w-[480px] md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] dark:bg-[#0B0F17] md:dark:border-l md:dark:border-white/[.09] dark:shadow-none">
-        <div className="absolute right-[26px] top-[26px] flex items-center gap-2">
+      {/* Sign-in — mobile: bottom sheet anchored under the hero; desktop:
+          right panel. Follows the app theme either way.
+          Desktop seam treatment against the always-dark hero (md+ only):
+          dark matches its #0B0F17 + hairline border; light keeps bg-card with
+          an inset shadow as if the dark panel cast it */}
+      <div className="relative flex w-full flex-none flex-col rounded-t-[26px] bg-card px-[26px] pt-[28px] pb-[46px] text-center dark:border-t dark:border-white/[.09] dark:bg-[#0F1522] md:w-[480px] md:justify-center md:rounded-none md:px-[52px] md:py-[48px] md:text-left md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] md:dark:border-t-0 md:dark:border-l md:dark:border-white/[.09] md:dark:bg-[#0B0F17] md:dark:shadow-none">
+        <div className="absolute right-[26px] top-[26px] hidden items-center gap-2 md:flex">
           <SegmentedControl
             size="compact"
-            items={[
-              ['light', 'Light'],
-              ['dark', 'Dark'],
-            ]}
-            active={theme}
-            onPick={onTheme}
+            items={THEME_OPTIONS.map(
+              ([k, key]) => [k, t(`common:${key}`)] as [ThemePref, string],
+            )}
+            active={themePref}
+            onPick={onThemePref}
           />
           <SegmentedControl
             size="compact"
@@ -171,7 +174,7 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
           type="button"
           onClick={connect}
           disabled={connecting}
-          className="mt-[26px] flex w-full items-center justify-center gap-[9px] rounded-[11px] bg-[#FC4C02] py-[13px] text-[14.5px] font-semibold text-white transition-colors hover:bg-[#E04300] disabled:cursor-default disabled:opacity-80 disabled:hover:bg-[#FC4C02]"
+          className="mt-[26px] flex w-full items-center justify-center gap-[9px] rounded-[12px] bg-[#FC4C02] py-[15px] text-[15px] font-semibold text-white transition-colors hover:bg-[#E04300] disabled:cursor-default disabled:opacity-80 disabled:hover:bg-[#FC4C02] md:rounded-[11px] md:py-[13px] md:text-[14.5px]"
         >
           {connecting ? (
             <>
@@ -190,8 +193,8 @@ export default function LoginPage({ theme, onTheme }: LoginPageProps) {
           {t('login.redirectNotice')}
         </p>
 
-        <div className="absolute bottom-[26px] left-[52px] right-[52px] flex flex-col gap-[10px]">
-          <div className="flex items-start gap-[7px] text-muted-foreground">
+        <div className="mt-6 flex flex-col items-center gap-[10px] md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:items-stretch">
+          <div className="flex items-start justify-center gap-[7px] text-muted-foreground md:justify-start">
             <Lock size={14} strokeWidth={1.7} className="mt-px shrink-0" />
             <span className="text-[11px] leading-[1.5]">
               {t('login.readOnlyNotice')}

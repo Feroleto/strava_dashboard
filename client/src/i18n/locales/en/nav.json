@@ -12,6 +12,14 @@
   "badges": {
     "upcoming": "UPCOMING"
   },
+  "openMenu": "Open menu",
+  "profile": {
+    "title": "Profile",
+    "units": "Units",
+    "unitsKm": "Kilometers (km)",
+    "theme": "Theme",
+    "language": "Language"
+  },
   "addSport": "Add a Sport",
   "yourProfile": "Your profile",
   "logOut": "Log out",

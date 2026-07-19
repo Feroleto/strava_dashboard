@@ -160,6 +160,32 @@
   --sidebar-ring: oklch(0.551 0.027 264.364);
 }
 
+/* mobile nav drawer slide-in (MobileChrome.tsx) */
+@keyframes drawer-in {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+.drawer-panel {
+  animation: drawer-in 200ms ease-out;
+}
+@media (prefers-reduced-motion: reduce) {
+  .drawer-panel {
+    animation: none;
+  }
+}
+
+/* hide scrollbars on mobile scroll containers (shoe carousel, etc.) */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;

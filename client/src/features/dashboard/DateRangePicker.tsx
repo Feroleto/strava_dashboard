@@ -161,6 +161,8 @@ export default function DateRangePicker({
   const maxMonth = monthStart(new Date());
   const canPrev = !minMonth || visibleMonth.getTime() > minMonth.getTime();
   const canNext = addMonths(visibleMonth, 1).getTime() < maxMonth.getTime();
+  // mobile shows a single month, so "next" is allowed up to the current month
+  const canNextMobile = visibleMonth.getTime() < maxMonth.getTime();
 
   const clickDay = (ts: number) => {
     if (pendingStart == null) {
@@ -189,14 +191,14 @@ export default function DateRangePicker({
       ...Array.from({ length: total }, (_, i) => i + 1),
     ];
     return (
-      <div className="w-[216px]">
+      <div className="w-full md:w-[216px]">
         <div className="flex items-center justify-between">
           {side === 'first' ? (
             <button
               onClick={() => setVisibleMonth(addMonths(visibleMonth, -1))}
               disabled={!canPrev}
               aria-label={t('dateRange.previousMonth')}
-              className="h-[26px] w-[26px] cursor-pointer rounded-[7px] text-muted-foreground hover:bg-chip disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent"
+              className="h-8 w-8 cursor-pointer rounded-[7px] text-muted-foreground hover:bg-chip disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent md:h-[26px] md:w-[26px]"
             >
               ‹
             </button>
@@ -216,7 +218,18 @@ export default function DateRangePicker({
               ›
             </button>
           ) : (
-            <span className="w-[26px]" />
+            <>
+              {/* mobile shows only this month, so it needs its own "next" */}
+              <button
+                onClick={() => setVisibleMonth(addMonths(visibleMonth, 1))}
+                disabled={!canNextMobile}
+                aria-label={t('dateRange.nextMonth')}
+                className="h-8 w-8 cursor-pointer rounded-[7px] text-muted-foreground hover:bg-chip disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent md:hidden"
+              >
+                ›
+              </button>
+              <span className="hidden w-[26px] md:block" />
+            </>
           )}
         </div>
         <div className="mt-2 grid grid-cols-7">
@@ -243,7 +256,7 @@ export default function DateRangePicker({
                 key={ts}
                 onClick={() => clickDay(ts)}
                 onMouseEnter={() => setHoverDate(ts)}
-                className={`flex h-[27px] cursor-pointer items-center justify-center text-[12px] ${
+                className={`flex h-10 cursor-pointer items-center justify-center text-[13px] md:h-[27px] md:text-[12px] ${
                   isEdge
                     ? 'rounded-[8px] font-semibold text-white'
                     : inMid
@@ -274,7 +287,7 @@ export default function DateRangePicker({
     <div ref={rootRef} className="relative">
       <button
         onClick={toggle}
-        className={`flex cursor-pointer items-center gap-1.5 rounded-[8px] border px-[11px] py-[5px] text-[11.5px] font-medium ${
+        className={`flex min-h-9 cursor-pointer items-center gap-1.5 rounded-[8px] border px-[11px] py-[5px] text-[11.5px] font-medium md:min-h-0 ${
           range ? 'border-transparent' : 'text-muted-foreground'
         }`}
         style={
@@ -293,60 +306,69 @@ export default function DateRangePicker({
       </button>
 
       {open && (
-        <div
-          className="absolute right-0 z-50 rounded-[14px] border bg-card p-4"
-          style={{
-            top: 'calc(100% + 10px)',
-            borderColor: 'var(--grid-ax)',
-            boxShadow: '0 12px 32px rgba(8,12,20,.16)',
-          }}
-        >
-          <div className="flex">
-            <div className="flex w-[132px] flex-col gap-1 border-r border-border pr-3">
-              {buildPresets().map(([key, preset]) => (
-                <button
-                  key={key}
-                  onClick={() => {
-                    onChange(preset);
-                    close();
-                  }}
-                  className="cursor-pointer rounded-[8px] px-[10px] py-[7px] text-left text-[12.5px] font-medium text-foreground hover:bg-chip"
-                >
-                  {t(key)}
-                </button>
-              ))}
+        <>
+          {/* mobile bottom-sheet scrim */}
+          <div
+            className="fixed inset-0 z-40 bg-[rgba(8,12,20,.35)] md:hidden"
+            onClick={close}
+          />
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 rounded-t-[20px] border bg-card p-5 pb-[calc(20px+env(safe-area-inset-bottom))] md:absolute md:inset-x-auto md:bottom-auto md:top-[calc(100%+10px)] md:right-0 md:rounded-[14px] md:p-4"
+            style={{
+              borderColor: 'var(--grid-ax)',
+              boxShadow: '0 12px 32px rgba(8,12,20,.16)',
+            }}
+          >
+            {/* mobile: presets on top, single-month calendar below */}
+            <div className="flex flex-col md:flex-row">
+              <div className="flex flex-row flex-wrap gap-1.5 border-b border-border pb-3 md:w-[132px] md:flex-col md:gap-1 md:border-b-0 md:border-r md:pb-0 md:pr-3">
+                {buildPresets().map(([key, preset]) => (
+                  <button
+                    key={key}
+                    onClick={() => {
+                      onChange(preset);
+                      close();
+                    }}
+                    className="cursor-pointer rounded-full bg-chip px-3 py-2 text-left text-[12.5px] font-medium text-foreground hover:bg-chip md:rounded-[8px] md:bg-transparent md:px-[10px] md:py-[7px]"
+                  >
+                    {t(key)}
+                  </button>
+                ))}
+              </div>
+              <div
+                className="flex gap-[22px] pt-3 md:pl-4 md:pt-0"
+                onMouseLeave={() => setHoverDate(null)}
+              >
+                {renderMonth(visibleMonth, 'first')}
+                <div className="hidden md:block">
+                  {renderMonth(addMonths(visibleMonth, 1), 'second')}
+                </div>
+              </div>
             </div>
-            <div
-              className="flex gap-[22px] pl-4"
-              onMouseLeave={() => setHoverDate(null)}
-            >
-              {renderMonth(visibleMonth, 'first')}
-              {renderMonth(addMonths(visibleMonth, 1), 'second')}
-            </div>
-          </div>
 
-          <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-            <div className="text-[12px] text-muted-foreground">{hint}</div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => {
-                  onChange(null);
-                  setPendingStart(null);
-                  setHoverDate(null);
-                }}
-                className="cursor-pointer rounded-[8px] px-2.5 py-[5px] text-[12px] font-medium text-muted-foreground hover:text-foreground"
-              >
-                {t('dateRange.clean')}
-              </button>
-              <button
-                onClick={close}
-                className="cursor-pointer rounded-[8px] bg-chip px-2.5 py-[5px] text-[12px] font-medium text-foreground hover:bg-grid-ax"
-              >
-                {t('dateRange.close')}
-              </button>
+            <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+              <div className="text-[12px] text-muted-foreground">{hint}</div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    onChange(null);
+                    setPendingStart(null);
+                    setHoverDate(null);
+                  }}
+                  className="cursor-pointer rounded-[8px] px-2.5 py-[5px] text-[12px] font-medium text-muted-foreground hover:text-foreground"
+                >
+                  {t('dateRange.clean')}
+                </button>
+                <button
+                  onClick={close}
+                  className="cursor-pointer rounded-[8px] bg-chip px-2.5 py-[5px] text-[12px] font-medium text-foreground hover:bg-grid-ax"
+                >
+                  {t('dateRange.close')}
+                </button>
+              </div>
             </div>
           </div>
-        </div>
+        </>
       )}
     </div>
   );

@@ -1,6 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { isMobileViewport, useIsMobile } from '@/lib/useIsMobile';
 import WeeklyChart, { type Granularity, type Period } from './WeeklyChart';
+import MobileWeeklySummary from './MobileWeeklySummary';
 import DateRangePicker, { type DateRange } from './DateRangePicker';
 import Rail from './Rail';
 import ActivityList from './ActivityList';
@@ -28,6 +30,39 @@ export default function Dashboard() {
   const [weekPage, setWeekPage] = useState(1);
   const [refreshKey, setRefreshKey] = useState(0);
   const { activities, loading, error } = useActivities(refreshKey);
+  const isMobile = useIsMobile();
+
+  // mobile: the detail view is pushed onto browser history so the hardware /
+  // gesture back closes it instead of leaving the app
+  const pushedDetailRef = useRef(false);
+
+  useEffect(() => {
+    const onPop = () => {
+      // back may be popping the drawer's own entry (MobileChrome) while the
+      // detail entry is still on the stack — in that case the detail stays
+      if (window.history.state?.activityDetail) return;
+      pushedDetailRef.current = false;
+      setDetailId(null);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const openDetail = (id: string) => {
+    setDetailId(id);
+    if (isMobileViewport()) {
+      window.history.pushState({ activityDetail: true }, '');
+      pushedDetailRef.current = true;
+    }
+  };
+
+  const closeDetail = () => {
+    if (pushedDetailRef.current) {
+      window.history.back();
+    } else {
+      setDetailId(null);
+    }
+  };
 
   const isAll = period === 'all';
   const n = isAll ? 0 : parseInt(period, 10);
@@ -84,6 +119,13 @@ export default function Dashboard() {
     }
     return aggregateWeeks(activities, n, typeFilter);
   }, [activities, inRange, dateRange, isAll, earliestDate, n, typeFilter]);
+
+  // mobile KPI carousel + bars are always the last 12 weeks, unfiltered —
+  // the mobile screen has no period segmented or type filter
+  const mobileWeeks = useMemo(
+    () => aggregateWeeks(activities, 12, 'ALL'),
+    [activities],
+  );
 
   const chartGranularity: Granularity =
     (rangeActive && rangeDays > MONTHLY_THRESHOLD_DAYS) ||
@@ -161,10 +203,13 @@ export default function Dashboard() {
   );
   // clamp instead of trusting state: a refetch or filter change can shrink the list
   const currentWeekPage = Math.min(weekPage, totalWeekPages);
-  const shownGroups = weekGroups.slice(
-    (currentWeekPage - 1) * WEEKS_PER_PAGE,
-    currentWeekPage * WEEKS_PER_PAGE,
-  );
+  // mobile appends older weeks ("load more") instead of swapping pages
+  const shownGroups = isMobile
+    ? weekGroups.slice(0, currentWeekPage * WEEKS_PER_PAGE)
+    : weekGroups.slice(
+        (currentWeekPage - 1) * WEEKS_PER_PAGE,
+        currentWeekPage * WEEKS_PER_PAGE,
+      );
   const olderWeeks = Math.max(
     0,
     weekGroups.length - currentWeekPage * WEEKS_PER_PAGE,
@@ -186,65 +231,72 @@ export default function Dashboard() {
   }
 
   return (
-    <div className="grid grid-cols-[264px_1fr] gap-11 p-10 tabular-nums">
-      <Rail
-        subtitle={
-          dateRange
-            ? formatRangeLabel(dateRange)
-            : isAll
-              ? t('rail.allRuns')
-              : t('rail.lastNWeeks', { count: n })
-        }
-        totals={totals}
-        avgPace={avgPace}
-        typeFilter={typeFilter}
-        onTypeFilter={(type) => {
-          setTypeFilter(type);
-          setWeekPage(1);
-        }}
-        typeCounts={typeCounts}
-        onSynced={() => setRefreshKey((k) => k + 1)}
-      />
+    <div className="grid grid-cols-1 px-5 pt-[18px] pb-[44px] tabular-nums md:grid-cols-[264px_1fr] md:gap-11 md:p-10">
+      {/* the Rail (period subtitle, type filter, sync panel) is desktop-only */}
+      <div className="hidden md:block">
+        <Rail
+          subtitle={
+            dateRange
+              ? formatRangeLabel(dateRange)
+              : isAll
+                ? t('rail.allRuns')
+                : t('rail.lastNWeeks', { count: n })
+          }
+          totals={totals}
+          avgPace={avgPace}
+          typeFilter={typeFilter}
+          onTypeFilter={(type) => {
+            setTypeFilter(type);
+            setWeekPage(1);
+          }}
+          typeCounts={typeCounts}
+          onSynced={() => setRefreshKey((k) => k + 1)}
+        />
+      </div>
 
       {/* right panel: detail view swaps in-place with the list */}
       {detailId ? (
         <div className="min-w-0">
-          <ActivityDetailView id={detailId} onBack={() => setDetailId(null)} />
+          <ActivityDetailView id={detailId} onBack={closeDetail} />
         </div>
       ) : (
         <div className="min-w-0">
-          <WeeklyChart
-            bins={chartBins}
-            granularity={chartGranularity}
-            totalKm={totals.km}
-            period={period}
-            onPeriodChange={(p) => {
-              setPeriod(p);
-              setWeekPage(1);
-              setDateRange(null);
-            }}
-            onSelect={
-              isAll && !rangeActive
-                ? (ms) => {
-                    const s = new Date(ms);
-                    applyRange({
-                      start: ms,
-                      end: new Date(
-                        s.getFullYear(),
-                        s.getMonth() + 1,
-                        0,
-                      ).getTime(),
-                    });
-                  }
-                : undefined
-            }
-          >
-            <DateRangePicker
-              range={dateRange}
-              onChange={applyRange}
-              minDate={earliestDate}
-            />
-          </WeeklyChart>
+          <div className="hidden md:block">
+            <WeeklyChart
+              bins={chartBins}
+              granularity={chartGranularity}
+              totalKm={totals.km}
+              period={period}
+              onPeriodChange={(p) => {
+                setPeriod(p);
+                setWeekPage(1);
+                setDateRange(null);
+              }}
+              onSelect={
+                isAll && !rangeActive
+                  ? (ms) => {
+                      const s = new Date(ms);
+                      applyRange({
+                        start: ms,
+                        end: new Date(
+                          s.getFullYear(),
+                          s.getMonth() + 1,
+                          0,
+                        ).getTime(),
+                      });
+                    }
+                  : undefined
+              }
+            >
+              <DateRangePicker
+                range={dateRange}
+                onChange={applyRange}
+                minDate={earliestDate}
+              />
+            </WeeklyChart>
+          </div>
+
+          <MobileWeeklySummary weeks={mobileWeeks} />
 
           {dateRange && (
             <RangeChip
@@ -259,10 +311,12 @@ export default function Dashboard() {
           <ActivityList
             loading={loading}
             groups={shownGroups}
-            onOpenDetail={setDetailId}
+            onOpenDetail={openDetail}
             currentPage={currentWeekPage}
             totalPages={totalWeekPages}
             onPageChange={setWeekPage}
+            olderWeeks={olderWeeks}
+            onLoadMore={() => setWeekPage(currentWeekPage + 1)}
             allModeFooter={
               isAll && !rangeActive
                 ? olderWeeks > 0

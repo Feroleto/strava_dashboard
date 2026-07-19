@@ -43,12 +43,13 @@ export default function ShoesSection() {
         </div>
       </div>
 
-      <div className="mt-3 grid grid-cols-3 gap-[14px]">
+      {/* mobile: edge-bleed horizontal carousel; desktop: 3-col grid */}
+      <div className="no-scrollbar -mx-5 mt-3 flex gap-[14px] overflow-x-auto px-5 md:mx-0 md:grid md:grid-cols-3 md:overflow-visible md:px-0">
         {gear.map((g) => (
           <ShoeCard key={g.id} gear={g} />
         ))}
         {gear.length === 0 && (
-          <p className="col-span-3 py-6 text-center text-[12.5px] text-muted-foreground">
+          <p className="w-full py-6 text-center text-[12.5px] text-muted-foreground md:col-span-3">
             {t('shoes.empty')}
           </p>
         )}
@@ -89,7 +90,7 @@ function ShoeCard({ gear }: { gear: Gear }) {
 
   return (
     <div
-      className={`flex flex-col gap-[10px] rounded-[12px] border border-border p-4 ${
+      className={`flex w-[230px] flex-none flex-col gap-[10px] rounded-[12px] border border-border bg-card p-4 md:w-auto ${
         gear.retired ? 'opacity-60' : ''
       }`}
     >

@@ -1,9 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '@/features/nav/Sidebar';
+import MobileChrome from '@/features/nav/MobileChrome';
 import PlaceholderPage from '@/features/nav/PlaceholderPage';
+import ProfilePage from '@/features/profile/ProfilePage';
 import { FIRST_SYNC_FLAG } from '@/features/onboarding/firstSyncFlag';
 import { useAuth } from '@/features/auth/AuthContext';
+import { parseThemePref, type ThemePref } from '@/lib/theme';
 import {
   PAGE_IMPORTERS,
   bootHasActivities,
@@ -28,7 +31,15 @@ const RunAnalysisPage = lazy(PAGE_IMPORTERS['run/analysis']!);
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const FirstSyncPage = lazy(() => import('@/features/onboarding/FirstSyncPage'));
 
-function PageContent({ page }: { page: PageId }) {
+function PageContent({
+  page,
+  themePref,
+  onThemePref,
+}: {
+  page: PageId;
+  themePref: ThemePref;
+  onThemePref: (pref: ThemePref) => void;
+}) {
   const { t } = useTranslation('nav');
   switch (page) {
     case 'overview':
@@ -37,6 +48,8 @@ function PageContent({ page }: { page: PageId }) {
       return <RunOverviewPage />;
     case 'run/analysis':
       return <RunAnalysisPage />;
+    case 'profile':
+      return <ProfilePage themePref={themePref} onThemePref={onThemePref} />;
     case 'run/activities':
     default:
       return <Dashboard />;
@@ -62,8 +75,13 @@ function BootSplash() {
 
 function App() {
   const { user, loading } = useAuth();
-  const [theme, setTheme] = useState<'light' | 'dark'>(() =>
-    localStorage.getItem('theme') === 'dark' ? 'dark' : 'light',
+  // 'auto' follows the browser via prefers-color-scheme; a manual pick
+  // persists and wins until the user goes back to Auto
+  const [themePref, setThemePref] = useState<ThemePref>(() =>
+    parseThemePref(localStorage.getItem('theme')),
+  );
+  const [systemDark, setSystemDark] = useState(
+    () => window.matchMedia('(prefers-color-scheme: dark)').matches,
   );
   const [collapsed, setCollapsed] = useState(
     () => localStorage.getItem('sidebar-collapsed') === 'true',
@@ -76,6 +94,9 @@ function App() {
   // activity yet; onboardingDone lets FirstSyncPage hand off to the dashboard
   const [hasActivities, setHasActivities] = useState<boolean | null>(null);
   const [onboardingDone, setOnboardingDone] = useState(false);
+
+  const theme =
+    themePref === 'auto' ? (systemDark ? 'dark' : 'light') : themePref;
 
   useEffect(() => {
     if (!user) return;
@@ -91,9 +112,19 @@ function App() {
   }, [user]);
 
   useEffect(() => {
+    const mq = window.matchMedia('(prefers-color-scheme: dark)');
+    const onChange = (e: MediaQueryListEvent) => setSystemDark(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark');
-    localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    localStorage.setItem('theme', themePref);
+  }, [themePref]);
 
   useEffect(() => {
     localStorage.setItem('sidebar-collapsed', String(collapsed));
@@ -115,7 +146,7 @@ function App() {
   if (!user) {
     return (
       <Suspense fallback={<BootSplash />}>
-        <LoginPage theme={theme} onTheme={setTheme} />
+        <LoginPage themePref={themePref} onThemePref={setThemePref} />
       </Suspense>
     );
   }
@@ -140,22 +171,24 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-page-bg p-3.5">
-      <div className="flex items-start gap-3.5">
+    <div className="min-h-screen bg-page-bg max-md:pt-[118px] max-md:pb-[env(safe-area-inset-bottom)] md:p-3.5">
+      <MobileChrome activePage={page} onNavigate={navigate} />
+      <div className="flex items-start md:gap-3.5">
         <Sidebar
           collapsed={collapsed}
           onToggleCollapse={() => setCollapsed((c) => !c)}
           activePage={page}
           onNavigate={navigate}
-          theme={theme}
-          onTheme={setTheme}
+          themePref={themePref}
+          onThemePref={setThemePref}
         />
-        <div
-          className="min-h-[calc(100vh-28px)] min-w-0 flex-1 rounded-2xl border border-border bg-card"
-          style={{ boxShadow: '0 8px 24px rgba(8,12,20,.06)' }}
-        >
+        <div className="min-w-0 flex-1 md:min-h-[calc(100vh-28px)] md:rounded-2xl md:border md:border-border md:bg-card md:shadow-[0_8px_24px_rgba(8,12,20,.06)]">
           <Suspense fallback={<div className="min-h-[calc(100vh-28px)]" />}>
-            <PageContent page={page} />
+            <PageContent
+              page={page}
+              themePref={themePref}
+              onThemePref={setThemePref}
+            />
           </Suspense>
         </div>
       </div>

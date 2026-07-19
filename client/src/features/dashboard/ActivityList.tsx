@@ -29,6 +29,9 @@ interface ActivityListProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  /** mobile load-more: weeks not yet shown (groups are cumulative there) */
+  olderWeeks: number;
+  onLoadMore: () => void;
   /** rodapé do modo "Tudo" sem range custom; null oculta */
   allModeFooter: string | null;
 }
@@ -40,6 +43,8 @@ export default function ActivityList({
   currentPage,
   totalPages,
   onPageChange,
+  olderWeeks,
+  onLoadMore,
   allModeFooter,
 }: ActivityListProps) {
   const { t } = useTranslation('dashboard');
@@ -76,8 +81,8 @@ export default function ActivityList({
               )}
             </div>
             <div className="text-[12.5px] text-muted-foreground">
-              {t('list.runsCount', { count: week.count })} ·{' '}
-              {formatKm(week.km)} km
+              {t('list.runsCount', { count: week.count })} · {formatKm(week.km)}{' '}
+              km
             </div>
           </div>
           {week.runs.map((a) => {
@@ -94,34 +99,50 @@ export default function ActivityList({
                     className="flex min-w-0 flex-1 cursor-pointer items-center gap-[13px] px-0.5 py-[13px]"
                   >
                     <div
-                      className="h-[7px] w-[7px] flex-none rounded-full"
+                      className="h-2 w-2 flex-none rounded-full md:h-[7px] md:w-[7px]"
                       style={{ background: meta?.dot }}
                     />
-                    <div className="min-w-0 flex-1 text-sm font-semibold text-foreground">
-                      {a.name}
-                      <span className="font-normal text-muted-foreground">
-                        {' '}
-                        · {formatDayMonth(new Date(a.startDate))}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-sm font-semibold text-foreground">
+                        {a.name}
+                        <span className="hidden font-normal text-muted-foreground md:inline">
+                          {' '}
+                          · {formatDayMonth(new Date(a.startDate))}
+                        </span>
+                      </div>
+                      {/* mobile meta line: date · km · time */}
+                      <div className="mt-[1px] text-[11.5px] text-muted-foreground md:hidden">
+                        {formatDayMonth(new Date(a.startDate))} ·{' '}
+                        {a.distanceKm != null
+                          ? `${formatKm(a.distanceKm)} km`
+                          : '—'}{' '}
+                        · {formatDurationShort(a.movingTimeSec)}
+                      </div>
                     </div>
-                    <div className="w-[72px] text-right text-[13.5px] text-muted-foreground">
+                    <div className="hidden w-[72px] text-right text-[13.5px] text-muted-foreground md:block">
                       {a.distanceKm != null
                         ? `${formatKm(a.distanceKm)} km`
                         : '—'}
                     </div>
-                    <div className="w-16 text-right text-[13.5px] text-muted-foreground">
+                    <div className="hidden w-16 text-right text-[13.5px] text-muted-foreground md:block">
                       {formatDurationShort(a.movingTimeSec)}
                     </div>
-                    <div className="w-[84px] text-right text-sm font-semibold text-foreground">
+                    <div className="text-right text-sm font-semibold text-foreground md:w-[84px]">
                       {formatPace(a.paceRawSecKm)}
                     </div>
+                    <span
+                      aria-hidden="true"
+                      className="text-[15px] text-muted-foreground md:hidden"
+                    >
+                      ›
+                    </span>
                   </div>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
                       setPeekId(peek ? null : a.id);
                     }}
-                    className="ml-1 h-[38px] w-[38px] cursor-pointer rounded-[9px] text-[15px] text-muted-foreground transition-transform duration-150 hover:bg-chip"
+                    className="ml-1 hidden h-[38px] w-[38px] cursor-pointer rounded-[9px] text-[15px] text-muted-foreground transition-transform duration-150 hover:bg-chip md:block"
                     style={{
                       transform: peek ? 'rotate(90deg)' : 'rotate(0deg)',
                     }}
@@ -172,8 +193,17 @@ export default function ActivityList({
           })}
         </div>
       ))}
+      {/* mobile: cumulative load-more */}
+      {olderWeeks > 0 && (
+        <button
+          onClick={onLoadMore}
+          className="w-full cursor-pointer rounded-[10px] bg-chip py-3 text-[13px] font-medium text-foreground md:hidden"
+        >
+          {t('list.olderWeeks', { count: olderWeeks })}
+        </button>
+      )}
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="hidden items-center justify-between md:flex">
           <button
             onClick={() => onPageChange(currentPage - 1)}
             disabled={currentPage <= 1}
@@ -194,7 +224,7 @@ export default function ActivityList({
         </div>
       )}
       {allModeFooter != null && (
-        <div className="mt-4 text-center text-[12.5px] text-muted-foreground">
+        <div className="mt-4 hidden text-center text-[12.5px] text-muted-foreground md:block">
           {allModeFooter}
         </div>
       )}

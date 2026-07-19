@@ -9,7 +9,10 @@
     "time": "Time",
     "avgPace": "{{pace}} avg",
     "elevation": "Elevation",
-    "bestElevation": "best {{value}} m in a run"
+    "bestElevation": "best {{value}} m in a run",
+    "activities": "Activities",
+    "avgPaceLabel": "Avg pace",
+    "totalTime": "Total time"
   },
   "calendar": {
     "previousMonth": "Previous month",

@@ -3,7 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>SoTreina</title>
     <meta
       name="description"
@@ -23,10 +26,18 @@
       recompute with `npm run csp:hash` and update vercel.json accordingly.
     -->
     <script>
-      // apply persisted theme before first paint to avoid flash
-      if (localStorage.getItem('theme') === 'dark') {
-        document.documentElement.classList.add('dark');
-      }
+      // apply persisted theme before first paint to avoid flash; anything
+      // other than an explicit manual choice means "auto" (follow the browser)
+      (function () {
+        var pref = localStorage.getItem('theme');
+        if (
+          pref === 'dark' ||
+          (pref !== 'light' &&
+            window.matchMedia('(prefers-color-scheme: dark)').matches)
+        ) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
       // set <html lang> before first paint, same rule as client/src/i18n/index.ts
       (function () {
         var stored = localStorage.getItem('language');

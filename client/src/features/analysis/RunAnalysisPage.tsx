@@ -24,7 +24,7 @@ function SectionLabel({
 }) {
   return (
     <div
-      className={`col-span-2 text-[11px] font-semibold tracking-[.08em] text-muted-foreground uppercase ${
+      className={`text-[11px] font-semibold tracking-[.08em] text-muted-foreground uppercase md:col-span-2 ${
         first ? '' : 'mt-6'
       }`}
     >
@@ -119,8 +119,9 @@ export default function RunAnalysisPage() {
   }
 
   return (
-    <div className="p-[30px_34px_34px] tabular-nums">
-      <h1 className="text-[19px] font-semibold tracking-[-.01em] text-foreground">
+    <div className="px-5 pt-[18px] pb-[44px] tabular-nums md:p-[30px_34px_34px]">
+      {/* on mobile the section title lives in the app bar (MobileChrome) */}
+      <h1 className="hidden text-[19px] font-semibold tracking-[-.01em] text-foreground md:block">
         {t('page.title')}
       </h1>
       <p className="mt-[2px] text-[12.5px] text-muted-foreground">
@@ -133,7 +134,7 @@ export default function RunAnalysisPage() {
           {t('page.loading')}
         </p>
       ) : (
-        <div className="mt-6 grid grid-cols-2 gap-4">
+        <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <SectionLabel first>{t('sections.volume')}</SectionLabel>
           <WeeklyVolumeChart weeks={completed} />
           <PaceVsVolumeChart weeks={completed} />

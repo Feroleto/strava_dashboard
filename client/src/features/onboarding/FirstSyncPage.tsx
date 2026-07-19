@@ -23,11 +23,63 @@ interface HistorySummary {
   lastYear: number | null;
 }
 
+// mobile stand-in: stacked column matching the tab-bar layout's content flow
+function MobileSkeletonBackdrop() {
+  return (
+    <div
+      aria-hidden="true"
+      className="flex min-h-full flex-1 flex-col gap-[14px] px-5 pt-[76px] md:hidden"
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-[10px]">
+          <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
+            ST
+          </div>
+          <span className="text-[14px] font-semibold text-foreground">
+            SoTreina
+          </span>
+        </div>
+        <div className="h-[30px] w-[30px] rounded-full bg-chip" />
+      </div>
+
+      <div className="grid grid-cols-2 gap-[14px]">
+        {['62%', '48%', '55%', '42%'].map((width) => (
+          <div
+            key={width}
+            className="flex flex-col gap-2.5 rounded-[14px] border border-border bg-card p-4"
+          >
+            <div className="h-[10px] rounded-[5px] bg-chip" style={{ width }} />
+            <div className="h-[18px] w-2/3 rounded-[6px] bg-chip" />
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-[14px] border border-border bg-card p-4">
+        <div className="h-[11px] w-[40%] rounded-[5px] bg-chip" />
+        <div className="h-[140px] rounded-[10px] bg-chip" />
+      </div>
+
+      <div className="flex flex-col gap-4 rounded-[14px] border border-border bg-card p-4">
+        {['72%', '58%', '66%'].map((width) => (
+          <div key={width} className="flex items-center gap-3">
+            <div className="h-2 w-2 flex-none rounded-full bg-chip" />
+            <div className="h-[10px] rounded-[5px] bg-chip" style={{ width }} />
+            <div className="ml-auto h-[10px] w-[44px] flex-none rounded-[5px] bg-chip" />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // static, non-interactive stand-in for the app shell so the sync card feels
 // like it sits on top of the real dashboard
 function SkeletonBackdrop() {
   return (
-    <div aria-hidden="true" className="flex min-h-full flex-1 gap-[14px]">
+    <div
+      aria-hidden="true"
+      className="hidden min-h-full flex-1 gap-[14px] p-[14px] md:flex"
+    >
       {/* sidebar */}
       <div className="flex w-[210px] flex-none flex-col gap-6 rounded-[16px] border border-border bg-card px-[14px] py-[20px]">
         <div className="flex items-center gap-[10px]">
@@ -146,7 +198,9 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
         return res.json();
       })
       .then((data: ActivitiesResponse) => {
-        const years = data.items.map((a) => new Date(a.startDate).getFullYear());
+        const years = data.items.map((a) =>
+          new Date(a.startDate).getFullYear(),
+        );
         setSummary({
           count: data.total,
           km: data.items.reduce((sum, a) => sum + (a.distanceKm ?? 0), 0),
@@ -193,19 +247,26 @@ export default function FirstSyncPage({ onDone }: FirstSyncPageProps) {
   const isRateLimited = status?.phase === 'rate_limited';
   const rateLimitSecondsLeft =
     isRateLimited && status?.rateLimitResetAt
-      ? Math.max(0, Math.round((new Date(status.rateLimitResetAt).getTime() - now) / 1000))
+      ? Math.max(
+          0,
+          Math.round(
+            (new Date(status.rateLimitResetAt).getTime() - now) / 1000,
+          ),
+        )
       : null;
 
   const primaryButton =
-    'w-full cursor-pointer rounded-[11px] bg-acc py-[13px] text-[14.5px] font-semibold text-white hover:brightness-[.93]';
+    'w-full cursor-pointer rounded-[12px] bg-acc py-[15px] text-[15px] font-semibold text-white hover:brightness-[.93] md:rounded-[11px] md:py-[13px] md:text-[14.5px]';
 
   return (
-    <div className="relative flex min-h-screen gap-[14px] bg-page-bg p-[14px]">
+    <div className="relative flex min-h-screen bg-page-bg">
+      <MobileSkeletonBackdrop />
       <SkeletonBackdrop />
 
-      <div className="absolute inset-0 flex items-center justify-center bg-[rgba(8,12,20,.16)] dark:bg-[rgba(4,7,12,.45)]">
+      {/* mobile: bottom-sheet scrim; desktop: centered dialog scrim */}
+      <div className="absolute inset-0 flex items-end justify-center bg-[rgba(8,12,20,.22)] md:items-center md:bg-[rgba(8,12,20,.16)] dark:bg-[rgba(4,7,12,.5)] md:dark:bg-[rgba(4,7,12,.45)]">
         {step != null && (
-          <div className="flex w-[430px] flex-col items-center rounded-[20px] border border-border bg-card px-[44px] pb-[32px] pt-[40px] text-center shadow-[0_24px_60px_rgba(8,12,20,.22)]">
+          <div className="flex w-full flex-col items-center rounded-t-[26px] border border-border bg-card px-[26px] pb-[46px] pt-[32px] text-center shadow-[0_24px_60px_rgba(8,12,20,.22)] md:w-[430px] md:rounded-[20px] md:px-[44px] md:pb-[32px] md:pt-[40px]">
             {step === 'intro' && (
               <>
                 {/* keeps large.jpg: 52px at 2x DPR needs 104px, medium (62px) would blur */}

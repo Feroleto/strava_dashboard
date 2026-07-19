@@ -25,8 +25,8 @@ export default function AnalysisCard({
 }: AnalysisCardProps) {
   return (
     <div
-      className={`flex flex-col rounded-[12px] border border-border px-[18px] pt-4 pb-[10px] ${
-        fullWidth ? 'col-span-2' : 'col-span-1'
+      className={`flex flex-col rounded-[12px] border border-border bg-card px-[18px] pt-4 pb-[10px] ${
+        fullWidth ? 'md:col-span-2' : ''
       }`}
     >
       <div className="flex items-center justify-between">

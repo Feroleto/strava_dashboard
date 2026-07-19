@@ -58,10 +58,23 @@
     "olderWeeks_other": "+ {{count}} previous weeks",
     "selectMonth": "Select a month in the graph to filter"
   },
+  "kpis": {
+    "distance": "Distance",
+    "avgPace": "Avg pace",
+    "activities": "Activities",
+    "time": "Time",
+    "weeksCount_one": "{{count}} week",
+    "weeksCount_other": "{{count}} weeks",
+    "perWeek": "{{value}} per week",
+    "moving": "moving"
+  },
   "chart": {
     "weeklyDistance": "Weekly distance",
     "monthlyDistance": "Monthly distance",
     "kmInPeriod": "{{km}} km in this period",
+    "barHint_one": "{{km}} km in {{count}} week · tap a bar",
+    "barHint_other": "{{km}} km in {{count}} weeks · tap a bar",
+    "barReading": "Week of {{date}} · {{km}} km",
     "periods": {
       "4": "4 w",
       "8": "8 w",

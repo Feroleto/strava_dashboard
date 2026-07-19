@@ -2,6 +2,11 @@
   "appName": "SoTreina",
   "error": "Error: {{message}}",
   "loading": "Loading…",
+  "theme": {
+    "auto": "Auto",
+    "light": "Light",
+    "dark": "Dark"
+  },
   "workout": {
     "easyLong": "Easy/Long",
     "interval": "Interval",

@@ -33,9 +33,21 @@ function formatDateFull(iso: string): string {
   return `${date.charAt(0).toUpperCase()}${date.slice(1)} · ${time}`;
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  desktopOnly,
+}: {
+  label: string;
+  value: string;
+  desktopOnly?: boolean;
+}) {
   return (
-    <div className="rounded-xl border border-border bg-card px-[15px] py-[13px] transition-[background] duration-[250ms]">
+    <div
+      className={`rounded-xl border border-border bg-card px-[15px] py-[13px] transition-[background] duration-[250ms] ${
+        desktopOnly ? 'hidden md:block' : ''
+      }`}
+    >
       <div className="text-[11px] tracking-[.03em] uppercase text-muted-foreground">
         {label}
       </div>
@@ -93,7 +105,8 @@ export default function ActivityDetailView({
       : null;
   const labels = lapLabels(activity.laps, t);
 
-  const stats: [string, string][] = [
+  // desktopOnly trims the mobile grid to the 6 headline cards
+  const stats: [string, string, boolean?][] = [
     [
       t('stats.distance'),
       activity.distanceKm != null ? `${formatKm(activity.distanceKm)} km` : '—',
@@ -115,6 +128,7 @@ export default function ActivityDetailView({
     [
       t('stats.maxHr'),
       activity.maxBpm != null ? `${Math.round(activity.maxBpm)} bpm` : '—',
+      true,
     ],
     [
       t('stats.cadence'),
@@ -122,7 +136,7 @@ export default function ActivityDetailView({
         ? `${Math.round(activity.averageCadence)} spm`
         : '—',
     ],
-    [t('stats.bestPace'), formatPace(fastestPace)],
+    [t('stats.bestPace'), formatPace(fastestPace), true],
   ];
 
   return (
@@ -149,9 +163,14 @@ export default function ActivityDetailView({
         {formatDateFull(activity.startDate)}
       </div>
 
-      <div className="mt-[22px] grid grid-cols-4 gap-2.5">
-        {stats.map(([label, value]) => (
-          <StatCard key={label} label={label} value={value} />
+      <div className="mt-[22px] grid grid-cols-2 gap-2.5 md:grid-cols-4">
+        {stats.map(([label, value, desktopOnly]) => (
+          <StatCard
+            key={label}
+            label={label}
+            value={value}
+            desktopOnly={desktopOnly}
+          />
         ))}
       </div>
 
@@ -207,14 +226,24 @@ export default function ActivityDetailView({
           </div>
           <div className="flex items-center gap-[13px] px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground">
             <div className="w-[22px]">{t('laps.index')}</div>
-            <div className="w-[110px]">{t('laps.lap')}</div>
+            <div className="w-[84px] md:w-[110px]">{t('laps.lap')}</div>
             <div className="flex-1" />
-            <div className="w-[66px] text-right">{t('laps.dist')}</div>
-            <div className="w-14 text-right">{t('laps.time')}</div>
+            <div className="w-[58px] text-right md:w-[66px]">
+              {t('laps.dist')}
+            </div>
+            <div className="hidden w-14 text-right md:block">
+              {t('laps.time')}
+            </div>
             <div className="w-16 text-right">{t('laps.pace')}</div>
-            <div className="w-11 text-right">{t('laps.spm')}</div>
-            <div className="w-11 text-right">{t('laps.avgHr')}</div>
-            <div className="w-11 text-right">{t('laps.maxHr')}</div>
+            <div className="hidden w-11 text-right md:block">
+              {t('laps.spm')}
+            </div>
+            <div className="hidden w-11 text-right md:block">
+              {t('laps.avgHr')}
+            </div>
+            <div className="hidden w-11 text-right md:block">
+              {t('laps.maxHr')}
+            </div>
           </div>
           {activity.laps.map((lap, i) => (
             <div
@@ -224,7 +253,7 @@ export default function ActivityDetailView({
               <div className="w-[22px] text-[12.5px] text-muted-foreground">
                 {lap.lapIndex}
               </div>
-              <div className="w-[110px] text-[13.5px] font-medium text-foreground">
+              <div className="w-[84px] text-[13.5px] font-medium text-foreground md:w-[110px]">
                 {labels[i]}
               </div>
               <div className="h-1.5 flex-1 overflow-hidden rounded-[3px] bg-chip">
@@ -239,22 +268,22 @@ export default function ActivityDetailView({
                   />
                 )}
               </div>
-              <div className="w-[66px] text-right text-[13px] text-muted-foreground">
+              <div className="w-[58px] text-right text-[13px] text-muted-foreground md:w-[66px]">
                 {(lap.distanceM / 1000).toFixed(2)} km
               </div>
-              <div className="w-14 text-right text-[13px] text-muted-foreground">
+              <div className="hidden w-14 text-right text-[13px] text-muted-foreground md:block">
                 {formatMinSec(lap.movingDurationSec)}
               </div>
               <div className="w-16 text-right text-[13.5px] font-semibold text-foreground">
                 {formatPace(lap.avgPaceSecKm).replace(' /km', '')}
               </div>
-              <div className="w-11 text-right text-[13px] text-muted-foreground">
+              <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
                 {lap.avgCadence > 0 ? Math.round(lap.avgCadence) : '-'}
               </div>
-              <div className="w-11 text-right text-[13px] text-muted-foreground">
+              <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
                 {lap.avgHr > 0 ? Math.round(lap.avgHr) : '—'}
               </div>
-              <div className="w-11 text-right text-[13px] text-muted-foreground">
+              <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
                 {lap.maxHr != null && lap.maxHr > 0
                   ? Math.round(lap.maxHr)
                   : '—'}

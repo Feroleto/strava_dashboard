@@ -58,10 +58,23 @@
     "olderWeeks_other": "+ {{count}} semanas anteriores",
     "selectMonth": "Clique num mês no gráfico para filtrar"
   },
+  "kpis": {
+    "distance": "Distância",
+    "avgPace": "Pace médio",
+    "activities": "Atividades",
+    "time": "Tempo",
+    "weeksCount_one": "{{count}} semana",
+    "weeksCount_other": "{{count}} semanas",
+    "perWeek": "{{value}} por semana",
+    "moving": "em movimento"
+  },
   "chart": {
     "weeklyDistance": "Distância semanal",
     "monthlyDistance": "Distância mensal",
     "kmInPeriod": "{{km}} km neste período",
+    "barHint_one": "{{km}} km em {{count}} semana · toque numa barra",
+    "barHint_other": "{{km}} km em {{count}} semanas · toque numa barra",
+    "barReading": "Semana de {{date}} · {{km}} km",
     "periods": {
       "4": "4 s",
       "8": "8 s",

@@ -12,6 +12,32 @@ import RunCalendar from './RunCalendar';
 import PersonalRecordsCard from './PersonalRecordsCard';
 import ShoesSection from './ShoesSection';
 
+function MobileTotalCard({
+  label,
+  value,
+  sub,
+}: {
+  label: string;
+  value: string;
+  sub?: string;
+}) {
+  return (
+    <div className="rounded-[14px] border border-border bg-card px-4 py-[15px]">
+      <div className="text-[10.5px] font-semibold tracking-[.07em] text-muted-foreground uppercase">
+        {label}
+      </div>
+      <div className="mt-1 text-[22px] font-bold tracking-[-.02em] text-foreground">
+        {value}
+      </div>
+      {sub && (
+        <div className="mt-[2px] text-[11.5px] text-muted-foreground">
+          {sub}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function TotalTile({
   label,
   value,
@@ -92,8 +118,9 @@ export default function RunOverviewPage() {
   }
 
   return (
-    <div className="p-[30px_34px_34px] tabular-nums">
-      <div>
+    <div className="px-5 pt-[18px] pb-[44px] tabular-nums md:p-[30px_34px_34px]">
+      {/* on mobile the section title lives in the app bar (MobileChrome) */}
+      <div className="hidden md:block">
         <h1 className="text-[19px] font-semibold tracking-[-.01em] text-foreground">
           {t('title')}
         </h1>
@@ -102,7 +129,33 @@ export default function RunOverviewPage() {
         </p>
       </div>
 
-      <div className="mt-6 grid grid-cols-4">
+      {/* mobile totals — 2×2 cards instead of the divider-separated tiles */}
+      <div className="grid grid-cols-2 gap-3 md:hidden">
+        <MobileTotalCard
+          label={t('tiles.distance')}
+          value={`${formatKm(totals?.totalKm ?? 0)} km`}
+          sub={
+            totals
+              ? t('tiles.kmPerWeek', { km: formatKm(totals.kmPerWeek) })
+              : undefined
+          }
+        />
+        <MobileTotalCard
+          label={t('tiles.activities')}
+          value={String(totals?.count ?? 0)}
+          sub={totals ? t('tiles.since', { date: totals.since }) : undefined}
+        />
+        <MobileTotalCard
+          label={t('tiles.avgPaceLabel')}
+          value={formatPace(totals?.avgPaceSecKm ?? null)}
+        />
+        <MobileTotalCard
+          label={t('tiles.totalTime')}
+          value={formatDuration(totals?.totalSec ?? 0)}
+        />
+      </div>
+
+      <div className="mt-6 hidden grid-cols-4 md:grid">
         <TotalTile
           label={t('tiles.totalRuns')}
           bordered={false}
@@ -143,7 +196,7 @@ export default function RunOverviewPage() {
         />
       </div>
 
-      <div className="mt-[26px] grid grid-cols-[340px_1fr] items-stretch gap-[18px]">
+      <div className="mt-[26px] grid grid-cols-1 items-stretch gap-3.5 md:grid-cols-[340px_1fr] md:gap-[18px]">
         <RunCalendar activities={activities} />
         <PersonalRecordsCard activities={activities} />
       </div>

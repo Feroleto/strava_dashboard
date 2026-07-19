@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 
 export type PageId =
-  'overview' | 'run/overview' | 'run/activities' | 'run/analysis';
+  'overview' | 'run/overview' | 'run/activities' | 'run/analysis' | 'profile';
 
 export const DEFAULT_PAGE: PageId = 'run/activities';
 
@@ -78,6 +78,15 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
+/** app-bar title (mobile) per page — keys live in the 'nav' namespace */
+export const MOBILE_TITLE_KEYS: Record<PageId, string> = {
+  overview: 'sections.overview',
+  'run/overview': 'sections.overview',
+  'run/activities': 'sections.runActivities',
+  'run/analysis': 'sections.runAnalysis',
+  profile: 'profile.title',
+};
+
 /** id of the section-parent whose subs should be revealed, given the active page */
 export function activeParentId(page: PageId): string | null {
   for (const section of NAV_SECTIONS) {
@@ -94,6 +103,7 @@ export function isKnownPage(value: string | null): value is PageId {
     value === 'overview' ||
     value === 'run/overview' ||
     value === 'run/activities' ||
-    value === 'run/analysis'
+    value === 'run/analysis' ||
+    value === 'profile'
   );
 }

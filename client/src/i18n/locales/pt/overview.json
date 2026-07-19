@@ -9,7 +9,10 @@
     "time": "Tempo",
     "avgPace": "{{pace}} médio",
     "elevation": "Elevação",
-    "bestElevation": "melhor {{value}} m em uma corrida"
+    "bestElevation": "melhor {{value}} m em uma corrida",
+    "activities": "Atividades",
+    "avgPaceLabel": "Pace médio",
+    "totalTime": "Tempo total"
   },
   "calendar": {
     "previousMonth": "Mês anterior",
