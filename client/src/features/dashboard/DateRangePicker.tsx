@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { formatDayMonth, formatMonthLong } from '@/lib/activityFormat';
+import { DAY_MS } from './bins';
 
 export interface DateRange {
   // midnight first activity
@@ -14,6 +15,9 @@ interface DateRangePickerProps {
   onChange: (range: DateRange | null) => void;
   // limits date navigation between activities date range
   minDate?: Date;
+  // caps the span of a selected range (calendar months) — presets longer
+  // than this are hidden and manual picks beyond it clamp to the anchor day
+  maxMonths?: number;
 }
 
 function midnight(d: Date): Date {
@@ -97,6 +101,7 @@ export default function DateRangePicker({
   range,
   onChange,
   minDate,
+  maxMonths,
 }: DateRangePickerProps) {
   const { t } = useTranslation('dashboard');
   const weekdays = t('dateRange.weekdaysShort', {
@@ -149,13 +154,39 @@ export default function DateRangePicker({
     };
   }, [open]);
 
+  // clamps the far end of a selection to maxMonths away from the anchor
+  // (the first day clicked) instead of letting the picked span grow past it
+  const clampToMax = (anchor: number, other: number): DateRange => {
+    if (!maxMonths) {
+      return { start: Math.min(anchor, other), end: Math.max(anchor, other) };
+    }
+    if (other >= anchor) {
+      const cap = addMonths(new Date(anchor), maxMonths).getTime() - DAY_MS;
+      return { start: anchor, end: Math.min(other, cap) };
+    }
+    const cap = addMonths(new Date(anchor), -maxMonths).getTime() + DAY_MS;
+    return { start: Math.max(other, cap), end: anchor };
+  };
+
+  const beyondMax = (ts: number): boolean => {
+    if (!maxMonths || pendingStart == null) return false;
+    if (ts >= pendingStart) {
+      const cap = addMonths(new Date(pendingStart), maxMonths).getTime() - DAY_MS;
+      return ts > cap;
+    }
+    const cap = addMonths(new Date(pendingStart), -maxMonths).getTime() + DAY_MS;
+    return ts < cap;
+  };
+
   const paint: DateRange | null =
     pendingStart != null
-      ? {
-          start: Math.min(pendingStart, hoverDate ?? pendingStart),
-          end: Math.max(pendingStart, hoverDate ?? pendingStart),
-        }
+      ? clampToMax(pendingStart, hoverDate ?? pendingStart)
       : range;
+
+  const presets = buildPresets().filter(
+    ([, preset]) =>
+      !maxMonths || preset.end - preset.start <= maxMonths * 31 * DAY_MS,
+  );
 
   const minMonth = minDate ? monthStart(minDate) : null;
   const maxMonth = monthStart(new Date());
@@ -169,10 +200,7 @@ export default function DateRangePicker({
       setPendingStart(ts);
       return;
     }
-    onChange({
-      start: Math.min(pendingStart, ts),
-      end: Math.max(pendingStart, ts),
-    });
+    onChange(clampToMax(pendingStart, ts));
     close();
   };
 
@@ -251,6 +279,7 @@ export default function DateRangePicker({
             const isEdge =
               paint != null && (ts === paint.start || ts === paint.end);
             const inMid = paint != null && ts > paint.start && ts < paint.end;
+            const outOfMax = !isEdge && !inMid && beyondMax(ts);
             return (
               <button
                 key={ts}
@@ -261,7 +290,9 @@ export default function DateRangePicker({
                     ? 'rounded-[8px] font-semibold text-white'
                     : inMid
                       ? 'text-foreground'
-                      : 'rounded-[7px] text-foreground hover:bg-chip'
+                      : outOfMax
+                        ? 'rounded-[7px] text-muted-foreground opacity-40'
+                        : 'rounded-[7px] text-foreground hover:bg-chip'
                 }`}
                 style={
                   isEdge
@@ -322,7 +353,7 @@ export default function DateRangePicker({
             {/* mobile: presets on top, single-month calendar below */}
             <div className="flex flex-col md:flex-row">
               <div className="flex flex-row flex-wrap gap-1.5 border-b border-border pb-3 md:w-[132px] md:flex-col md:gap-1 md:border-b-0 md:border-r md:pb-0 md:pr-3">
-                {buildPresets().map(([key, preset]) => (
+                {presets.map(([key, preset]) => (
                   <button
                     key={key}
                     onClick={() => {

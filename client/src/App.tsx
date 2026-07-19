@@ -171,7 +171,7 @@ function App() {
   }
 
   return (
-    <div className="min-h-screen bg-page-bg max-md:pt-[118px] max-md:pb-[env(safe-area-inset-bottom)] md:p-3.5">
+    <div className="min-h-screen bg-page-bg max-md:pt-[calc(max(12px,env(safe-area-inset-top))_+_53px)] max-md:pb-[env(safe-area-inset-bottom)] md:p-3.5">
       <MobileChrome activePage={page} onNavigate={navigate} />
       <div className="flex items-start md:gap-3.5">
         <Sidebar

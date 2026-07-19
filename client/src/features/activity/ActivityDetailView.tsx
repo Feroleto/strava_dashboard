@@ -224,23 +224,19 @@ export default function ActivityDetailView({
               {t('laps.count', { count: activity.laps.length })}
             </div>
           </div>
-          <div className="flex items-center gap-[13px] px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground">
+          <div className="flex items-center gap-1.5 px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground md:gap-[13px]">
             <div className="w-[22px]">{t('laps.index')}</div>
             <div className="w-[84px] md:w-[110px]">{t('laps.lap')}</div>
-            <div className="flex-1" />
+            <div className="hidden flex-1 md:block" />
             <div className="w-[58px] text-right md:w-[66px]">
               {t('laps.dist')}
             </div>
-            <div className="hidden w-14 text-right md:block">
-              {t('laps.time')}
-            </div>
-            <div className="w-16 text-right">{t('laps.pace')}</div>
+            <div className="w-11 text-right md:w-14">{t('laps.time')}</div>
+            <div className="w-14 text-right md:w-16">{t('laps.pace')}</div>
             <div className="hidden w-11 text-right md:block">
               {t('laps.spm')}
             </div>
-            <div className="hidden w-11 text-right md:block">
-              {t('laps.avgHr')}
-            </div>
+            <div className="w-11 text-right">{t('laps.avgHr')}</div>
             <div className="hidden w-11 text-right md:block">
               {t('laps.maxHr')}
             </div>
@@ -248,15 +244,15 @@ export default function ActivityDetailView({
           {activity.laps.map((lap, i) => (
             <div
               key={lap.id}
-              className="flex items-center gap-[13px] border-b border-border px-0.5 py-2.5"
+              className="flex items-center gap-1.5 border-b border-border px-0.5 py-2.5 md:gap-[13px]"
             >
               <div className="w-[22px] text-[12.5px] text-muted-foreground">
                 {lap.lapIndex}
               </div>
-              <div className="w-[84px] text-[13.5px] font-medium text-foreground md:w-[110px]">
+              <div className="w-[84px] truncate text-[13.5px] font-medium text-foreground md:w-[110px]">
                 {labels[i]}
               </div>
-              <div className="h-1.5 flex-1 overflow-hidden rounded-[3px] bg-chip">
+              <div className="hidden h-1.5 flex-1 overflow-hidden rounded-[3px] bg-chip md:block">
                 {fastestPace != null && lap.avgPaceSecKm > 0 && (
                   <div
                     className="h-full rounded-[3px]"
@@ -271,16 +267,16 @@ export default function ActivityDetailView({
               <div className="w-[58px] text-right text-[13px] text-muted-foreground md:w-[66px]">
                 {(lap.distanceM / 1000).toFixed(2)} km
               </div>
-              <div className="hidden w-14 text-right text-[13px] text-muted-foreground md:block">
+              <div className="w-11 text-right text-[13px] text-muted-foreground md:w-14">
                 {formatMinSec(lap.movingDurationSec)}
               </div>
-              <div className="w-16 text-right text-[13.5px] font-semibold text-foreground">
+              <div className="w-14 text-right text-[13.5px] font-semibold text-foreground md:w-16">
                 {formatPace(lap.avgPaceSecKm).replace(' /km', '')}
               </div>
               <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
                 {lap.avgCadence > 0 ? Math.round(lap.avgCadence) : '-'}
               </div>
-              <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
+              <div className="w-11 text-right text-[13px] text-muted-foreground">
                 {lap.avgHr > 0 ? Math.round(lap.avgHr) : '—'}
               </div>
               <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { List, X } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import type { Activity, PersonalBestRecord } from '@/lib/types';
 import {
@@ -238,6 +239,7 @@ export default function PersonalRecordsCard({
   const { t } = useTranslation('overview');
   const [records, setRecords] = useState<PersonalBestRecord[]>([]);
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   useEffect(() => {
     apiFetch('/personal-bests')
@@ -248,6 +250,15 @@ export default function PersonalRecordsCard({
       .then(setRecords)
       .catch(() => setRecords([]));
   }, []);
+
+  useEffect(() => {
+    if (!showAll) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowAll(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [showAll]);
 
   const activityById = new Map(activities.map((a) => [a.id, a]));
 
@@ -277,9 +288,17 @@ export default function PersonalRecordsCard({
         <div className="text-[13.5px] font-semibold text-foreground">
           {t('records.title')}
         </div>
-        <div className="text-[11.5px] text-muted-foreground">
+        <div className="hidden text-[11.5px] text-muted-foreground md:block">
           {t('records.subtitle')}
         </div>
+        <button
+          onClick={() => setShowAll(true)}
+          aria-label={t('records.viewAllAriaLabel')}
+          className="flex cursor-pointer items-center gap-1 rounded-full bg-chip px-2.5 py-1 text-[11.5px] font-medium text-foreground md:hidden"
+        >
+          <List className="h-3.5 w-3.5" strokeWidth={2} />
+          {t('records.viewAll')}
+        </button>
       </div>
 
       {/* mobile — headline distances only, single column */}
@@ -341,6 +360,48 @@ export default function PersonalRecordsCard({
             </div>
           </div>
         </div>
+      )}
+
+      {showAll && (
+        <>
+          <div
+            className="fixed inset-0 z-40 bg-[rgba(8,12,20,.35)] md:hidden dark:bg-[rgba(4,7,12,.55)]"
+            onClick={() => setShowAll(false)}
+          />
+          <div
+            className="fixed inset-x-0 bottom-0 z-50 max-h-[80vh] overflow-y-auto rounded-t-[20px] border bg-card p-5 pb-[calc(20px+env(safe-area-inset-bottom))] md:hidden"
+            style={{
+              borderColor: 'var(--grid-ax)',
+              boxShadow: '0 12px 32px rgba(8,12,20,.16)',
+            }}
+          >
+            <div className="mb-2 flex items-center justify-between">
+              <div className="text-[14px] font-semibold text-foreground">
+                {t('records.allRecordsTitle')}
+              </div>
+              <button
+                onClick={() => setShowAll(false)}
+                aria-label={t('records.closeAriaLabel')}
+                className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full text-muted-foreground hover:bg-chip"
+              >
+                <X className="h-[18px] w-[18px]" strokeWidth={1.8} />
+              </button>
+            </div>
+            {DISTANCES.map((def, i) => (
+              <RecordCell
+                key={def.key}
+                def={def}
+                records={byName.get(def.key) ?? []}
+                activityById={activityById}
+                expanded={expandedKey === def.key}
+                onToggle={() =>
+                  setExpandedKey(expandedKey === def.key ? null : def.key)
+                }
+                last={i === DISTANCES.length - 1}
+              />
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

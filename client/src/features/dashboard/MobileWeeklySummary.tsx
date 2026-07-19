@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   formatDayMonth,
@@ -31,13 +31,16 @@ function KpiCard({
 }
 
 interface MobileWeeklySummaryProps {
-  /** the last 12 weeks, ascending, zero-filled */
+  /** the last 12 weeks, ascending, zero-filled — or the custom range when one is set */
   weeks: BinAgg[];
+  /** header slot in the bars card, top-right (the custom date range trigger) */
+  children?: ReactNode;
 }
 
 /** mobile replacement for the area chart: KPI carousel + compact week bars */
 export default function MobileWeeklySummary({
   weeks,
+  children,
 }: MobileWeeklySummaryProps) {
   const { t } = useTranslation('dashboard');
   // tap toggles the selected bar and its reading line
@@ -88,12 +91,15 @@ export default function MobileWeeklySummary({
 
       {/* compact week bars */}
       <div className="mt-3 mb-5 rounded-[14px] border border-border bg-card p-4">
-        <div
-          className={`text-[12.5px] ${
-            sel !== null ? 'text-foreground' : 'text-muted-foreground'
-          }`}
-        >
-          {reading}
+        <div className="flex items-start justify-between gap-2">
+          <div
+            className={`min-w-0 flex-1 text-[12.5px] ${
+              sel !== null ? 'text-foreground' : 'text-muted-foreground'
+            }`}
+          >
+            {reading}
+          </div>
+          <div className="flex-none">{children}</div>
         </div>
         <div className="mt-3 flex h-[120px] items-end gap-1">
           {weeks.map((w, i) => (

@@ -54,5 +54,9 @@ export default function RouteMap({ polyline }: { polyline: string }) {
     };
   }, [polyline]);
 
-  return <div ref={containerRef} className="aspect-8/3 w-full" />;
+  // relative + z-0 boxes Leaflet's internal panes/controls (z-index up to
+  // 1000) into their own stacking context — without it those z-indexes
+  // compare directly against the app's fixed header/drawer and bleed on top
+  // of them on drag/pan
+  return <div ref={containerRef} className="relative z-0 aspect-8/3 w-full" />;
 }

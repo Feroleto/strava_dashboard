@@ -32,6 +32,10 @@
     "prBadgeTitle": "PR at the time it was run",
     "longestRun": "Longest run",
     "max": "MAX",
+    "viewAll": "View all",
+    "viewAllAriaLabel": "View all personal records",
+    "allRecordsTitle": "All personal records",
+    "closeAriaLabel": "Close",
     "distances": {
       "400m": "400m",
       "halfMile": "1/2 mile",

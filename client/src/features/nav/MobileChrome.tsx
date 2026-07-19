@@ -134,7 +134,7 @@ export default function MobileChrome({
   return (
     <div className="md:hidden">
       {/* app bar */}
-      <header className="fixed inset-x-0 top-0 z-40 border-b border-border bg-card px-[18px] pt-[66px] pb-3">
+      <header className="fixed inset-x-0 top-0 z-40 border-b border-border bg-card px-[18px] pt-[max(12px,env(safe-area-inset-top))] pb-3">
         <div className="flex items-center gap-3">
           <button
             onClick={openDrawer}
@@ -166,7 +166,7 @@ export default function MobileChrome({
             className="absolute inset-0 bg-[rgba(8,12,20,.35)] dark:bg-[rgba(4,7,12,.55)]"
             onClick={closeDrawer}
           />
-          <div className="drawer-panel absolute inset-y-0 left-0 flex w-[288px] flex-col border-r border-border bg-card px-3.5 pt-[76px] pb-[30px] shadow-[24px_0_60px_rgba(4,8,16,.3)]">
+          <div className="drawer-panel absolute inset-y-0 left-0 flex w-[288px] flex-col border-r border-border bg-card px-3.5 pt-[calc(max(12px,env(safe-area-inset-top))_+_10px)] pb-[30px] shadow-[24px_0_60px_rgba(4,8,16,.3)]">
             <div className="flex items-center gap-[10px] px-3">
               <div className="flex h-[30px] w-[30px] flex-none items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
                 ST

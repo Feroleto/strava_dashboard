@@ -120,12 +120,20 @@ export default function Dashboard() {
     return aggregateWeeks(activities, n, typeFilter);
   }, [activities, inRange, dateRange, isAll, earliestDate, n, typeFilter]);
 
-  // mobile KPI carousel + bars are always the last 12 weeks, unfiltered —
-  // the mobile screen has no period segmented or type filter
-  const mobileWeeks = useMemo(
-    () => aggregateWeeks(activities, 12, 'ALL'),
-    [activities],
-  );
+  // mobile KPI carousel + bars: last 12 weeks by default (unfiltered — the
+  // mobile screen has no type filter), or the custom range when one is set
+  const mobileWeeks = useMemo(() => {
+    if (dateRange) {
+      return aggregateBins(
+        inRange,
+        'ALL',
+        'week',
+        new Date(dateRange.start),
+        startOfBin(new Date(dateRange.end), 'week'),
+      );
+    }
+    return aggregateWeeks(activities, 12, 'ALL');
+  }, [dateRange, inRange, activities]);
 
   const chartGranularity: Granularity =
     (rangeActive && rangeDays > MONTHLY_THRESHOLD_DAYS) ||
@@ -296,7 +304,14 @@ export default function Dashboard() {
             </WeeklyChart>
           </div>
 
-          <MobileWeeklySummary weeks={mobileWeeks} />
+          <MobileWeeklySummary weeks={mobileWeeks}>
+            <DateRangePicker
+              range={dateRange}
+              onChange={applyRange}
+              minDate={earliestDate}
+              maxMonths={3}
+            />
+          </MobileWeeklySummary>
 
           {dateRange && (
             <RangeChip

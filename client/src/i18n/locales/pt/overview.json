@@ -32,6 +32,10 @@
     "prBadgeTitle": "Foi PR na época em que foi corrido",
     "longestRun": "Corrida mais longa",
     "max": "MAX",
+    "viewAll": "Ver todos",
+    "viewAllAriaLabel": "Ver todos os recordes pessoais",
+    "allRecordsTitle": "Todos os recordes pessoais",
+    "closeAriaLabel": "Fechar",
     "distances": {
       "400m": "400m",
       "halfMile": "1/2 milha",
