@@ -82,9 +82,10 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
   return (
     <div className="flex min-h-svh flex-col md:h-screen md:min-h-0 md:flex-row">
       {/* Hero — editorial, always dark regardless of app theme; on mobile it
-          fills the space above the bottom sheet (76px top accommodates the
-          status bar / safe area) */}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[76px] md:flex-[1.25] md:px-[44px] md:pt-[36px]">
+          fills the space above the bottom sheet (top padding tracks the
+          real status bar / notch via env(safe-area-inset-top), plus a
+          small fixed cushion, instead of a flat guess) */}
+      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[calc(env(safe-area-inset-top)+20px)] md:flex-[1.25] md:px-[44px] md:pt-[36px]">
         <div className="flex items-center gap-[10px]">
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
             ST
