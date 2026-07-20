@@ -9,6 +9,8 @@ function lap(overrides: Partial<ActivityLap>): ActivityLap {
     id: 'lap-1',
     lapIndex: 0,
     lapType: 'STEADY',
+    startSec: 0,
+    endSec: 300,
     movingDurationSec: 300,
     distanceM: 1000,
     avgPaceSecKm: 300,
