@@ -94,7 +94,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           </span>
         </div>
 
-        <div className="my-auto py-8 md:py-10">
+        <div className="mt-4 py-8 md:my-auto md:py-10">
           <h1 className="text-[33px] leading-[1.18] font-bold tracking-[-.025em] text-[#EDF1F7] md:text-[40px] md:leading-[1.16]">
             <Trans
               t={t}
