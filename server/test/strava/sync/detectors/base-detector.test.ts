@@ -18,6 +18,7 @@ function makeSecond(overrides: Partial<ProcessedSecond>): ProcessedSecond {
     gradePercent: 0,
     verticalSpeedMs: 0,
     paceSeckm: null,
+    cadence: null,
     ...overrides,
   };
 }

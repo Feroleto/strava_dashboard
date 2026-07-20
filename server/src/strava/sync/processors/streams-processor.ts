@@ -6,6 +6,7 @@ export interface RawActivitySecond {
   distanceDeltaM?: number | null;
   heartRate?: number | null;
   elevationM?: number | null;
+  cadence?: number | null;
 }
 
 export class StreamProcessor {
@@ -31,7 +32,8 @@ export class StreamProcessor {
         distRaw: r?.distanceTotalM ?? null,
         elevRaw: r?.elevationM ?? null,
         hrRaw: r?.heartRate ?? null,
-        
+        cadRaw: r?.cadence ?? null,
+
         distPrev: null as number | null, distPrevT: null as number | null,
         distNext: null as number | null, distNextT: null as number | null,
         elevPrev: null as number | null, elevPrevT: null as number | null,
@@ -164,6 +166,7 @@ export class StreamProcessor {
         gradePercent: grade,
         verticalSpeedMs: vSpeed,
         paceSeckm: pace,
+        cadence: p.cadRaw,
       };
     }
 

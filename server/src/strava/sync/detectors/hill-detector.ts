@@ -1,5 +1,6 @@
 import { ProcessedSecond } from '../types';
 import { BaseDetector, DetectedLap, ProcessedDict } from './base-detector';
+import { computeGradeAndVam } from '../processors/lap-stats-calculator';
 
 export class HillDetector extends BaseDetector {
   private readonly minElevationGain: number;
@@ -88,19 +89,11 @@ export class HillDetector extends BaseDetector {
     block: ProcessedSecond[],
     label: string,
   ): DetectedLap {
-    const summary     = this.summarizeCommon(block, label);
-    const elevGain    = block[block.length - 1].elevationM - block[0].elevationM;
-    const distance    = summary.distanceM;
-    const movingSec   = summary.movingDurationSec;
+    const summary = this.summarizeCommon(block, label);
+    const { avgGradePercent, vam } = computeGradeAndVam(block, summary);
 
-    const avgGradePercent =
-      distance > 0 ? (elevGain / distance) * 100 : 0;
-    const vam =
-      movingSec > 0 ? (elevGain / movingSec) * 3600 : 0;
-
-    summary.elevGainM       = Math.round(elevGain * 10) / 10;
-    summary.avgGradePercent = Math.round(avgGradePercent * 10) / 10;
-    summary.vam             = Math.round(vam);
+    summary.avgGradePercent = avgGradePercent;
+    summary.vam             = vam;
 
     return summary;
   }

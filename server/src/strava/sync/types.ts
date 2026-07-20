@@ -15,6 +15,7 @@ export interface ProcessedSecond {
   gradePercent: number;
   verticalSpeedMs: number;
   paceSeckm: number | null;
+  cadence: number | null;
 }
 
 export interface MappedLap {

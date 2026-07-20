@@ -1,4 +1,5 @@
 import { ProcessedSecond } from '../types';
+import { summarizeSegment } from '../processors/lap-stats-calculator';
 
 export interface DetectedLap {
   type: string;
@@ -14,6 +15,7 @@ export interface DetectedLap {
   elevGainM: number;
   avgGradePercent: number;
   vam: number;
+  avgCadence: number | null;
 }
 
 export type ProcessedDict = Map<number, ProcessedSecond>;
@@ -41,47 +43,7 @@ export abstract class BaseDetector {
     block: ProcessedSecond[],
     typeLabel: string,
   ): DetectedLap {
-    if (!block.length) {
-      throw new Error('summarizeCommon called with empty block');
-    }
-
-    const startData = block[0];
-    const endData   = block[block.length - 1];
-
-    const distance  = endData.distanceTotalM - startData.distanceTotalM;
-    const elevGain  = endData.elevationM - startData.elevationM;
-
-    const movingSeconds = block.filter(
-      (d) => (d.speedMs ?? 0) > this.minSpeedMoving,
-    ).length;
-
-    const avgSpeed = movingSeconds > 0 ? distance / movingSeconds : 0;
-    const avgPace  = avgSpeed > 0.3 ? 1000 / avgSpeed : 0;
-
-    const hrValues = block
-      .map((d) => d.heartRate)
-      .filter((hr) => hr != null && hr > 0);
-    const avgHr =
-      hrValues.length > 0
-        ? hrValues.reduce((a, b) => a + b, 0) / hrValues.length
-        : 0;
-    const maxHr = hrValues.length > 0 ? Math.max(...hrValues) : null;
-
-    return {
-      type:              typeLabel,
-      lapIndex:          null,
-      startSec:          startData.secondIndex,
-      endSec:            endData.secondIndex,
-      totalDurationSec:  endData.secondIndex - startData.secondIndex,
-      movingDurationSec: movingSeconds,
-      distanceM:         Math.round(distance * 10) / 10,
-      avgPace,
-      avgHr:             Math.round(avgHr * 10) / 10,
-      maxHr,
-      elevGainM:         Math.round(elevGain * 10) / 10,
-      avgGradePercent:   0,
-      vam:               0,
-    };
+    return summarizeSegment(block, typeLabel, this.minSpeedMoving);
   }
 
   protected splitIntoKm(

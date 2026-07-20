@@ -17,22 +17,62 @@ export interface ActivitiesResponse {
   total: number;
 }
 
+// RUN/WORKOUT/REST/STEADY/WARMUP/COOLDOWN are user-editable via the lap
+// editor; ACTIVITY is a detector-only fallback (no distinct effort found)
+// and only ever appears read-only on laps synced before manual editing
+export type LapType =
+  | 'RUN'
+  | 'WORKOUT'
+  | 'REST'
+  | 'STEADY'
+  | 'WARMUP'
+  | 'COOLDOWN'
+  | 'ACTIVITY';
+
 export interface ActivityLap {
   id: string;
   lapIndex: number;
-  lapType: string;
+  lapType: LapType;
+  startSec: number;
+  endSec: number;
   movingDurationSec: number;
   distanceM: number;
   avgPaceSecKm: number;
   avgHr: number;
   maxHr: number | null;
   elevGainM: number;
-  avgCadence: number;
+  avgCadence: number | null;
 }
 
 export interface ActivityDetail extends Activity {
   summaryPolyline: string | null;
   laps: ActivityLap[];
+}
+
+// GET /activities/:id/streams — per-second stream used by the lap editor to
+// resolve distance/time-based lap boundaries client-side
+export interface ActivityStreamPoint {
+  secondIndex: number;
+  distanceTotalM: number;
+  elevationM: number;
+  heartRate: number;
+  speedMs: number;
+  cadence: number | null;
+}
+
+export interface ActivityStreamsResponse {
+  points: ActivityStreamPoint[];
+  source: 'stored' | 'strava';
+}
+
+export type LapSizeMode = 'distance' | 'time';
+
+// PUT /activities/:id/laps request — boundaries are never sent, only
+// type + size; the backend resolves positions via a sequential walk
+export interface LapEditInput {
+  lapType: LapType;
+  sizeMode: LapSizeMode;
+  sizeValue: number;
 }
 
 // flat, cross-activity lap for GET /activities/laps (Run > Analysis) — avgHr

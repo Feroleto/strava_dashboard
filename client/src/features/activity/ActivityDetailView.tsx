@@ -14,6 +14,8 @@ import { apiFetch } from '@/lib/api';
 
 // lazy so Leaflet is only fetched when a GPS activity detail is opened
 const RouteMap = lazy(() => import('./RouteMap'));
+// lazy so the editor's fetch/form logic only loads when actually opened
+const LapEditorPanel = lazy(() => import('./lap-editor/LapEditorPanel'));
 
 const MAP_W = 640;
 const MAP_H = 240;
@@ -70,6 +72,7 @@ export default function ActivityDetailView({
   const { t } = useTranslation('activity');
   const [activity, setActivity] = useState<ActivityDetail | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
 
   useEffect(() => {
     setActivity(null);
@@ -214,16 +217,16 @@ export default function ActivityDetailView({
         )}
       </div>
 
+      <div className="mt-7 flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
+        <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
+          {t('laps.title')}
+        </div>
+        <div className="text-[12.5px] text-muted-foreground">
+          {t('laps.count', { count: activity.laps.length })}
+        </div>
+      </div>
       {activity.laps.length > 0 && (
         <>
-          <div className="mt-7 flex items-baseline justify-between border-b border-grid-ax pb-[9px]">
-            <div className="text-xs font-semibold tracking-[.04em] uppercase text-muted-foreground">
-              {t('laps.title')}
-            </div>
-            <div className="text-[12.5px] text-muted-foreground">
-              {t('laps.count', { count: activity.laps.length })}
-            </div>
-          </div>
           <div className="flex items-center gap-1.5 px-0.5 pt-[9px] pb-[7px] text-[11px] tracking-[.03em] uppercase text-muted-foreground md:gap-[13px]">
             <div className="w-[22px]">{t('laps.index')}</div>
             <div className="w-[84px] md:w-[110px]">{t('laps.lap')}</div>
@@ -274,7 +277,9 @@ export default function ActivityDetailView({
                 {formatPace(lap.avgPaceSecKm).replace(' /km', '')}
               </div>
               <div className="hidden w-11 text-right text-[13px] text-muted-foreground md:block">
-                {lap.avgCadence > 0 ? Math.round(lap.avgCadence) : '-'}
+                {lap.avgCadence != null && lap.avgCadence > 0
+                  ? Math.round(lap.avgCadence)
+                  : '-'}
               </div>
               <div className="w-11 text-right text-[13px] text-muted-foreground">
                 {lap.avgHr > 0 ? Math.round(lap.avgHr) : '—'}
@@ -287,6 +292,27 @@ export default function ActivityDetailView({
             </div>
           ))}
         </>
+      )}
+      <div className="mt-3 flex justify-end">
+        <button
+          onClick={() => setEditorOpen(true)}
+          className="cursor-pointer rounded-[9px] bg-chip py-[7px] px-[13px] text-[13px] font-medium text-foreground hover:bg-grid-ax"
+        >
+          {t('laps.edit')}
+        </button>
+      </div>
+
+      {editorOpen && (
+        <Suspense fallback={null}>
+          <LapEditorPanel
+            activity={activity}
+            onClose={() => setEditorOpen(false)}
+            onSaved={(updated) => {
+              setActivity(updated);
+              setEditorOpen(false);
+            }}
+          />
+        </Suspense>
       )}
     </div>
   );

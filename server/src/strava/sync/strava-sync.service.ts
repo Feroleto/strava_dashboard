@@ -485,7 +485,7 @@ export class StravaSyncService {
       userId,
       `/activities/${fullData.id}/streams`,
       {
-        keys: 'time,distance,velocity_smooth,heartrate,altitude',
+        keys: 'time,distance,velocity_smooth,heartrate,altitude,cadence',
         key_by_type: 'true',
       },
     );
@@ -497,6 +497,9 @@ export class StravaSyncService {
     const speedStream = rawStreams['velocity_smooth']?.data ?? [];
     const hrStream    = rawStreams['heartrate']?.data ?? [];
     const altStream   = rawStreams['altitude']?.data ?? [];
+    // Strava reports cadence in rpm (one leg) even for runs — ×2 to spm,
+    // same convention as Activity.averageCadence/ActivityLap.avgCadence
+    const cadStream   = rawStreams['cadence']?.data ?? [];
 
     const secondsData: Omit<Prisma.ActivitySecondCreateManyInput, 'activityId'>[] = [];
     let prevDistance: number | null = null;
@@ -512,6 +515,7 @@ export class StravaSyncService {
       prevDistance = totalDist;
 
       const speed = speedStream[i] ?? null;
+      const cadenceRpm = cadStream[i];
 
       secondsData.push({
         secondIndex: timeStream[i],
@@ -521,6 +525,7 @@ export class StravaSyncService {
         heartRate: hrStream[i] ?? null,
         elevationM: altStream[i] ?? null,
         paceSecKm: speed && speed > 0 ? 1000 / speed : null,
+        cadence: cadenceRpm != null ? cadenceRpm * 2 : null,
       });
     }
 

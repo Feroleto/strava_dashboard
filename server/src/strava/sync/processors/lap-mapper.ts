@@ -137,5 +137,6 @@ export function detectedLapToCreateData(
     elevGainM: lap.elevGainM,
     avgGradePercent: lap.avgGradePercent,
     vam: lap.vam,
+    avgCadence: lap.avgCadence,
   };
 }

@@ -77,14 +77,9 @@ export class IntervalDetector extends BaseDetector {
     block: ProcessedSecond[],
     label: string,
   ): DetectedLap {
-    const summary = this.summarizeCommon(block, label);
-
-    const elevGain = block[block.length - 1].elevationM - block[0].elevationM;
-
-    summary.elevGainM       = Math.round(elevGain * 10) / 10;
-    summary.avgGradePercent = 0;
-    summary.vam             = 0;
-
-    return summary;
+    // avgGradePercent/vam are intentionally not computed for interval
+    // efforts (elevation isn't the relevant signal here) — summarizeCommon
+    // already defaults both to 0.
+    return this.summarizeCommon(block, label);
   }
 }
