@@ -112,7 +112,8 @@ export default function MobileChrome({
     }
   };
 
-  const pick = (page: PageId) => {
+  const pick = (page: PageId, disabled?: boolean) => {
+    if (disabled) return;
     onNavigate(page);
     closeDrawer();
   };
@@ -189,7 +190,8 @@ export default function MobileChrome({
                           key={sub.id}
                           label={t(sub.labelKey)}
                           active={sub.id === activePage}
-                          onPick={() => pick(sub.id)}
+                          disabled={sub.disabled}
+                          onPick={() => pick(sub.id, sub.disabled)}
                         />
                       ))}
                     </DrawerGroup>,

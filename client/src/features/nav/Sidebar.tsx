@@ -112,12 +112,15 @@ function SubList({
         return (
           <button
             key={sub.id}
-            onClick={() => onPick(sub)}
+            onClick={() => !sub.disabled && onPick(sub)}
+            disabled={sub.disabled}
             className={cn(
-              'relative cursor-pointer rounded-[7px] py-[5px] text-left text-[12.5px]',
-              active
-                ? 'font-semibold text-acc-tx'
-                : 'text-muted-foreground hover:text-foreground',
+              'relative rounded-[7px] py-[5px] text-left text-[12.5px]',
+              sub.disabled
+                ? 'cursor-not-allowed text-muted-foreground/50'
+                : active
+                  ? 'cursor-pointer font-semibold text-acc-tx'
+                  : 'cursor-pointer text-muted-foreground hover:text-foreground',
             )}
           >
             {active && (

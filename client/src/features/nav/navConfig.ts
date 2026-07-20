@@ -17,6 +17,7 @@ export const ACTIVE_PAGE_KEY = 'active-page';
 export interface NavSubItem {
   id: PageId;
   labelKey: string;
+  disabled?: boolean;
 }
 
 export interface NavItem {
@@ -57,7 +58,11 @@ export const NAV_SECTIONS: NavSection[] = [
         subs: [
           { id: 'run/overview', labelKey: 'sections.runOverview' },
           { id: 'run/activities', labelKey: 'sections.runActivities' },
-          { id: 'run/analysis', labelKey: 'sections.runAnalysis' },
+          {
+            id: 'run/analysis',
+            labelKey: 'sections.runAnalysis',
+            disabled: true,
+          },
         ],
       },
       {
@@ -96,6 +101,20 @@ export function activeParentId(page: PageId): string | null {
     }
   }
   return null;
+}
+
+/** pages whose nav entry is temporarily disabled — code stays intact, just unreachable */
+export const DISABLED_PAGES: ReadonlySet<PageId> = new Set(
+  NAV_SECTIONS.flatMap((section) =>
+    section.items.flatMap((item) => [
+      ...(item.disabled && item.page ? [item.page] : []),
+      ...(item.subs?.filter((s) => s.disabled).map((s) => s.id) ?? []),
+    ]),
+  ),
+);
+
+export function isPageDisabled(page: PageId): boolean {
+  return DISABLED_PAGES.has(page);
 }
 
 export function isKnownPage(value: string | null): value is PageId {

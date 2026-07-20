@@ -16,6 +16,7 @@ import {
   ACTIVE_PAGE_KEY,
   DEFAULT_PAGE,
   isKnownPage,
+  isPageDisabled,
   type PageId,
 } from '@/features/nav/navConfig';
 
@@ -88,7 +89,7 @@ function App() {
   );
   const [page, setPage] = useState<PageId>(() => {
     const stored = localStorage.getItem(ACTIVE_PAGE_KEY);
-    return isKnownPage(stored) ? stored : DEFAULT_PAGE;
+    return isKnownPage(stored) && !isPageDisabled(stored) ? stored : DEFAULT_PAGE;
   });
   // first-access gate: null while checking whether the user has any imported
   // activity yet; onboardingDone lets FirstSyncPage hand off to the dashboard
@@ -135,6 +136,7 @@ function App() {
   }, [page]);
 
   const navigate = (next: PageId, opts?: { collapse?: boolean }) => {
+    if (isPageDisabled(next)) return;
     setPage(next);
     if (opts?.collapse) setCollapsed(true);
   };
