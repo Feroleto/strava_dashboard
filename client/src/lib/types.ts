@@ -138,6 +138,148 @@ export interface SyncStatus {
   rateLimitResetAt: string | null;
 }
 
+// ---- Gym module ----
+
+export interface ExerciseListItem {
+  id: string;
+  name: string;
+  slug: string;
+  force: string | null;
+  level: string | null;
+  mechanic: string | null;
+  equipment: string | null;
+  primaryMuscles: string[];
+  secondaryMuscles: string[];
+  source: string;
+}
+
+export interface ExerciseDetail extends ExerciseListItem {
+  instructions: string[];
+  imageUrls: string[];
+}
+
+export interface ExercisesResponse {
+  items: ExerciseListItem[];
+  total: number;
+  page: number;
+  limit: number;
+}
+
+export interface LastPerformanceSet {
+  id: string;
+  setNumber: number;
+  weightKg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  setType: string;
+}
+
+export interface LastPerformance {
+  workoutId: string;
+  startedAt: string;
+  sets: LastPerformanceSet[];
+}
+
+export interface ExercisePersonalRecord {
+  weightKg: number;
+  reps: number | null;
+  workoutId: string;
+  startedAt: string;
+  templateName: string | null;
+}
+
+export interface WorkoutSet {
+  id: string;
+  setNumber: number;
+  weightKg: number | null;
+  reps: number | null;
+  rpe: number | null;
+  setType: string;
+  completedAt: string;
+}
+
+// goal carried over from the originating template, matched by exerciseId —
+// null for free workouts or exercises added ad hoc after starting from one
+export interface ExerciseTarget {
+  sets: number | null;
+  repsMin: number | null;
+  repsMax: number | null;
+}
+
+export interface WorkoutExercise {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  order: number;
+  supersetGroupId: string | null;
+  target: ExerciseTarget | null;
+  sets: WorkoutSet[];
+}
+
+export interface WorkoutDetail {
+  id: string;
+  startedAt: string;
+  finishedAt: string | null;
+  notes: string | null;
+  templateId: string | null;
+  templateName: string | null;
+  exercises: WorkoutExercise[];
+}
+
+export interface WorkoutHistoryItem {
+  id: string;
+  startedAt: string;
+  finishedAt: string;
+  durationSec: number;
+  exerciseCount: number;
+  volumeKg: number;
+  templateId: string | null;
+  templateName: string | null;
+}
+
+// POST/PATCH .../sets request body — all optional, a bodyweight set may
+// carry reps only
+export interface SetInput {
+  weightKg?: number;
+  reps?: number;
+  rpe?: number;
+  setType?: string;
+}
+
+// ---- Workout templates (routines) ----
+
+export interface TemplateExerciseTargets {
+  targetSets?: number;
+  targetRepsMin?: number;
+  targetRepsMax?: number;
+}
+
+export interface TemplateExerciseDetail extends TemplateExerciseTargets {
+  id: string;
+  exerciseId: string;
+  exerciseName: string;
+  primaryMuscles: string[];
+  order: number;
+  supersetGroupId: string | null;
+}
+
+export interface TemplateDetail {
+  id: string;
+  name: string;
+  description: string | null;
+  exercises: TemplateExerciseDetail[];
+}
+
+export interface TemplateSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  exerciseCount: number;
+  exercisePreview: string[];
+  muscleGroups: string[];
+  lastPerformedAt: string | null;
+}
+
 export interface PersonalBestRecord {
   name: string;
   /** 1–3, derived server-side from moving time (fastest first) */

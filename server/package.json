@@ -16,7 +16,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:cov": "vitest run --coverage",
-    "test:e2e": "jest --config test/jest-e2e.json"
+    "test:e2e": "jest --config test/jest-e2e.json",
+    "db:seed:gym": "tsx prisma/seed-gym.ts",
+    "db:seed:gym:pt": "tsx prisma/seed-gym-translations.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",

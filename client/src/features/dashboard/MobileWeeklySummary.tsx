@@ -7,6 +7,7 @@ import {
   formatPace,
 } from '@/lib/activityFormat';
 import type { BinAgg } from './WeeklyChart';
+import { endOfWeek } from './bins';
 
 function KpiCard({
   label,
@@ -56,7 +57,7 @@ export default function MobileWeeklySummary({
   const reading =
     sel !== null
       ? t('chart.barReading', {
-          date: formatDayMonth(weeks[sel].start),
+          range: `${formatDayMonth(weeks[sel].start)} – ${formatDayMonth(endOfWeek(weeks[sel].start))}`,
           km: formatKm(weeks[sel].km),
         })
       : t('chart.barHint', { km: formatKm(km), count: n });

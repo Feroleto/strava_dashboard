@@ -7,18 +7,21 @@ datasource db {
 }
 
 model User {
-  id             String          @id @default(cuid())
-  email          String?         @unique
-  firstName      String?         @map("first_name")
-  profileImgUrl  String?         @map("profile_img_url")
-  maxHr          Int?            @map("max_hr")
-  tokenVersion   Int             @default(0) @map("token_version")
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  activities     Activity[]
-  stravaAccount  StravaAccount?
-  gear           Gear[]
-  athleteHrZones AthleteHrZones?
+  id               String            @id @default(cuid())
+  email            String?           @unique
+  firstName        String?           @map("first_name")
+  profileImgUrl    String?           @map("profile_img_url")
+  maxHr            Int?              @map("max_hr")
+  tokenVersion     Int               @default(0) @map("token_version")
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  activities       Activity[]
+  stravaAccount    StravaAccount?
+  gear             Gear[]
+  athleteHrZones   AthleteHrZones?
+  workouts         Workout[]
+  createdExercises Exercise[]
+  workoutTemplates WorkoutTemplate[]
 
   @@map("users")
 }
@@ -191,4 +194,193 @@ enum LapType {
   ACTIVITY
 
   @@map("lap_type")
+}
+
+// ---- Gym module (strength training log) ----
+
+enum ExerciseSource {
+  SEED
+  USER
+
+  @@map("exercise_source")
+}
+
+enum MuscleGroup {
+  CHEST
+  BACK
+  LATS
+  TRAPS
+  SHOULDERS
+  BICEPS
+  TRICEPS
+  FOREARMS
+  ABDOMINALS
+  QUADRICEPS
+  HAMSTRINGS
+  GLUTES
+  CALVES
+  ADDUCTORS
+  ABDUCTORS
+  LOWER_BACK
+  NECK
+  CARDIO
+  FULL_BODY
+
+  @@map("muscle_group")
+}
+
+enum Equipment {
+  BARBELL
+  DUMBBELL
+  MACHINE
+  CABLE
+  BODY_ONLY
+  KETTLEBELLS
+  BANDS
+  MEDICINE_BALL
+  EXERCISE_BALL
+  FOAM_ROLL
+  EZ_CURL_BAR
+  OTHER
+
+  @@map("equipment")
+}
+
+enum ExerciseLevel {
+  BEGINNER
+  INTERMEDIATE
+  EXPERT
+
+  @@map("exercise_level")
+}
+
+enum ExerciseForce {
+  PUSH
+  PULL
+  STATIC
+
+  @@map("exercise_force")
+}
+
+enum ExerciseMechanic {
+  COMPOUND
+  ISOLATION
+
+  @@map("exercise_mechanic")
+}
+
+enum SetType {
+  WARMUP
+  WORKING
+  DROPSET
+
+  @@map("set_type")
+}
+
+model Exercise {
+  id                String                    @id @default(cuid())
+  name              String
+  namePt            String?                   @map("name_pt")
+  slug              String                    @unique
+  force             ExerciseForce?
+  level             ExerciseLevel?
+  mechanic          ExerciseMechanic?
+  equipment         Equipment?
+  primaryMuscles    MuscleGroup[]             @map("primary_muscles")
+  secondaryMuscles  MuscleGroup[]             @map("secondary_muscles")
+  instructions      String[]
+  instructionsPt    String[]                  @map("instructions_pt")
+  imageUrls         String[]                  @map("image_urls")
+  source            ExerciseSource            @default(SEED)
+  createdByUserId   String?                   @map("created_by_user_id")
+  createdBy         User?                     @relation(fields: [createdByUserId], references: [id])
+  workoutExercises  WorkoutExercise[]
+  templateExercises WorkoutTemplateExercise[]
+  createdAt         DateTime                  @default(now()) @map("created_at")
+  updatedAt         DateTime                  @updatedAt @map("updated_at")
+
+  @@index([source])
+  @@map("exercises")
+}
+
+model Workout {
+  id         String            @id @default(cuid())
+  userId     String
+  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  templateId String?           @map("template_id")
+  template   WorkoutTemplate?  @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  startedAt  DateTime          @default(now()) @map("started_at")
+  finishedAt DateTime?         @map("finished_at")
+  notes      String?
+  exercises  WorkoutExercise[]
+  createdAt  DateTime          @default(now()) @map("created_at")
+  updatedAt  DateTime          @updatedAt @map("updated_at")
+
+  @@index([userId, startedAt])
+  @@index([templateId])
+  @@map("workouts")
+}
+
+model WorkoutTemplate {
+  id          String                    @id @default(cuid())
+  userId      String
+  user        User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name        String
+  description String?
+  exercises   WorkoutTemplateExercise[]
+  workouts    Workout[]
+  createdAt   DateTime                  @default(now()) @map("created_at")
+  updatedAt   DateTime                  @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("workout_templates")
+}
+
+model WorkoutTemplateExercise {
+  id              String          @id @default(cuid())
+  templateId      String          @map("template_id")
+  template        WorkoutTemplate @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exerciseId      String          @map("exercise_id")
+  exercise        Exercise        @relation(fields: [exerciseId], references: [id])
+  order           Int
+  targetSets      Int?            @map("target_sets")
+  targetRepsMin   Int?            @map("target_reps_min")
+  targetRepsMax   Int?            @map("target_reps_max")
+  supersetGroupId String?         @map("superset_group_id")
+  createdAt       DateTime        @default(now()) @map("created_at")
+
+  @@index([templateId])
+  @@index([exerciseId])
+  @@map("workout_template_exercises")
+}
+
+model WorkoutExercise {
+  id              String       @id @default(cuid())
+  workoutId       String       @map("workout_id")
+  workout         Workout      @relation(fields: [workoutId], references: [id], onDelete: Cascade)
+  exerciseId      String       @map("exercise_id")
+  exercise        Exercise     @relation(fields: [exerciseId], references: [id])
+  order           Int
+  supersetGroupId String?      @map("superset_group_id")
+  sets            WorkoutSet[]
+  createdAt       DateTime     @default(now()) @map("created_at")
+
+  @@index([workoutId])
+  @@index([exerciseId])
+  @@map("workout_exercises")
+}
+
+model WorkoutSet {
+  id                String          @id @default(cuid())
+  workoutExerciseId String          @map("workout_exercise_id")
+  workoutExercise   WorkoutExercise @relation(fields: [workoutExerciseId], references: [id], onDelete: Cascade)
+  setNumber         Int             @map("set_number")
+  weightKg          Decimal?        @map("weight_kg") @db.Decimal(6, 2)
+  reps              Int?
+  rpe               Decimal?        @db.Decimal(3, 1)
+  setType           SetType         @default(WORKING) @map("set_type")
+  completedAt       DateTime        @default(now()) @map("completed_at")
+
+  @@index([workoutExerciseId])
+  @@map("workout_sets")
 }

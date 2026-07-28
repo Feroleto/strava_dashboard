@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { type ReactNode } from 'react';
 import { Menu } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { cn } from '@/lib/utils';
@@ -14,6 +14,11 @@ import {
 interface MobileChromeProps {
   activePage: PageId;
   onNavigate: (page: PageId) => void;
+  // drawer open state lives in App.tsx (not here) so WorkoutSession's
+  // hamburger button can open the very same drawer — see ActiveWorkoutBar
+  drawerOpen: boolean;
+  onOpenDrawer: () => void;
+  onCloseDrawer: () => void;
 }
 
 function DrawerGroup({
@@ -78,39 +83,15 @@ function DrawerItem({
 export default function MobileChrome({
   activePage,
   onNavigate,
+  drawerOpen: open,
+  onOpenDrawer: openDrawer,
+  onCloseDrawer: closeDrawer,
 }: MobileChromeProps) {
   const { t } = useTranslation('nav');
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
-  // drawer gets its own history entry so hardware/gesture back closes it
-  // instead of leaving the app (same pattern as the activity detail)
-  const pushedRef = useRef(false);
   const initials = user?.firstName
     ? user.firstName.slice(0, 2).toUpperCase()
     : '—';
-
-  useEffect(() => {
-    const onPop = () => {
-      pushedRef.current = false;
-      setOpen(false);
-    };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, []);
-
-  const openDrawer = () => {
-    setOpen(true);
-    window.history.pushState({ drawer: true }, '');
-    pushedRef.current = true;
-  };
-
-  const closeDrawer = () => {
-    if (pushedRef.current) {
-      window.history.back();
-    } else {
-      setOpen(false);
-    }
-  };
 
   const pick = (page: PageId, disabled?: boolean) => {
     if (disabled) return;

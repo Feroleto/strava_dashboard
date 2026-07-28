@@ -74,7 +74,7 @@
     "kmInPeriod": "{{km}} km neste período",
     "barHint_one": "{{km}} km em {{count}} semana · toque numa barra",
     "barHint_other": "{{km}} km em {{count}} semanas · toque numa barra",
-    "barReading": "Semana de {{date}} · {{km}} km",
+    "barReading": "{{range}} · {{km}} km",
     "periods": {
       "4": "4 s",
       "8": "8 s",

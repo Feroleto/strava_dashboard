@@ -39,6 +39,7 @@ void i18n.use(initReactI18next).init({
     'overview',
     'activity',
     'analysis',
+    'gym',
   ],
   defaultNS: 'common',
   resources,

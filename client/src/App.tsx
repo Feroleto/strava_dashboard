@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import Sidebar from '@/features/nav/Sidebar';
 import MobileChrome from '@/features/nav/MobileChrome';
@@ -7,6 +7,8 @@ import ProfilePage from '@/features/profile/ProfilePage';
 import { FIRST_SYNC_FLAG } from '@/features/onboarding/firstSyncFlag';
 import { useAuth } from '@/features/auth/AuthContext';
 import { parseThemePref, type ThemePref } from '@/lib/theme';
+import { useActiveWorkout } from '@/features/gym/useActiveWorkout';
+import ActiveWorkoutBar from '@/features/gym/ActiveWorkoutBar';
 import {
   PAGE_IMPORTERS,
   bootHasActivities,
@@ -27,6 +29,9 @@ import {
 const Dashboard = lazy(PAGE_IMPORTERS['run/activities']!);
 const RunOverviewPage = lazy(PAGE_IMPORTERS['run/overview']!);
 const RunAnalysisPage = lazy(PAGE_IMPORTERS['run/analysis']!);
+const GymOverviewPage = lazy(PAGE_IMPORTERS['gym/overview']!);
+const GymWorkoutsPage = lazy(PAGE_IMPORTERS['gym/workouts']!);
+const GymHistoryPage = lazy(PAGE_IMPORTERS['gym/history']!);
 // login/onboarding are dead weight for the recurring logged-in user; boot.ts
 // preloads whichever one the localStorage hints predict will be needed
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
@@ -36,10 +41,14 @@ function PageContent({
   page,
   themePref,
   onThemePref,
+  activeWorkout,
+  onOpenDrawer,
 }: {
   page: PageId;
   themePref: ThemePref;
   onThemePref: (pref: ThemePref) => void;
+  activeWorkout: ReturnType<typeof useActiveWorkout>;
+  onOpenDrawer: () => void;
 }) {
   const { t } = useTranslation('nav');
   switch (page) {
@@ -49,6 +58,14 @@ function PageContent({
       return <RunOverviewPage />;
     case 'run/analysis':
       return <RunAnalysisPage />;
+    case 'gym/overview':
+      return <GymOverviewPage />;
+    case 'gym/workouts':
+      return (
+        <GymWorkoutsPage activeWorkout={activeWorkout} onOpenDrawer={onOpenDrawer} />
+      );
+    case 'gym/history':
+      return <GymHistoryPage />;
     case 'profile':
       return <ProfilePage themePref={themePref} onThemePref={onThemePref} />;
     case 'run/activities':
@@ -96,6 +113,19 @@ function App() {
   const [hasActivities, setHasActivities] = useState<boolean | null>(null);
   const [onboardingDone, setOnboardingDone] = useState(false);
 
+  // owned here (not MobileChrome) so WorkoutSession's hamburger button can
+  // open the same drawer from anywhere in the tree
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  // drawer gets its own history entry so hardware/gesture back closes it
+  // instead of leaving the app (same pattern as the activity detail)
+  const drawerPushedRef = useRef(false);
+
+  // enabled only once auth is resolved, mirroring lib/boot.ts's has-activities
+  // hint — otherwise a logged-out visitor would fire a 401 against
+  // /workouts/active. Lives here (not GymWorkoutsPage) so an active session
+  // survives navigating away from Academia and can drive ActiveWorkoutBar
+  const activeWorkout = useActiveWorkout(!!user);
+
   const theme =
     themePref === 'auto' ? (systemDark ? 'dark' : 'light') : themePref;
 
@@ -134,6 +164,29 @@ function App() {
   useEffect(() => {
     localStorage.setItem(ACTIVE_PAGE_KEY, page);
   }, [page]);
+
+  useEffect(() => {
+    const onPop = () => {
+      drawerPushedRef.current = false;
+      setDrawerOpen(false);
+    };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  const openDrawer = () => {
+    setDrawerOpen(true);
+    window.history.pushState({ drawer: true }, '');
+    drawerPushedRef.current = true;
+  };
+
+  const closeDrawer = () => {
+    if (drawerPushedRef.current) {
+      window.history.back();
+    } else {
+      setDrawerOpen(false);
+    }
+  };
 
   const navigate = (next: PageId, opts?: { collapse?: boolean }) => {
     if (isPageDisabled(next)) return;
@@ -174,7 +227,19 @@ function App() {
 
   return (
     <div className="min-h-screen bg-page-bg max-md:pt-[calc(max(12px,env(safe-area-inset-top))_+_53px)] max-md:pb-[env(safe-area-inset-bottom)] md:p-3.5">
-      <MobileChrome activePage={page} onNavigate={navigate} />
+      <MobileChrome
+        activePage={page}
+        onNavigate={navigate}
+        drawerOpen={drawerOpen}
+        onOpenDrawer={openDrawer}
+        onCloseDrawer={closeDrawer}
+      />
+      {activeWorkout.workout && page !== 'gym/workouts' && (
+        <ActiveWorkoutBar
+          workout={activeWorkout.workout}
+          onOpen={() => navigate('gym/workouts')}
+        />
+      )}
       <div className="flex items-start md:gap-3.5">
         <Sidebar
           collapsed={collapsed}
@@ -190,6 +255,8 @@ function App() {
               page={page}
               themePref={themePref}
               onThemePref={setThemePref}
+              activeWorkout={activeWorkout}
+              onOpenDrawer={openDrawer}
             />
           </Suspense>
         </div>

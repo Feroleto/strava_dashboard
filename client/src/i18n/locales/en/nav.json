@@ -6,6 +6,10 @@
     "runOverview": "Overview",
     "runActivities": "Activities",
     "runAnalysis": "Analysis",
+    "gym": "Gym",
+    "gymOverview": "Overview",
+    "gymWorkouts": "Routines",
+    "gymHistory": "History",
     "cycling": "Cycling",
     "swimming": "Swimming"
   },

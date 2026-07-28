@@ -1,0 +1,20 @@
+// shared between RoutineEditPage.tsx (builder card) and RoutineDetailPage.tsx
+// (read-only exercise list) — a separate file (not a named export from a
+// component file) because Vite's Fast Refresh requires component files to
+// only export components
+export function formatRepsRange(
+  min: number | null | undefined,
+  max: number | null | undefined,
+): string {
+  if (min == null && max == null) return '—';
+  if (min != null && max != null) return `${min}–${max}`;
+  return String(min ?? max);
+}
+
+// "Treino A — Peito/Tríceps" → "Peito/Tríceps" — GymOverviewPage's routines
+// section shows the descriptive part only, dropping the "Treino X — " label
+// suggested by editor.namePlaceholder; names that don't follow that
+// convention (most real routines, e.g. "Upper") pass through untouched
+export function stripWorkoutPrefix(name: string): string {
+  return name.replace(/^treino\s+\S+\s*[—-]\s*/i, '');
+}

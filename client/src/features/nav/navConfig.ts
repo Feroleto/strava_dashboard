@@ -1,13 +1,21 @@
 import {
   Activity,
   Bike,
+  Dumbbell,
   LayoutGrid,
   Waves,
   type LucideIcon,
 } from 'lucide-react';
 
 export type PageId =
-  'overview' | 'run/overview' | 'run/activities' | 'run/analysis' | 'profile';
+  | 'overview'
+  | 'run/overview'
+  | 'run/activities'
+  | 'run/analysis'
+  | 'gym/overview'
+  | 'gym/workouts'
+  | 'gym/history'
+  | 'profile';
 
 export const DEFAULT_PAGE: PageId = 'run/activities';
 
@@ -66,6 +74,17 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
+        id: 'gym',
+        labelKey: 'sections.gym',
+        icon: Dumbbell,
+        page: 'gym/overview',
+        subs: [
+          { id: 'gym/overview', labelKey: 'sections.gymOverview' },
+          { id: 'gym/workouts', labelKey: 'sections.gymWorkouts' },
+          { id: 'gym/history', labelKey: 'sections.gymHistory' },
+        ],
+      },
+      {
         id: 'cycling',
         labelKey: 'sections.cycling',
         icon: Bike,
@@ -89,6 +108,9 @@ export const MOBILE_TITLE_KEYS: Record<PageId, string> = {
   'run/overview': 'sections.overview',
   'run/activities': 'sections.runActivities',
   'run/analysis': 'sections.runAnalysis',
+  'gym/overview': 'sections.gymOverview',
+  'gym/workouts': 'sections.gymWorkouts',
+  'gym/history': 'sections.gymHistory',
   profile: 'profile.title',
 };
 
@@ -123,6 +145,9 @@ export function isKnownPage(value: string | null): value is PageId {
     value === 'run/overview' ||
     value === 'run/activities' ||
     value === 'run/analysis' ||
+    value === 'gym/overview' ||
+    value === 'gym/workouts' ||
+    value === 'gym/history' ||
     value === 'profile'
   );
 }

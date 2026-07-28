@@ -6,6 +6,7 @@ import dashboardEn from './locales/en/dashboard.json';
 import overviewEn from './locales/en/overview.json';
 import activityEn from './locales/en/activity.json';
 import analysisEn from './locales/en/analysis.json';
+import gymEn from './locales/en/gym.json';
 
 import commonPt from './locales/pt/common.json';
 import authPt from './locales/pt/auth.json';
@@ -15,6 +16,7 @@ import dashboardPt from './locales/pt/dashboard.json';
 import overviewPt from './locales/pt/overview.json';
 import activityPt from './locales/pt/activity.json';
 import analysisPt from './locales/pt/analysis.json';
+import gymPt from './locales/pt/gym.json';
 
 export const resources = {
   en: {
@@ -26,6 +28,7 @@ export const resources = {
     overview: overviewEn,
     activity: activityEn,
     analysis: analysisEn,
+    gym: gymEn,
   },
   pt: {
     common: commonPt,
@@ -36,5 +39,6 @@ export const resources = {
     overview: overviewPt,
     activity: activityPt,
     analysis: analysisPt,
+    gym: gymPt,
   },
 } as const;

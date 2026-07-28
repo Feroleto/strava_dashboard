@@ -38,6 +38,14 @@ export function nextBin(start: Date, granularity: Granularity): Date {
   return d;
 }
 
+// last day of the 7-day week starting on `start` (a Monday from startOfBin) —
+// used to render "13/07 – 19/07" instead of just the week's start date
+export function endOfWeek(start: Date): Date {
+  const d = new Date(start);
+  d.setDate(d.getDate() + 6);
+  return d;
+}
+
 export function toISODate(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

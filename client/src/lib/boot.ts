@@ -27,13 +27,18 @@ export const HAS_ACTIVITIES_HINT = 'has-activities';
 const PREFETCH_MAX_AGE_MS = 30_000;
 
 // shared with React.lazy in App.tsx — same import specifier means the browser
-// module map dedupes the boot preload and the lazy() call into one download
+// module map dedupes the boot preload and the lazy() call into one download.
+// ComponentType<any> (not the default ComponentType<{}>) because these pages
+// don't all share one prop shape
 export const PAGE_IMPORTERS: Partial<
-  Record<PageId, () => Promise<{ default: ComponentType }>>
+  Record<PageId, () => Promise<{ default: ComponentType<any> }>>
 > = {
   'run/activities': () => import('@/features/dashboard/Dashboard'),
   'run/overview': () => import('@/features/overview/RunOverviewPage'),
   'run/analysis': () => import('@/features/analysis/RunAnalysisPage'),
+  'gym/overview': () => import('@/features/gym/GymOverviewPage'),
+  'gym/workouts': () => import('@/features/gym/GymWorkoutsPage'),
+  'gym/history': () => import('@/features/gym/GymHistoryPage'),
 };
 
 export function recordHasActivities(has: boolean): void {
