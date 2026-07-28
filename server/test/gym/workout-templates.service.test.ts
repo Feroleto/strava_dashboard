@@ -150,25 +150,16 @@ describe('WorkoutTemplatesService', () => {
       expect(mockPrisma.workoutTemplate.delete).toHaveBeenCalledWith({ where: { id: 't1' } });
     });
 
-    it('addExercise 404s for a template belonging to another user, without checking exercise visibility', async () => {
+    it('update 404s before checking exercise visibility when exercises is provided for a template belonging to another user', async () => {
       mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce(null);
 
       await expect(
-        service.addExercise(USER_ID, 'someone_elses_template', { exerciseId: 'ex1' }),
+        service.update(USER_ID, 'someone_elses_template', {
+          exercises: [{ exerciseId: 'ex1' }],
+        }),
       ).rejects.toBeInstanceOf(NotFoundException);
       expect(exercisesService.findById).not.toHaveBeenCalled();
-    });
-
-    it('updateExercise/removeExercise 404 when the exercise is not reachable through this user/template chain', async () => {
-      mockPrisma.workoutTemplateExercise.findFirst.mockResolvedValueOnce(null);
-      await expect(
-        service.updateExercise(USER_ID, 't1', 'not-mine', { targetSets: 3 }),
-      ).rejects.toBeInstanceOf(NotFoundException);
-
-      mockPrisma.workoutTemplateExercise.findFirst.mockResolvedValueOnce(null);
-      await expect(
-        service.removeExercise(USER_ID, 't1', 'not-mine'),
-      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
   });
 
@@ -322,19 +313,77 @@ describe('WorkoutTemplatesService', () => {
     });
   });
 
-  describe('addExercise', () => {
-    it('computes order as max(current order) + 1', async () => {
+  describe('update — exercises replace', () => {
+    it('replaces the exercise list wholesale when exercises is provided — deletes all then recreates with order from array position', async () => {
       mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce({ id: 't1' }); // ownership
-      exercisesService.findById.mockResolvedValueOnce({ id: 'ex1' });
-      mockPrisma.workoutTemplateExercise.aggregate.mockResolvedValueOnce({ _max: { order: 2 } });
-      mockPrisma.workoutTemplateExercise.create.mockResolvedValueOnce({});
+      exercisesService.findById.mockResolvedValue({ id: 'ex' }); // every exercise visible
       mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce(DETAIL_STUB); // findById refetch
 
-      await service.addExercise(USER_ID, 't1', { exerciseId: 'ex1' });
+      await service.update(USER_ID, 't1', {
+        exercises: [
+          { exerciseId: 'ex1', targetSets: 3 },
+          { exerciseId: 'ex2', targetRepsMin: 8, targetRepsMax: 12 },
+        ],
+      });
 
-      expect(mockPrisma.workoutTemplateExercise.create).toHaveBeenCalledWith(
-        expect.objectContaining({ data: expect.objectContaining({ order: 3 }) }),
-      );
+      expect(mockPrisma.workoutTemplateExercise.deleteMany).toHaveBeenCalledWith({
+        where: { templateId: 't1' },
+      });
+      expect(mockPrisma.workoutTemplateExercise.createMany).toHaveBeenCalledWith({
+        data: [
+          {
+            templateId: 't1',
+            exerciseId: 'ex1',
+            order: 1,
+            targetSets: 3,
+            targetRepsMin: null,
+            targetRepsMax: null,
+          },
+          {
+            templateId: 't1',
+            exerciseId: 'ex2',
+            order: 2,
+            targetSets: null,
+            targetRepsMin: 8,
+            targetRepsMax: 12,
+          },
+        ],
+      });
+    });
+
+    it('leaves the exercise list untouched when exercises is omitted', async () => {
+      mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce({ id: 't1' }); // ownership
+      mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce(DETAIL_STUB); // findById refetch
+
+      await service.update(USER_ID, 't1', { name: 'New name' });
+
+      expect(mockPrisma.workoutTemplateExercise.deleteMany).not.toHaveBeenCalled();
+      expect(mockPrisma.workoutTemplateExercise.createMany).not.toHaveBeenCalled();
+    });
+
+    it('validates every exercise is visible to the caller before replacing', async () => {
+      mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce({ id: 't1' }); // ownership
+      exercisesService.findById.mockResolvedValueOnce({ id: 'ex1' }); // first visible
+      exercisesService.findById.mockResolvedValueOnce(null); // second not visible
+
+      await expect(
+        service.update(USER_ID, 't1', {
+          exercises: [{ exerciseId: 'ex1' }, { exerciseId: 'ex2' }],
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mockPrisma.workoutTemplateExercise.deleteMany).not.toHaveBeenCalled();
+    });
+
+    it('accepts an empty array to clear the routine', async () => {
+      mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce({ id: 't1' }); // ownership
+      mockPrisma.workoutTemplate.findFirst.mockResolvedValueOnce(DETAIL_STUB); // findById refetch
+
+      await service.update(USER_ID, 't1', { exercises: [] });
+
+      expect(mockPrisma.workoutTemplateExercise.deleteMany).toHaveBeenCalledWith({
+        where: { templateId: 't1' },
+      });
+      expect(mockPrisma.workoutTemplateExercise.createMany).toHaveBeenCalledWith({ data: [] });
     });
   });
 });

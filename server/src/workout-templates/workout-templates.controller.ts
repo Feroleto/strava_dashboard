@@ -10,12 +10,7 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { WorkoutTemplatesService } from './workout-templates.service';
-import {
-  parseAddTemplateExerciseInput,
-  parseCreateTemplateInput,
-  parseUpdateTemplateExerciseInput,
-  parseUpdateTemplateInput,
-} from './dto';
+import { parseCreateTemplateInput, parseUpdateTemplateInput } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
@@ -70,38 +65,5 @@ export class WorkoutTemplatesController {
   async remove(@CurrentUser() user: AuthenticatedUser, @Param('id') id: string) {
     await this.service.remove(user.id, id);
     return { ok: true };
-  }
-
-  @Post(':id/exercises')
-  async addExercise(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentLang() lang: Lang,
-    @Param('id') id: string,
-    @Body() body: unknown,
-  ) {
-    const input = parseAddTemplateExerciseInput(body);
-    return this.service.addExercise(user.id, id, input, lang);
-  }
-
-  @Patch(':id/exercises/:templateExerciseId')
-  async updateExercise(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentLang() lang: Lang,
-    @Param('id') id: string,
-    @Param('templateExerciseId') templateExerciseId: string,
-    @Body() body: unknown,
-  ) {
-    const input = parseUpdateTemplateExerciseInput(body);
-    return this.service.updateExercise(user.id, id, templateExerciseId, input, lang);
-  }
-
-  @Delete(':id/exercises/:templateExerciseId')
-  async removeExercise(
-    @CurrentUser() user: AuthenticatedUser,
-    @CurrentLang() lang: Lang,
-    @Param('id') id: string,
-    @Param('templateExerciseId') templateExerciseId: string,
-  ) {
-    return this.service.removeExercise(user.id, id, templateExerciseId, lang);
   }
 }

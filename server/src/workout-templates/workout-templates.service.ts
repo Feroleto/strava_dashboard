@@ -1,14 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { PrismaClient } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { ExercisesService } from '../exercises/exercises.service';
-import type {
-  CreateTemplateExerciseInput,
-  CreateTemplateInput,
-  UpdateTemplateExerciseInput,
-  UpdateTemplateInput,
-} from './dto';
+import type { CreateTemplateInput, UpdateTemplateInput } from './dto';
 import { localizedName, type Lang } from '../common/lang';
 
 export interface TemplateExerciseDetail {
@@ -194,6 +189,14 @@ export class WorkoutTemplatesService {
     return template ? toDetail(template, lang) : null;
   }
 
+  // name/description update and exercises replace run in one transaction —
+  // the editor always sends the full state it built in memory (see
+  // RoutineEditPage/useRoutineEditor), so there's nothing to diff: `exercises`
+  // present means "this is the whole list now", same delete+createMany shape
+  // as syncFromWorkout/the lap editor's PUT .../laps. `order` comes from
+  // array position (1-based), matching create(). supersetGroupId always ends
+  // up null on replace — no UI sets it anywhere yet (schema reserved for a
+  // future superset feature), so this isn't a regression
   async update(
     userId: string,
     id: string,
@@ -201,17 +204,38 @@ export class WorkoutTemplatesService {
     lang: Lang = 'en',
   ): Promise<TemplateDetail> {
     await this.assertOwnedTemplate(userId, id);
+    if (input.exercises !== undefined) {
+      await this.assertExercisesVisible(userId, input.exercises.map((e) => e.exerciseId));
+    }
 
-    const template = await this.prisma.workoutTemplate.update({
-      where: { id },
-      data: {
-        ...(input.name !== undefined && { name: input.name }),
-        ...(input.description !== undefined && { description: input.description }),
-      },
-      select: TEMPLATE_DETAIL_SELECT,
-    });
+    const ops: Prisma.PrismaPromise<unknown>[] = [
+      this.prisma.workoutTemplate.update({
+        where: { id },
+        data: {
+          ...(input.name !== undefined && { name: input.name }),
+          ...(input.description !== undefined && { description: input.description }),
+        },
+      }),
+    ];
+    if (input.exercises !== undefined) {
+      const exercises = input.exercises;
+      ops.push(
+        this.prisma.workoutTemplateExercise.deleteMany({ where: { templateId: id } }),
+        this.prisma.workoutTemplateExercise.createMany({
+          data: exercises.map((e, idx) => ({
+            templateId: id,
+            exerciseId: e.exerciseId,
+            order: idx + 1,
+            targetSets: e.targetSets ?? null,
+            targetRepsMin: e.targetRepsMin ?? null,
+            targetRepsMax: e.targetRepsMax ?? null,
+          })),
+        }),
+      );
+    }
+    await this.prisma.$transaction(ops);
 
-    return toDetail(template, lang);
+    return (await this.findById(userId, id, lang))!;
   }
 
   async remove(userId: string, id: string): Promise<void> {
@@ -220,67 +244,6 @@ export class WorkoutTemplatesService {
     // relation without cascade, so past workouts survive with templateId set
     // to null (SetNull) — see workouts.service.ts findById/toDetail
     await this.prisma.workoutTemplate.delete({ where: { id } });
-  }
-
-  async addExercise(
-    userId: string,
-    templateId: string,
-    input: CreateTemplateExerciseInput,
-    lang: Lang = 'en',
-  ): Promise<TemplateDetail> {
-    await this.assertOwnedTemplate(userId, templateId);
-    await this.assertExercisesVisible(userId, [input.exerciseId]);
-
-    const last = await this.prisma.workoutTemplateExercise.aggregate({
-      where: { templateId },
-      _max: { order: true },
-    });
-
-    await this.prisma.workoutTemplateExercise.create({
-      data: {
-        templateId,
-        exerciseId: input.exerciseId,
-        order: (last._max.order ?? 0) + 1,
-        targetSets: input.targetSets,
-        targetRepsMin: input.targetRepsMin,
-        targetRepsMax: input.targetRepsMax,
-      },
-    });
-
-    return (await this.findById(userId, templateId, lang))!;
-  }
-
-  async updateExercise(
-    userId: string,
-    templateId: string,
-    templateExerciseId: string,
-    input: UpdateTemplateExerciseInput,
-    lang: Lang = 'en',
-  ): Promise<TemplateDetail> {
-    await this.assertOwnedTemplateExercise(userId, templateId, templateExerciseId);
-
-    await this.prisma.workoutTemplateExercise.update({
-      where: { id: templateExerciseId },
-      data: {
-        ...(input.targetSets !== undefined && { targetSets: input.targetSets }),
-        ...(input.targetRepsMin !== undefined && { targetRepsMin: input.targetRepsMin }),
-        ...(input.targetRepsMax !== undefined && { targetRepsMax: input.targetRepsMax }),
-        ...(input.order !== undefined && { order: input.order }),
-      },
-    });
-
-    return (await this.findById(userId, templateId, lang))!;
-  }
-
-  async removeExercise(
-    userId: string,
-    templateId: string,
-    templateExerciseId: string,
-    lang: Lang = 'en',
-  ): Promise<TemplateDetail> {
-    await this.assertOwnedTemplateExercise(userId, templateId, templateExerciseId);
-    await this.prisma.workoutTemplateExercise.delete({ where: { id: templateExerciseId } });
-    return (await this.findById(userId, templateId, lang))!;
   }
 
   // Called by WorkoutsService.finish when the user opts to "also update the
@@ -354,17 +317,4 @@ export class WorkoutTemplatesService {
     }
   }
 
-  private async assertOwnedTemplateExercise(
-    userId: string,
-    templateId: string,
-    templateExerciseId: string,
-  ): Promise<void> {
-    const templateExercise = await this.prisma.workoutTemplateExercise.findFirst({
-      where: { id: templateExerciseId, templateId, template: { userId } },
-      select: { id: true },
-    });
-    if (!templateExercise) {
-      throw new NotFoundException(`Template exercise ${templateExerciseId} not found`);
-    }
-  }
 }

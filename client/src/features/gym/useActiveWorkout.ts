@@ -125,9 +125,10 @@ export function useActiveWorkout(enabled: boolean) {
   }, []);
 
   // Called once when the drag ends (pointerup), with the id order captured
-  // at drag start — same "diff against a pre-drag snapshot, one PATCH per
-  // moved row" contract as useRoutineEditor.commitReorder, no bulk reorder
-  // endpoint exists here either
+  // at drag start — diffs against that pre-drag snapshot and PATCHes one
+  // row per moved index; no bulk reorder endpoint exists here (unlike
+  // useRoutineEditor, this is a live session — each action still commits
+  // immediately, there's no "save" step to batch into)
   const commitReorderExercises = useCallback(async (originalIds: string[]) => {
     const current = workoutRef.current;
     if (!current) return;

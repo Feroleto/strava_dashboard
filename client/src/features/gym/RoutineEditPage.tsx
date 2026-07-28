@@ -29,6 +29,17 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
   const editor = useRoutineEditor(templateId);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [mobilePickerOpen, setMobilePickerOpen] = useState(false);
+  // gates the back button behind a confirmation when there are unsaved
+  // changes (see useRoutineEditor's isDirty) — same "requestClose" pattern
+  // as the lap editor's confirmingClose
+  const [confirmingBack, setConfirmingBack] = useState(false);
+  const requestBack = () => {
+    if (editor.isDirty) {
+      setConfirmingBack(true);
+      return;
+    }
+    onCancel();
+  };
   // mobile builder only — tapping an already-added exercise card opens
   // RoutineExerciseEditPage for it (sets/reps range), see the card's onClick
   // below; desktop's inline inputs (RoutineExerciseRow.tsx) are untouched
@@ -40,7 +51,6 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
   // into another row (via elementFromPoint + data-exercise-key), and
   // persists once on drop rather than per crossing.
   const [dragKey, setDragKey] = useState<string | null>(null);
-  const dragStartOrder = useRef<string[]>([]);
 
   useEffect(() => {
     if (!dragKey) return;
@@ -53,10 +63,7 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
         editor.reorderExercise(dragKey, overKey);
       }
     };
-    const onUp = () => {
-      editor.commitReorder(dragStartOrder.current);
-      setDragKey(null);
-    };
+    const onUp = () => setDragKey(null);
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
     window.addEventListener('pointercancel', onUp);
@@ -130,13 +137,8 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
   }
 
   const handleSave = async () => {
-    if (editor.isEdit) {
-      const ok = await editor.saveMeta();
-      if (ok) onDone();
-    } else {
-      const created = await editor.submitCreate();
-      if (created) onDone();
-    }
+    const saved = await editor.save();
+    if (saved) onDone();
   };
 
   // toggling commits immediately — add if not already in the routine,
@@ -157,7 +159,7 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-5 py-4">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={requestBack}
             aria-label={t('routines.back')}
             className="cursor-pointer text-muted-foreground hover:text-foreground"
           >
@@ -167,6 +169,28 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
             {editor.isEdit ? t('editor.editTitle') : t('editor.newTitle')}
           </h1>
         </div>
+
+        {confirmingBack && (
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-chip px-5 py-3">
+            <span className="text-[13px] text-foreground">{t('editor.discardConfirm')}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingBack(false)}
+                className="cursor-pointer rounded-[8px] px-2.5 py-1 text-[12.5px] font-medium text-muted-foreground hover:text-foreground"
+              >
+                {t('editor.keepEditing')}
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="cursor-pointer rounded-[8px] bg-neg px-2.5 py-1 text-[12.5px] font-medium text-white"
+              >
+                {t('editor.discard')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 space-y-4 px-4 py-4">
           {editor.error && <p className="text-[12px] text-neg">{editor.error}</p>}
@@ -240,8 +264,8 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
         {pickerOpen && (
           <ExercisePicker
             onClose={() => setPickerOpen(false)}
-            onPick={async (exercise) => {
-              await editor.addExercise(exercise.id, exercise.name);
+            onPick={(exercise) => {
+              editor.addExercise(exercise.id, exercise.name);
               setPickerOpen(false);
             }}
           />
@@ -253,7 +277,7 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
         <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-card px-5 py-4">
           <button
             type="button"
-            onClick={onCancel}
+            onClick={requestBack}
             aria-label={t('routines.back')}
             className="cursor-pointer text-muted-foreground hover:text-foreground"
           >
@@ -271,6 +295,28 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
             {editor.saving ? t('editor.saving') : t('editor.saveShort')}
           </button>
         </div>
+
+        {confirmingBack && (
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-chip px-5 py-3">
+            <span className="text-[13px] text-foreground">{t('editor.discardConfirm')}</span>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setConfirmingBack(false)}
+                className="cursor-pointer rounded-[8px] px-2.5 py-1 text-[12.5px] font-medium text-muted-foreground hover:text-foreground"
+              >
+                {t('editor.keepEditing')}
+              </button>
+              <button
+                type="button"
+                onClick={onCancel}
+                className="cursor-pointer rounded-[8px] bg-neg px-2.5 py-1 text-[12.5px] font-medium text-white"
+              >
+                {t('editor.discard')}
+              </button>
+            </div>
+          </div>
+        )}
 
         <div className="flex-1 px-5 pt-[18px] pb-[32px]">
           {editor.error && <p className="mb-3 text-[12px] text-neg">{editor.error}</p>}
@@ -314,7 +360,6 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
                 onPointerDown={(e) => {
                   e.preventDefault();
                   e.stopPropagation();
-                  dragStartOrder.current = editor.exercises.map((e2) => e2.key);
                   setDragKey(ex.key);
                 }}
                 aria-label={t('editor.reorderExercise')}

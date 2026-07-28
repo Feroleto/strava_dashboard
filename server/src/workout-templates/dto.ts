@@ -60,6 +60,25 @@ export interface CreateTemplateExerciseInput extends TemplateExerciseTargets {
   exerciseId: string;
 }
 
+// shared by create (exercises required, defaults to []) and update
+// (exercises optional — presence means "replace the whole list", see
+// parseUpdateTemplateInput)
+function parseTemplateExercises(value: unknown): CreateTemplateExerciseInput[] {
+  if (!Array.isArray(value)) {
+    throw new BadRequestException('exercises must be an array');
+  }
+  return value.map((raw, idx) => {
+    if (typeof raw !== 'object' || raw === null) {
+      throw new BadRequestException(`exercises[${idx}] must be an object`);
+    }
+    const { exerciseId, ...rest } = raw as Record<string, unknown>;
+    if (typeof exerciseId !== 'string' || exerciseId.trim().length === 0) {
+      throw new BadRequestException(`exercises[${idx}].exerciseId is required`);
+    }
+    return { exerciseId, ...parseTargets(rest) };
+  });
+}
+
 export interface CreateTemplateInput {
   name: string;
   description?: string;
@@ -79,22 +98,8 @@ export function parseCreateTemplateInput(body: unknown): CreateTemplateInput {
     throw new BadRequestException('description must be a string');
   }
 
-  let parsedExercises: CreateTemplateExerciseInput[] = [];
-  if (exercises !== undefined && exercises !== null) {
-    if (!Array.isArray(exercises)) {
-      throw new BadRequestException('exercises must be an array');
-    }
-    parsedExercises = exercises.map((raw, idx) => {
-      if (typeof raw !== 'object' || raw === null) {
-        throw new BadRequestException(`exercises[${idx}] must be an object`);
-      }
-      const { exerciseId, ...rest } = raw as Record<string, unknown>;
-      if (typeof exerciseId !== 'string' || exerciseId.trim().length === 0) {
-        throw new BadRequestException(`exercises[${idx}].exerciseId is required`);
-      }
-      return { exerciseId, ...parseTargets(rest) };
-    });
-  }
+  const parsedExercises =
+    exercises !== undefined && exercises !== null ? parseTemplateExercises(exercises) : [];
 
   return {
     name: name.trim(),
@@ -106,15 +111,17 @@ export function parseCreateTemplateInput(body: unknown): CreateTemplateInput {
 export interface UpdateTemplateInput {
   name?: string;
   description?: string | null;
+  // undefined = leave the exercise list untouched; an array (including [])
+  // replaces it wholesale — the editor always sends the full list it built
+  // in memory, there's no partial/diffed update
+  exercises?: CreateTemplateExerciseInput[];
 }
 
-// only name/description — per the spec, structural edits go through the
-// dedicated exercises sub-resource
 export function parseUpdateTemplateInput(body: unknown): UpdateTemplateInput {
   if (typeof body !== 'object' || body === null) {
     throw new BadRequestException('Request body must be an object');
   }
-  const { name, description } = body as Record<string, unknown>;
+  const { name, description, exercises } = body as Record<string, unknown>;
 
   const result: UpdateTemplateInput = {};
   if (name !== undefined) {
@@ -129,30 +136,8 @@ export function parseUpdateTemplateInput(body: unknown): UpdateTemplateInput {
     }
     result.description = description;
   }
+  if (exercises !== undefined) {
+    result.exercises = parseTemplateExercises(exercises);
+  }
   return result;
-}
-
-export function parseAddTemplateExerciseInput(body: unknown): CreateTemplateExerciseInput {
-  if (typeof body !== 'object' || body === null) {
-    throw new BadRequestException('Request body must be an object');
-  }
-  const { exerciseId, ...rest } = body as Record<string, unknown>;
-  if (typeof exerciseId !== 'string' || exerciseId.trim().length === 0) {
-    throw new BadRequestException('exerciseId is required');
-  }
-  return { exerciseId, ...parseTargets(rest) };
-}
-
-export interface UpdateTemplateExerciseInput extends TemplateExerciseTargets {
-  order?: number;
-}
-
-export function parseUpdateTemplateExerciseInput(body: unknown): UpdateTemplateExerciseInput {
-  if (typeof body !== 'object' || body === null) {
-    throw new BadRequestException('Request body must be an object');
-  }
-  const { order, ...rest } = body as Record<string, unknown>;
-  const targets = parseTargets(rest);
-  const parsedOrder = parseOptionalInt('order', order, 1, 1000);
-  return { ...targets, order: parsedOrder };
 }
