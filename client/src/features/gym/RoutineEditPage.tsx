@@ -283,7 +283,7 @@ export default function RoutineEditPage({ templateId, onDone, onCancel }: Routin
               value={editor.name}
               onChange={(e) => editor.setName(e.target.value)}
               placeholder={t('editor.namePlaceholder')}
-              className="w-full rounded-[10px] border border-border bg-card p-[12px_14px] text-[15px] font-semibold text-foreground outline-none focus:border-acc"
+              className="w-full rounded-[10px] border border-border bg-card p-[12px_14px] text-[16px] font-semibold text-foreground outline-none focus:border-acc"
             />
           </label>
 

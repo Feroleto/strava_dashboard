@@ -95,7 +95,7 @@ export default function LapEditorToolbar({
           <select
             value={lapType}
             onChange={(e) => setLapType(e.target.value as LapType)}
-            className="cursor-pointer rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+            className="cursor-pointer rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
           >
             {EDITABLE_LAP_TYPES.map((type) => (
               <option key={type} value={type}>
@@ -109,7 +109,7 @@ export default function LapEditorToolbar({
             min={1}
             value={sizeValue}
             onChange={(e) => setSizeValue(e.target.value)}
-            className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+            className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
           />
           <span className="text-[12px] text-muted-foreground">
             {sizeMode === 'distance' ? 'm' : 's'}
@@ -135,7 +135,7 @@ export default function LapEditorToolbar({
               min={1}
               value={repsCount}
               onChange={(e) => setRepsCount(e.target.value)}
-              className="w-16 rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+              className="w-16 rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -148,7 +148,7 @@ export default function LapEditorToolbar({
               min={1}
               value={workoutSizeValue}
               onChange={(e) => setWorkoutSizeValue(e.target.value)}
-              className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+              className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
             />
             <span className="text-[12px] text-muted-foreground">
               {workoutSizeMode === 'distance' ? 'm' : 's'}
@@ -164,7 +164,7 @@ export default function LapEditorToolbar({
               min={1}
               value={restSizeValue}
               onChange={(e) => setRestSizeValue(e.target.value)}
-              className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+              className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
             />
             <span className="text-[12px] text-muted-foreground">
               {restSizeMode === 'distance' ? 'm' : 's'}

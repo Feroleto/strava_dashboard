@@ -161,7 +161,7 @@ export default function RestTimerControl({ timer }: RestTimerControlProps) {
                   placeholder={t('rest.customPlaceholder')}
                   value={customValue}
                   onChange={(e) => setCustomValue(e.target.value)}
-                  className="h-10 w-full min-w-0 rounded-[10px] border border-border bg-transparent px-3 text-[13px] text-foreground outline-none focus:border-acc"
+                  className="h-10 w-full min-w-0 rounded-[10px] border border-border bg-transparent px-3 text-[16px] text-foreground outline-none focus:border-acc md:text-[13px]"
                 />
                 <button
                   type="submit"

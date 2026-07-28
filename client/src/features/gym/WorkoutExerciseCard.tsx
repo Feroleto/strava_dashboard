@@ -69,7 +69,7 @@ function LoggedSetRow({ index, set, busy, onUpdate, onUncheck }: LoggedSetRowPro
         onBlur={commitWeight}
         disabled={busy}
         aria-label={t('entry.weightLabel')}
-        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[13px] font-medium text-foreground outline-none focus:border-acc"
+        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[16px] font-medium text-foreground outline-none focus:border-acc md:text-[13px]"
       />
       <input
         type="number"
@@ -79,7 +79,7 @@ function LoggedSetRow({ index, set, busy, onUpdate, onUncheck }: LoggedSetRowPro
         onBlur={commitReps}
         disabled={busy}
         aria-label={t('entry.repsLabel')}
-        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[13px] font-medium text-foreground outline-none focus:border-acc"
+        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[16px] font-medium text-foreground outline-none focus:border-acc md:text-[13px]"
       />
       {/* empty spacer — keeps column alignment with EmptySetRow's remove button, which this row never shows */}
       <div className="w-[18px] flex-none" />
@@ -144,7 +144,7 @@ function EmptySetRow({ index, enabled, isLast, suggestion, busy, onLog, onRemove
         placeholder={suggestion?.weightKg != null ? String(suggestion.weightKg) : ''}
         disabled={!enabled || busy}
         aria-label={t('entry.weightLabel')}
-        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[13px] font-medium text-foreground outline-none focus:border-acc disabled:opacity-40"
+        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[16px] font-medium text-foreground outline-none focus:border-acc disabled:opacity-40 md:text-[13px]"
       />
       <input
         type="number"
@@ -154,7 +154,7 @@ function EmptySetRow({ index, enabled, isLast, suggestion, busy, onLog, onRemove
         placeholder={suggestion?.reps != null ? String(suggestion.reps) : ''}
         disabled={!enabled || busy}
         aria-label={t('entry.repsLabel')}
-        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[13px] font-medium text-foreground outline-none focus:border-acc disabled:opacity-40"
+        className="h-9 min-w-0 flex-1 rounded-[8px] border border-border bg-page-bg px-1.5 text-[16px] font-medium text-foreground outline-none focus:border-acc disabled:opacity-40 md:text-[13px]"
       />
       {isLast ? (
         <button

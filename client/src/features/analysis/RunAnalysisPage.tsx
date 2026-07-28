@@ -75,7 +75,7 @@ function MaxHrControl({
         value={value}
         onChange={(e) => setValue(e.target.value)}
         placeholder={t('maxHr.placeholder')}
-        className="w-20 rounded-md border border-border bg-transparent px-2 py-1 text-foreground"
+        className="w-20 rounded-md border border-border bg-transparent px-2 py-1 text-[16px] text-foreground md:text-[12.5px]"
       />
       <span>{t('maxHr.bpm')}</span>
       <button

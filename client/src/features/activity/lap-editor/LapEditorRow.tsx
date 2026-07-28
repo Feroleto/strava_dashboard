@@ -68,7 +68,7 @@ export default function LapEditorRow({
         <select
           value={lapType}
           onChange={(e) => setLapType(e.target.value as LapType)}
-          className="cursor-pointer rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+          className="cursor-pointer rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
         >
           {EDITABLE_LAP_TYPES.map((type) => (
             <option key={type} value={type}>
@@ -82,7 +82,7 @@ export default function LapEditorRow({
           min={1}
           value={sizeValue}
           onChange={(e) => setSizeValue(e.target.value)}
-          className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[13px] text-foreground"
+          className="w-20 rounded-md border border-border bg-card px-2 py-1 text-[16px] text-foreground md:text-[13px]"
         />
         <span className="text-[12px] text-muted-foreground">
           {sizeMode === 'distance' ? 'm' : 's'}
