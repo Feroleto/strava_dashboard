@@ -70,7 +70,7 @@ export default function ExercisePicker({ onClose, onPick }: ExercisePickerProps)
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('picker.searchPlaceholder')}
-            className="h-10 flex-1 bg-transparent text-[15px] text-foreground outline-none placeholder:text-muted-foreground"
+            className="h-10 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-foreground md:text-[15px]"
           />
           <button
             type="button"

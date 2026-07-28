@@ -134,7 +134,7 @@ export default function RoutineExercisePicker({
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder={t('picker.searchPlaceholder')}
-            className="h-5 flex-1 bg-transparent text-[14px] text-foreground outline-none placeholder:text-muted-foreground"
+            className="h-5 flex-1 bg-transparent text-[16px] text-foreground outline-none placeholder:text-muted-foreground"
           />
         </div>
 
