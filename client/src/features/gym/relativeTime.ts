@@ -1,4 +1,4 @@
-import type { TFunction } from 'react-i18next';
+import type { TFunction } from 'i18next';
 
 const DAY_MS = 86_400_000;
 
