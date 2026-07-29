@@ -253,7 +253,7 @@ export default function ProfilePage({
                 placeholder={t('auth:login.emailPlaceholder')}
                 autoComplete="email"
                 required
-                className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc"
+                className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[16px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc md:text-[14px]"
               />
               <PasswordInput
                 value={pwPassword}

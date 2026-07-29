@@ -24,7 +24,7 @@ export default function PasswordInput({
       <input
         {...props}
         type={visible ? 'text' : 'password'}
-        className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] pr-11 text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc"
+        className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] pr-11 text-[16px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc md:text-[14px]"
       />
       <button
         type="button"
