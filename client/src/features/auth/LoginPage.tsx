@@ -477,11 +477,15 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
             <p className="mt-[11px] text-[11.5px] text-muted-foreground">
               {t('login.redirectNotice')}
             </p>
+          </div>
+        )}
 
+        <div className="mt-6 flex flex-col items-center gap-3 md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:items-stretch">
+          {view === 'main' && (
             <button
               type="button"
               onClick={openForm}
-              className="mt-3 text-left text-[12.5px] leading-[1.5]"
+              className="self-center text-center text-[14.5px] leading-[1.5] md:self-start md:text-left"
             >
               <span className="text-muted-foreground">
                 {t('login.emailCtaPrefix')}{' '}
@@ -490,10 +494,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
                 {t('login.emailCtaLink')}
               </span>
             </button>
-          </div>
-        )}
-
-        <div className="mt-6 flex flex-col items-center gap-[10px] md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:items-stretch">
+          )}
           <div className="flex items-start justify-center gap-[7px] text-muted-foreground md:justify-start">
             <Lock size={14} strokeWidth={1.7} className="mt-px shrink-0" />
             <span className="text-[11px] leading-[1.5]">
