@@ -198,7 +198,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           fills the space above the bottom sheet (top padding tracks the
           real status bar / notch via env(safe-area-inset-top), plus a
           small fixed cushion, instead of a flat guess) */}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[calc(env(safe-area-inset-top)+20px)] md:flex-[1.25] md:px-[44px] md:pt-[36px]">
+      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[calc(env(safe-area-inset-top)+20px)] pb-6 md:flex-[1.25] md:px-[44px] md:pt-[36px] md:pb-0">
         <div className="flex items-center gap-[10px]">
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
             ST
