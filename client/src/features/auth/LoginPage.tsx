@@ -272,7 +272,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
         </div>
 
         {(view === 'form' || view === 'forgot') && (
-          <div className="flex justify-center md:justify-start">
+          <div className="flex justify-start">
             <button
               type="button"
               onClick={goBack}
