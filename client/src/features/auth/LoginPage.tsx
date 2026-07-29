@@ -198,7 +198,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           fills the space above the bottom sheet (top padding tracks the
           real status bar / notch via env(safe-area-inset-top), plus a
           small fixed cushion, instead of a flat guess) */}
-      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[calc(env(safe-area-inset-top)+20px)] pb-6 md:flex-[1.25] md:px-[44px] md:pt-[36px] md:pb-0">
+      <div className="flex min-w-0 flex-1 flex-col bg-[#0B0F17] px-[26px] pt-[calc(env(safe-area-inset-top)+20px)] md:flex-[1.25] md:px-[44px] md:pt-[36px]">
         <div className="flex items-center gap-[10px]">
           <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-acc text-[12px] font-bold text-white">
             ST
@@ -250,7 +250,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           Desktop seam treatment against the always-dark hero (md+ only):
           dark matches its #0B0F17 + hairline border; light keeps bg-card with
           an inset shadow as if the dark panel cast it */}
-      <div className="relative flex min-h-[54dvh] w-full flex-none flex-col rounded-t-[26px] bg-card px-[26px] pt-[28px] pb-[46px] text-center dark:border-t dark:border-white/[.09] dark:bg-[#0F1522] md:min-h-0 md:w-[480px] md:justify-center md:rounded-none md:px-[52px] md:py-[48px] md:text-left md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] md:dark:border-t-0 md:dark:border-l md:dark:border-white/[.09] md:dark:bg-[#0B0F17] md:dark:shadow-none">
+      <div className="relative flex min-h-[54dvh] w-full flex-none flex-col rounded-t-[26px] bg-card px-[26px] pt-[28px] pb-[max(18px,env(safe-area-inset-bottom))] text-center dark:border-t dark:border-white/[.09] dark:bg-[#0F1522] md:min-h-0 md:w-[480px] md:justify-center md:rounded-none md:px-[52px] md:py-[48px] md:text-left md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] md:dark:border-t-0 md:dark:border-l md:dark:border-white/[.09] md:dark:bg-[#0B0F17] md:dark:shadow-none">
         <div className="absolute right-[26px] top-[26px] hidden items-center gap-2 md:flex">
           <SegmentedControl
             size="compact"
