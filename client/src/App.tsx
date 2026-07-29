@@ -35,6 +35,7 @@ const GymHistoryPage = lazy(PAGE_IMPORTERS['gym/history']!);
 // login/onboarding are dead weight for the recurring logged-in user; boot.ts
 // preloads whichever one the localStorage hints predict will be needed
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
+const ResetPasswordPage = lazy(() => import('@/features/auth/ResetPasswordPage'));
 const FirstSyncPage = lazy(() => import('@/features/onboarding/FirstSyncPage'));
 
 function PageContent({
@@ -194,6 +195,17 @@ function App() {
     if (opts?.collapse) setCollapsed(true);
   };
 
+  // reached only via the emailed reset link — must work regardless of
+  // whether the visitor currently has a session, so this check comes before
+  // the loading/user gate below
+  if (window.location.pathname === '/redefinir-senha') {
+    return (
+      <Suspense fallback={<BootSplash />}>
+        <ResetPasswordPage themePref={themePref} onThemePref={setThemePref} />
+      </Suspense>
+    );
+  }
+
   if (loading || (user && hasActivities === null)) {
     return <BootSplash />;
   }
@@ -207,9 +219,13 @@ function App() {
   }
 
   // no imported history yet (or a first import is still running after a
-  // reload) → onboarding sync screen instead of an empty dashboard
+  // reload) → onboarding sync screen instead of an empty dashboard. Gated on
+  // hasStravaAccount too: a user who registered via email/password and never
+  // connected Strava has no sync to onboard into — FirstSyncPage's calls are
+  // Strava-specific and would just fail for them
   if (
     !onboardingDone &&
+    user.hasStravaAccount &&
     (hasActivities === false || localStorage.getItem(FIRST_SYNC_FLAG) != null)
   ) {
     return (

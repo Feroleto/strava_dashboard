@@ -1,9 +1,27 @@
-import { Controller, Get, HttpCode, Post, Req, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Post,
+  Req,
+  Res,
+  UnauthorizedException,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import type { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import type { MeResponse } from './auth.service';
 import { SessionService } from './session.service';
+import { AuthGuard } from './auth.guard';
+import {
+  parseLoginInput,
+  parseRegisterInput,
+  parseSetPasswordInput,
+  parseForgotPasswordInput,
+  parseResetPasswordInput,
+} from './dto';
 
 @Controller('auth')
 export class AuthController {
@@ -20,10 +38,81 @@ export class AuthController {
     return this.authService.authenticate(this.session.extractSession(req));
   }
 
+  // tighter than the 10/min used elsewhere in this controller — these two
+  // are pre-auth and a more attractive brute-force target
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('register')
+  @HttpCode(201)
+  async register(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MeResponse> {
+    const input = parseRegisterInput(body);
+    const { userId, tokenVersion } = await this.authService.register(input);
+    this.session.setCookie(res, userId, tokenVersion);
+    return (await this.authService.authenticate({ userId, tokenVersion }))!;
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('login')
+  @HttpCode(200)
+  async login(
+    @Body() body: unknown,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<MeResponse> {
+    const input = parseLoginInput(body);
+    const result = await this.authService.login(input);
+    if (!result) throw new UnauthorizedException('Invalid email or password');
+    this.session.setCookie(res, result.userId, result.tokenVersion);
+    return (await this.authService.authenticate(result))!;
+  }
+
+  // guarded + pre-auth-style throttle: this touches the same email-uniqueness
+  // and password-hashing cost as register(), just for an already-logged-in
+  // user adding credentials to a Strava-only account
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @UseGuards(AuthGuard)
+  @Post('set-password')
+  @HttpCode(200)
+  async setPassword(
+    @Req() req: Request,
+    @Body() body: unknown,
+  ): Promise<MeResponse> {
+    const input = parseSetPasswordInput(body);
+    const session = this.session.extractSession(req)!;
+    await this.authService.setPassword(session.userId, input);
+    return (await this.authService.authenticate(session))!;
+  }
+
+  // tighter than the 10/min used elsewhere in this controller — same
+  // pre-auth brute-force target reasoning as register/login
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('forgot-password')
+  @HttpCode(200)
+  async forgotPassword(@Body() body: unknown): Promise<{ ok: true }> {
+    const { email } = parseForgotPasswordInput(body);
+    await this.authService.requestPasswordReset(email);
+    // always the same response, regardless of whether the email exists or
+    // has a password — anti-enumeration
+    return { ok: true };
+  }
+
+  @Throttle({ default: { limit: 5, ttl: 60_000 } })
+  @Post('reset-password')
+  @HttpCode(200)
+  async resetPassword(@Body() body: unknown): Promise<{ ok: true }> {
+    const { token, newPassword } = parseResetPasswordInput(body);
+    await this.authService.resetPassword(token, newPassword);
+    return { ok: true };
+  }
+
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('logout')
   @HttpCode(204)
-  async logout(@Req() req: Request, @Res({ passthrough: true }) res: Response): Promise<void> {
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ): Promise<void> {
     const session = this.session.extractSession(req);
     try {
       if (session) await this.authService.invalidateSessions(session.userId);

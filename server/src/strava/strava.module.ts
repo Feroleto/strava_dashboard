@@ -2,9 +2,11 @@ import { Module } from '@nestjs/common';
 import { ScheduleModule } from '@nestjs/schedule';
 import { ConfigModule } from '@nestjs/config';
 import { AuthModule } from '../auth/auth.module';
+import { EmailModule } from '../email/email.module';
 import { StravaClientService } from './client/strava-client.service';
 import { StravaAuthService } from './auth/strava-auth.service';
 import { StravaAuthController } from './auth/strava-auth.controller';
+import { StravaConnectController } from './auth/strava-connect.controller';
 import { StravaSyncService } from './sync/strava-sync.service';
 import { StravaSyncController } from './sync/strava-sync.controller';
 import { BestEffortsSyncService } from './best-efforts/best-efforts-sync.service';
@@ -21,9 +23,11 @@ import { StravaWebhookController } from './webhook/strava-webhook.controller';
     ConfigModule,
     ScheduleModule.forRoot(),
     AuthModule,
+    EmailModule,
   ],
   controllers: [
     StravaAuthController,
+    StravaConnectController,
     StravaSyncController,
     BestEffortsSyncController,
     AthleteZonesSyncController,

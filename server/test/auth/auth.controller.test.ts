@@ -1,5 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
+import {
+  BadRequestException,
+  ConflictException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { AuthController } from 'src/auth/auth.controller';
 import { AuthService } from 'src/auth/auth.service';
 import { SessionService } from 'src/auth/session.service';
@@ -8,20 +13,35 @@ const USER_ID = 'user_test_123';
 
 describe('AuthController', () => {
   let controller: AuthController;
-  let session: { extractSession: ReturnType<typeof vi.fn>; clearCookie: ReturnType<typeof vi.fn> };
+  let session: {
+    extractSession: ReturnType<typeof vi.fn>;
+    clearCookie: ReturnType<typeof vi.fn>;
+    setCookie: ReturnType<typeof vi.fn>;
+  };
   let authService: {
     authenticate: ReturnType<typeof vi.fn>;
     invalidateSessions: ReturnType<typeof vi.fn>;
+    register: ReturnType<typeof vi.fn>;
+    login: ReturnType<typeof vi.fn>;
+    setPassword: ReturnType<typeof vi.fn>;
+    requestPasswordReset: ReturnType<typeof vi.fn>;
+    resetPassword: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(async () => {
     session = {
       extractSession: vi.fn(),
       clearCookie: vi.fn(),
+      setCookie: vi.fn(),
     };
     authService = {
       authenticate: vi.fn(),
       invalidateSessions: vi.fn().mockResolvedValue(undefined),
+      register: vi.fn(),
+      login: vi.fn(),
+      setPassword: vi.fn(),
+      requestPasswordReset: vi.fn().mockResolvedValue(undefined),
+      resetPassword: vi.fn().mockResolvedValue(undefined),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -61,7 +81,10 @@ describe('AuthController', () => {
 
   describe('logout', () => {
     it('invalidates the session and clears the cookie when a session cookie is present', async () => {
-      session.extractSession.mockReturnValue({ userId: USER_ID, tokenVersion: 0 });
+      session.extractSession.mockReturnValue({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
       const req: any = { cookies: { session: 'valid-token' } };
       const res: any = {};
 
@@ -83,13 +106,196 @@ describe('AuthController', () => {
     });
 
     it('still clears the cookie even when invalidateSessions rejects', async () => {
-      session.extractSession.mockReturnValue({ userId: USER_ID, tokenVersion: 0 });
+      session.extractSession.mockReturnValue({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
       authService.invalidateSessions.mockRejectedValue(new Error('db down'));
       const req: any = { cookies: { session: 'valid-token' } };
       const res: any = {};
 
       await expect(controller.logout(req, res)).rejects.toThrow('db down');
       expect(session.clearCookie).toHaveBeenCalledWith(res);
+    });
+  });
+
+  describe('register', () => {
+    it('sets the session cookie and returns the MeResponse', async () => {
+      authService.register.mockResolvedValue({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
+      authService.authenticate.mockResolvedValue({
+        id: USER_ID,
+        hasStravaAccount: false,
+      });
+      const res: any = {};
+
+      const result = await controller.register(
+        { email: 'test@example.com', password: 'password123' },
+        res,
+      );
+
+      expect(session.setCookie).toHaveBeenCalledWith(res, USER_ID, 0);
+      expect(result).toEqual({ id: USER_ID, hasStravaAccount: false });
+    });
+
+    it('propagates ConflictException from authService.register', async () => {
+      authService.register.mockRejectedValue(
+        new ConflictException('Email already in use'),
+      );
+      const res: any = {};
+
+      await expect(
+        controller.register(
+          { email: 'test@example.com', password: 'password123' },
+          res,
+        ),
+      ).rejects.toThrow(ConflictException);
+      expect(session.setCookie).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('login', () => {
+    it('sets the session cookie and returns the MeResponse on valid credentials', async () => {
+      authService.login.mockResolvedValue({ userId: USER_ID, tokenVersion: 1 });
+      authService.authenticate.mockResolvedValue({
+        id: USER_ID,
+        hasStravaAccount: true,
+      });
+      const res: any = {};
+
+      const result = await controller.login(
+        { email: 'test@example.com', password: 'password123' },
+        res,
+      );
+
+      expect(session.setCookie).toHaveBeenCalledWith(res, USER_ID, 1);
+      expect(result).toEqual({ id: USER_ID, hasStravaAccount: true });
+    });
+
+    it('throws UnauthorizedException when authService.login resolves null', async () => {
+      authService.login.mockResolvedValue(null);
+      const res: any = {};
+
+      await expect(
+        controller.login({ email: 'test@example.com', password: 'wrong' }, res),
+      ).rejects.toThrow(UnauthorizedException);
+      expect(session.setCookie).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('setPassword', () => {
+    it('forwards the session userId + parsed body and returns the refreshed MeResponse', async () => {
+      const extractedSession = { userId: USER_ID, tokenVersion: 0 };
+      session.extractSession.mockReturnValue(extractedSession);
+      authService.setPassword.mockResolvedValue(undefined);
+      authService.authenticate.mockResolvedValue({
+        id: USER_ID,
+        hasStravaAccount: true,
+        hasPassword: true,
+      });
+
+      const req: any = { cookies: { session: 'valid-token' } };
+      const result = await controller.setPassword(req, {
+        email: 'test@example.com',
+        password: 'password123',
+      });
+
+      expect(authService.setPassword).toHaveBeenCalledWith(USER_ID, {
+        email: 'test@example.com',
+        password: 'password123',
+      });
+      expect(authService.authenticate).toHaveBeenCalledWith(extractedSession);
+      expect(result).toEqual({
+        id: USER_ID,
+        hasStravaAccount: true,
+        hasPassword: true,
+      });
+    });
+
+    it('propagates ConflictException from authService.setPassword', async () => {
+      session.extractSession.mockReturnValue({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
+      authService.setPassword.mockRejectedValue(
+        new ConflictException('Password already set'),
+      );
+
+      const req: any = { cookies: { session: 'valid-token' } };
+      await expect(
+        controller.setPassword(req, {
+          email: 'test@example.com',
+          password: 'password123',
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(authService.authenticate).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('forgotPassword', () => {
+    it('parses the body, calls requestPasswordReset, and always returns ok', async () => {
+      const result = await controller.forgotPassword({
+        email: 'test@example.com',
+      });
+
+      expect(authService.requestPasswordReset).toHaveBeenCalledWith(
+        'test@example.com',
+      );
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('returns the same ok response even though nothing in the service call distinguishes the outcome', async () => {
+      // requestPasswordReset resolves the same way whether or not the email
+      // exists — this asserts the controller doesn't try to branch on it
+      const result = await controller.forgotPassword({
+        email: 'nobody@example.com',
+      });
+
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('rejects a malformed body before calling the service', async () => {
+      await expect(
+        controller.forgotPassword({ email: 'not-an-email' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(authService.requestPasswordReset).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('resetPassword', () => {
+    it('parses the body, calls resetPassword, and returns ok', async () => {
+      const result = await controller.resetPassword({
+        token: 'abc123',
+        newPassword: 'newpassword123',
+      });
+
+      expect(authService.resetPassword).toHaveBeenCalledWith(
+        'abc123',
+        'newpassword123',
+      );
+      expect(result).toEqual({ ok: true });
+    });
+
+    it('propagates BadRequestException from authService.resetPassword (invalid/expired token)', async () => {
+      authService.resetPassword.mockRejectedValue(
+        new BadRequestException('Invalid or expired token'),
+      );
+
+      await expect(
+        controller.resetPassword({
+          token: 'stale',
+          newPassword: 'newpassword123',
+        }),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('rejects a malformed body before calling the service', async () => {
+      await expect(
+        controller.resetPassword({ token: '', newPassword: 'newpassword123' }),
+      ).rejects.toThrow(BadRequestException);
+      expect(authService.resetPassword).not.toHaveBeenCalled();
     });
   });
 });

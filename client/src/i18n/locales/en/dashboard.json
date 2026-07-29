@@ -40,6 +40,10 @@
     "etaMinSec": "~{{m}}min {{s}}s remaining",
     "etaSec": "~{{s}}s remaining"
   },
+  "connectBanner": {
+    "message": "Connect Strava to import your runs.",
+    "cta": "Connect Strava"
+  },
   "list": {
     "loading": "Loading…",
     "empty": "No activities with this filter",

@@ -1,10 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
+import type { FormEvent } from 'react';
 import { ArrowRight, Loader2, Lock } from 'lucide-react';
 import { Trans, useTranslation } from 'react-i18next';
 import { API_BASE_URL } from '@/lib/apiUrl';
+import { apiFetch } from '@/lib/api';
 import SegmentedControl from '@/components/SegmentedControl';
+import PasswordInput from '@/components/PasswordInput';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
+import { useAuth } from '@/features/auth/AuthContext';
 import { THEME_OPTIONS, type ThemePref } from '@/lib/theme';
+
+type Mode = 'login' | 'register';
+type View = 'main' | 'form' | 'forgot';
 
 // TODO: swap the button for Strava's official "Connect with Strava" asset
 // (SVG/PNG from developers.strava.com/guidelines) once it's vendored into
@@ -60,10 +67,24 @@ interface LoginPageProps {
 export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
   const { t } = useTranslation('auth');
   const { language, setLanguage } = useAppLanguage();
+  const { setUser } = useAuth();
   const [connecting, setConnecting] = useState(false);
   const [authError, setAuthError] = useState(() =>
     new URLSearchParams(window.location.search).has('auth_error'),
   );
+
+  const [view, setView] = useState<View>('main');
+  const [mode, setMode] = useState<Mode>('login');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotSubmitting, setForgotSubmitting] = useState(false);
+  const [forgotSuccess, setForgotSuccess] = useState(false);
 
   useEffect(() => {
     // keep the notice in state but drop ?auth_error=1 from the address bar
@@ -77,6 +98,98 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
     setAuthError(false);
     setConnecting(true);
     window.location.href = `${API_BASE_URL}/strava/auth`;
+  };
+
+  const openForm = () => {
+    setView('form');
+    setMode('login');
+    setFormError(null);
+    setAuthError(false);
+  };
+
+  // wrong credentials mean whatever's in these fields was bad — clearing
+  // them (rather than leaving the rejected values sitting there) avoids
+  // the user re-submitting the same typo, same on "back": a stale
+  // email/password shouldn't survive to the next time the form opens
+  const clearCredentialFields = () => {
+    setEmail('');
+    setPassword('');
+    setConfirmPassword('');
+  };
+
+  const goBack = () => {
+    if (view === 'forgot') {
+      // came from the login form, not the Strava-first screen — return
+      // there instead of all the way back to 'main'
+      setView('form');
+      setForgotSuccess(false);
+      return;
+    }
+    setView('main');
+    clearCredentialFields();
+  };
+
+  const openForgotPassword = () => {
+    setView('forgot');
+    setFormError(null);
+    setForgotEmail('');
+    setForgotSuccess(false);
+  };
+
+  const submitForgotPassword = async (e: FormEvent) => {
+    e.preventDefault();
+    if (forgotSubmitting) return;
+    setForgotSubmitting(true);
+    try {
+      await apiFetch('/auth/forgot-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: forgotEmail }),
+      });
+    } finally {
+      // always show the same success state, regardless of the response —
+      // same anti-enumeration principle as the backend
+      setForgotSuccess(true);
+      setForgotSubmitting(false);
+    }
+  };
+
+  const submitForm = async (e: FormEvent) => {
+    e.preventDefault();
+    if (submitting) return;
+    setFormError(null);
+    if (mode === 'register' && password !== confirmPassword) {
+      setFormError(t('login.passwordMismatch'));
+      return;
+    }
+    setSubmitting(true);
+    try {
+      const res = await apiFetch(
+        mode === 'login' ? '/auth/login' : '/auth/register',
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(
+            mode === 'login'
+              ? { email, password }
+              : { email, password, firstName: firstName.trim() || undefined },
+          ),
+        },
+      );
+      if (!res.ok) {
+        if (res.status === 401) {
+          setFormError(t('login.invalidCredentials'));
+          clearCredentialFields();
+        } else if (res.status === 409) setFormError(t('login.emailInUse'));
+        else setFormError(t('login.genericError'));
+        return;
+      }
+      setUser(await res.json());
+    } catch {
+      setFormError(t('login.genericError'));
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -158,41 +271,227 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           />
         </div>
 
-        <h2 className="text-[20px] font-semibold tracking-[-.01em] text-foreground">
-          {t('login.signIn')}
-        </h2>
-        <p className="mt-[7px] text-[13px] leading-[1.55] text-muted-foreground">
-          {t('login.signInSubtitle')}
-        </p>
-
-        {authError && (
-          <p className="mt-[18px] text-[12px] text-neg">
-            {t('login.authError')}
-          </p>
+        {(view === 'form' || view === 'forgot') && (
+          <div className="flex justify-center md:justify-start">
+            <button
+              type="button"
+              onClick={goBack}
+              className="mb-4 cursor-pointer rounded-[9px] bg-chip py-[7px] pr-[13px] pl-2.5 text-[13px] font-medium text-foreground hover:bg-grid-ax"
+            >
+              {t('login.back')}
+            </button>
+          </div>
         )}
 
-        <button
-          type="button"
-          onClick={connect}
-          disabled={connecting}
-          className="mt-[26px] flex w-full items-center justify-center gap-[9px] rounded-[12px] bg-[#FC4C02] py-[15px] text-[15px] font-semibold text-white transition-colors hover:bg-[#E04300] disabled:cursor-default disabled:opacity-80 disabled:hover:bg-[#FC4C02] md:rounded-[11px] md:py-[13px] md:text-[14.5px]"
-        >
-          {connecting ? (
-            <>
-              <Loader2 size={15} className="animate-spin" strokeWidth={2} />
-              {t('login.connecting')}
-            </>
-          ) : (
-            <>
-              {t('login.connect')}
-              <ArrowRight size={15} strokeWidth={2} />
-            </>
-          )}
-        </button>
-
-        <p className="mt-[11px] text-[11.5px] text-muted-foreground">
-          {t('login.redirectNotice')}
+        <h2 className="text-[20px] font-semibold tracking-[-.01em] text-foreground">
+          {view === 'main'
+            ? t('login.signIn')
+            : view === 'forgot'
+              ? t('login.forgotTitle')
+              : mode === 'login'
+                ? t('login.tabLogin')
+                : t('login.tabRegister')}
+        </h2>
+        <p className="mt-[7px] text-[13px] leading-[1.55] text-muted-foreground">
+          {view === 'main'
+            ? t('login.signInSubtitle')
+            : view === 'forgot'
+              ? t('login.forgotSubtitle')
+              : mode === 'login'
+                ? t('login.formSubtitleLogin')
+                : t('login.formSubtitleRegister')}
         </p>
+
+        {view === 'form' && (
+          <>
+            <div className="mt-[22px] flex justify-center md:justify-start">
+              <SegmentedControl
+                size="compact"
+                items={[
+                  ['login', t('login.tabLogin')],
+                  ['register', t('login.tabRegister')],
+                ]}
+                active={mode}
+                onPick={(m) => {
+                  setMode(m);
+                  setFormError(null);
+                }}
+              />
+            </div>
+
+            <form
+              onSubmit={(e) => void submitForm(e)}
+              className="mt-4 flex flex-col gap-2.5 text-left"
+            >
+              {mode === 'register' && (
+                <input
+                  type="text"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                  placeholder={t('login.namePlaceholder')}
+                  autoComplete="given-name"
+                  className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc"
+                />
+              )}
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder={t('login.emailPlaceholder')}
+                autoComplete="email"
+                required
+                className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc"
+              />
+              <PasswordInput
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder={t('login.passwordPlaceholder')}
+                autoComplete={
+                  mode === 'login' ? 'current-password' : 'new-password'
+                }
+                minLength={mode === 'register' ? 8 : undefined}
+                required
+                showLabel={t('login.showPassword')}
+                hideLabel={t('login.hidePassword')}
+              />
+              {mode === 'register' && (
+                <PasswordInput
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  placeholder={t('login.confirmPasswordPlaceholder')}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                  showLabel={t('login.showPassword')}
+                  hideLabel={t('login.hidePassword')}
+                />
+              )}
+
+              {mode === 'login' && (
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={openForgotPassword}
+                    className="text-[12px] font-medium text-acc-tx hover:underline"
+                  >
+                    {t('login.forgotPassword')}
+                  </button>
+                </div>
+              )}
+
+              {formError && <p className="text-[12px] text-neg">{formError}</p>}
+
+              <button
+                type="submit"
+                disabled={submitting}
+                className="mt-1 flex w-full items-center justify-center gap-[9px] rounded-[12px] bg-acc py-[13px] text-[14.5px] font-semibold text-white transition-colors disabled:cursor-default disabled:opacity-80 md:rounded-[11px]"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2
+                      size={15}
+                      className="animate-spin"
+                      strokeWidth={2}
+                    />
+                    {mode === 'login'
+                      ? t('login.submittingLogin')
+                      : t('login.submittingRegister')}
+                  </>
+                ) : mode === 'login' ? (
+                  t('login.submitLogin')
+                ) : (
+                  t('login.submitRegister')
+                )}
+              </button>
+            </form>
+          </>
+        )}
+
+        {view === 'forgot' &&
+          (forgotSuccess ? (
+            <p className="mt-[22px] text-[13px] leading-[1.55] text-foreground">
+              {t('login.forgotSuccess')}
+            </p>
+          ) : (
+            <form
+              onSubmit={(e) => void submitForgotPassword(e)}
+              className="mt-4 flex flex-col gap-2.5 text-left"
+            >
+              <input
+                type="email"
+                value={forgotEmail}
+                onChange={(e) => setForgotEmail(e.target.value)}
+                placeholder={t('login.emailPlaceholder')}
+                autoComplete="email"
+                required
+                className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[14px] text-foreground outline-none placeholder:text-muted-foreground focus:border-acc"
+              />
+              <button
+                type="submit"
+                disabled={forgotSubmitting}
+                className="mt-1 flex w-full items-center justify-center gap-[9px] rounded-[12px] bg-acc py-[13px] text-[14.5px] font-semibold text-white transition-colors disabled:cursor-default disabled:opacity-80 md:rounded-[11px]"
+              >
+                {forgotSubmitting ? (
+                  <>
+                    <Loader2
+                      size={15}
+                      className="animate-spin"
+                      strokeWidth={2}
+                    />
+                    {t('login.forgotSubmitting')}
+                  </>
+                ) : (
+                  t('login.forgotSubmit')
+                )}
+              </button>
+            </form>
+          ))}
+
+        {view === 'main' && (
+          <div className="mt-[22px]">
+            {authError && (
+              <p className="mb-[14px] text-[12px] text-neg">
+                {t('login.authError')}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={connect}
+              disabled={connecting}
+              className="flex w-full items-center justify-center gap-[9px] rounded-[12px] bg-[#FC4C02] py-[15px] text-[15px] font-semibold text-white transition-colors hover:bg-[#E04300] disabled:cursor-default disabled:opacity-80 disabled:hover:bg-[#FC4C02] md:rounded-[11px] md:py-[13px] md:text-[14.5px]"
+            >
+              {connecting ? (
+                <>
+                  <Loader2 size={15} className="animate-spin" strokeWidth={2} />
+                  {t('login.connecting')}
+                </>
+              ) : (
+                <>
+                  {t('login.connect')}
+                  <ArrowRight size={15} strokeWidth={2} />
+                </>
+              )}
+            </button>
+
+            <p className="mt-[11px] text-[11.5px] text-muted-foreground">
+              {t('login.redirectNotice')}
+            </p>
+
+            <button
+              type="button"
+              onClick={openForm}
+              className="mt-3 text-left text-[12.5px] leading-[1.5]"
+            >
+              <span className="text-muted-foreground">
+                {t('login.emailCtaPrefix')}{' '}
+              </span>
+              <span className="font-medium text-acc-tx hover:underline">
+                {t('login.emailCtaLink')}
+              </span>
+            </button>
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col items-center gap-[10px] md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:items-stretch">
           <div className="flex items-start justify-center gap-[7px] text-muted-foreground md:justify-start">

@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { EmailService } from '../../email/email.service';
 
 const STRAVA_AUTH_URL = 'https://www.strava.com/oauth/authorize';
 const STRAVA_TOKEN_URL = 'https://www.strava.com/oauth/token';
@@ -17,12 +18,19 @@ interface StravaTokenExchangeResponse {
   };
 }
 
+// thrown when a logged-in user tries to connect a Strava account that's
+// already linked to a different User — never silently steals the link
+export class StravaAccountConflictError extends Error {}
+
 @Injectable()
 export class StravaAuthService {
   private readonly logger = new Logger(StravaAuthService.name);
   private readonly prisma: PrismaClient;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly emailService: EmailService,
+  ) {
     const adapter = new PrismaPg({
       connectionString: this.config.get<string>('DATABASE_URL'),
     });
@@ -42,10 +50,16 @@ export class StravaAuthService {
     return `${STRAVA_AUTH_URL}?${params.toString()}`;
   }
 
-  // exchanges the OAuth code for tokens, then finds or creates the User
-  // whose StravaAccount matches the returned athlete id — this is both the
-  // "authorize sync" flow and the login flow, they're the same action here
-  async handleCallback(code: string): Promise<{ userId: string; tokenVersion: number }> {
+  // exchanges the OAuth code for tokens, then either:
+  //  - existingUserId is set (connect flow, called from an already-logged-in
+  //    session): links the resulting StravaAccount to that user, or refreshes
+  //    it if already linked to them, or rejects if linked to someone else
+  //  - existingUserId is null (plain login flow, unchanged): finds or
+  //    creates the User whose StravaAccount matches the returned athlete id
+  async handleCallback(
+    code: string,
+    existingUserId: string | null = null,
+  ): Promise<{ userId: string; tokenVersion: number }> {
     const response = await fetch(STRAVA_TOKEN_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -75,6 +89,12 @@ export class StravaAuthService {
     });
 
     if (existing) {
+      if (existingUserId && existing.userId !== existingUserId) {
+        throw new StravaAccountConflictError(
+          `Strava athlete ${stravaAthleteId} is already linked to a different account`,
+        );
+      }
+
       const [, updatedUser] = await this.prisma.$transaction([
         this.prisma.stravaAccount.update({
           where: { stravaAthleteId },
@@ -93,6 +113,18 @@ export class StravaAuthService {
       return { userId: existing.userId, tokenVersion: updatedUser.tokenVersion };
     }
 
+    if (existingUserId) {
+      // connect flow: link to the already-logged-in user, don't create a
+      // new User and don't overwrite the name/avatar they already have
+      const created = await this.prisma.stravaAccount.create({
+        data: { userId: existingUserId, stravaAthleteId, ...tokenFields },
+        select: { user: { select: { tokenVersion: true } } },
+      });
+
+      this.logger.log(`Strava account linked to existing user ${existingUserId}`);
+      return { userId: existingUserId, tokenVersion: created.user.tokenVersion };
+    }
+
     const user = await this.prisma.user.create({
       data: {
         firstName: data.athlete.firstname,
@@ -103,7 +135,21 @@ export class StravaAuthService {
       },
     });
 
+    // guarded, not unconditional: Strava's OAuth payload never includes an
+    // email address, so `user.email` is null here today and this is
+    // effectively a no-op — kept for the day Strava (or some other
+    // email-aware signup path) actually provides one
+    if (user.email) {
+      void this.emailService.sendWelcomeEmail(user.email, user.firstName);
+    }
+
     this.logger.log(`New user created ${user.id} (athlete ${data.athlete.id})`);
     return { userId: user.id, tokenVersion: user.tokenVersion };
+  }
+
+  // idempotent — a no-op (not an error) when there's nothing to delete
+  async disconnectAccount(userId: string): Promise<void> {
+    const { count } = await this.prisma.stravaAccount.deleteMany({ where: { userId } });
+    if (count > 0) this.logger.log(`Strava account disconnected for user ${userId}`);
   }
 }

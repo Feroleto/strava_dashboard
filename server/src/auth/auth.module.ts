@@ -6,10 +6,12 @@ import { AuthService } from './auth.service';
 import { SessionService } from './session.service';
 import { AuthGuard } from './auth.guard';
 import { AccountThrottlerGuard } from './account-throttler.guard';
+import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [
     ConfigModule,
+    EmailModule,
     JwtModule.registerAsync({
       useFactory: (config: ConfigService) => ({
         secret: config.getOrThrow<string>('JWT_SECRET'),

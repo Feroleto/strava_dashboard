@@ -40,6 +40,10 @@
     "etaMinSec": "~{{m}}min {{s}}s restantes",
     "etaSec": "~{{s}}s restantes"
   },
+  "connectBanner": {
+    "message": "Conecte o Strava para importar suas corridas.",
+    "cta": "Conectar Strava"
+  },
   "list": {
     "loading": "Carregando…",
     "empty": "Nenhuma atividade com este filtro",
