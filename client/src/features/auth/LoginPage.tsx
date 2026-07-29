@@ -250,7 +250,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           Desktop seam treatment against the always-dark hero (md+ only):
           dark matches its #0B0F17 + hairline border; light keeps bg-card with
           an inset shadow as if the dark panel cast it */}
-      <div className="relative flex w-full flex-none flex-col rounded-t-[26px] bg-card px-[26px] pt-[28px] pb-[46px] text-center dark:border-t dark:border-white/[.09] dark:bg-[#0F1522] md:w-[480px] md:justify-center md:rounded-none md:px-[52px] md:py-[48px] md:text-left md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] md:dark:border-t-0 md:dark:border-l md:dark:border-white/[.09] md:dark:bg-[#0B0F17] md:dark:shadow-none">
+      <div className="relative flex min-h-[54svh] w-full flex-none flex-col rounded-t-[26px] bg-card px-[26px] pt-[28px] pb-[46px] text-center dark:border-t dark:border-white/[.09] dark:bg-[#0F1522] md:min-h-0 md:w-[480px] md:justify-center md:rounded-none md:px-[52px] md:py-[48px] md:text-left md:shadow-[inset_20px_0_30px_-22px_rgba(8,12,20,.42)] md:dark:border-t-0 md:dark:border-l md:dark:border-white/[.09] md:dark:bg-[#0B0F17] md:dark:shadow-none">
         <div className="absolute right-[26px] top-[26px] hidden items-center gap-2 md:flex">
           <SegmentedControl
             size="compact"
@@ -480,7 +480,7 @@ export default function LoginPage({ themePref, onThemePref }: LoginPageProps) {
           </div>
         )}
 
-        <div className="mt-6 flex flex-col items-center gap-3 md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:items-stretch">
+        <div className="mt-auto flex flex-col items-center gap-3 pt-6 md:absolute md:bottom-[26px] md:left-[52px] md:right-[52px] md:mt-0 md:pt-0 md:items-stretch">
           {view === 'main' && (
             <button
               type="button"
