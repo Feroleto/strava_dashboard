@@ -44,7 +44,8 @@
     "markDone": "Mark set as done",
     "markUndone": "Unmark set",
     "addSet": "+ Add set",
-    "removeSet": "Remove set"
+    "removeSet": "Remove set",
+    "targetReps": "Target: {{reps}} reps"
   },
   "picker": {
     "searchPlaceholder": "Search exercises…",

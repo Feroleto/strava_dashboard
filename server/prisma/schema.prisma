@@ -13,6 +13,10 @@ model User {
   firstName           String?              @map("first_name")
   profileImgUrl       String?              @map("profile_img_url")
   maxHr               Int?                 @map("max_hr")
+  dailyKcalGoal       Int                  @default(2000) @map("daily_kcal_goal")
+  dailyProteinGoal    Int                  @default(150) @map("daily_protein_goal")
+  dailyCarbsGoal      Int                  @default(250) @map("daily_carbs_goal")
+  dailyFatGoal        Int                  @default(65) @map("daily_fat_goal")
   tokenVersion        Int                  @default(0) @map("token_version")
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt
@@ -24,6 +28,9 @@ model User {
   createdExercises    Exercise[]
   workoutTemplates    WorkoutTemplate[]
   passwordResetTokens PasswordResetToken[]
+  createdFoods        Food[]
+  foodLogs            FoodLog[]
+  savedMeals          SavedMeal[]
 
   @@map("users")
 }
@@ -398,4 +405,94 @@ model WorkoutSet {
 
   @@index([workoutExerciseId])
   @@map("workout_sets")
+}
+
+// ---- Diet module (food logging) ----
+
+enum FoodSource {
+  TACO
+  OFF
+  CUSTOM
+
+  @@map("food_source")
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+  SUPPER
+
+  @@map("meal_type")
+}
+
+model Food {
+  id              String          @id @default(cuid())
+  name            String
+  brand           String?
+  source          FoodSource
+  externalId      String?         @map("external_id")
+  imageUrl        String?         @map("image_url")
+  kcal            Float
+  protein         Float
+  carbs           Float
+  fat             Float
+  fiber           Float?
+  sodium          Float?
+  createdByUserId String?         @map("created_by_user_id")
+  createdBy       User?           @relation(fields: [createdByUserId], references: [id])
+  createdAt       DateTime        @default(now()) @map("created_at")
+  logs            FoodLog[]
+  savedMealItems  SavedMealItem[]
+
+  @@unique([source, externalId])
+  @@index([name])
+  @@map("foods")
+}
+
+model FoodLog {
+  id        String   @id @default(cuid())
+  userId    String   @map("user_id")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId    String   @map("food_id")
+  food      Food     @relation(fields: [foodId], references: [id])
+  quantity  Float
+  mealType  MealType @map("meal_type")
+  loggedAt  DateTime @map("logged_at")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([userId, loggedAt])
+  @@map("food_logs")
+}
+
+// A saved meal has no fixed MealType — it's just a named list of
+// food+quantity, applied to whichever meal slot the user is in at the time
+// (mirrors WorkoutTemplate having no fixed "day", applied to any Workout)
+model SavedMeal {
+  id        String          @id @default(cuid())
+  userId    String          @map("user_id")
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String
+  items     SavedMealItem[]
+  createdAt DateTime        @default(now()) @map("created_at")
+  updatedAt DateTime        @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("saved_meals")
+}
+
+model SavedMealItem {
+  id          String    @id @default(cuid())
+  savedMealId String    @map("saved_meal_id")
+  savedMeal   SavedMeal @relation(fields: [savedMealId], references: [id], onDelete: Cascade)
+  foodId      String    @map("food_id")
+  food        Food      @relation(fields: [foodId], references: [id])
+  quantity    Float
+  order       Int
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  @@index([savedMealId])
+  @@index([foodId])
+  @@map("saved_meal_items")
 }

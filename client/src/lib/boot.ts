@@ -39,6 +39,8 @@ export const PAGE_IMPORTERS: Partial<
   'gym/overview': () => import('@/features/gym/GymOverviewPage'),
   'gym/workouts': () => import('@/features/gym/GymWorkoutsPage'),
   'gym/history': () => import('@/features/gym/GymHistoryPage'),
+  'diet/overview': () => import('@/features/diet/DietOverviewPage'),
+  'diet/history': () => import('@/features/diet/DietHistoryPage'),
 };
 
 export function recordHasActivities(has: boolean): void {

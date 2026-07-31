@@ -1,0 +1,109 @@
+{
+  "overview": {
+    "title": "Diet",
+    "ofGoal": "of {{kcal}} kcal",
+    "remaining": "{{kcal}} kcal remaining",
+    "editGoal": "Edit daily goal",
+    "mealsTitle": "Today's meals",
+    "items": "{{count}} item",
+    "items_other": "{{count}} items",
+    "addMeal": "Add to meal"
+  },
+  "meal": {
+    "BREAKFAST": "Breakfast",
+    "LUNCH": "Lunch",
+    "SNACK": "Afternoon snack",
+    "DINNER": "Dinner",
+    "SUPPER": "Supper"
+  },
+  "macro": {
+    "protein": "Protein",
+    "carbs": "Carbs",
+    "fat": "Fat"
+  },
+  "addMeal": {
+    "back": "Back",
+    "searchPlaceholder": "Search for a food…",
+    "scanBarcode": "Scan barcode",
+    "inThisMeal": "In this meal",
+    "searchResults": "Search results",
+    "loading": "Searching…",
+    "noResults": "No results for “{{query}}”",
+    "manualLink": "Can't find it? Add manually →",
+    "kcal": "kcal",
+    "per100g": "per 100g",
+    "remove": "Remove",
+    "itemsCount": "{{count}} item",
+    "itemsCount_other": "{{count}} items",
+    "save": "Save meal",
+    "saving": "Saving…",
+    "error": "Couldn't save. Please try again."
+  },
+  "manual": {
+    "title": "Add manually",
+    "back": "← Back to search",
+    "name": "Food name",
+    "portion": "Portion",
+    "portionPlaceholder": "e.g. 100 g",
+    "kcal": "Calories (kcal)",
+    "protein": "Protein (g)",
+    "carbs": "Carbs (g)",
+    "fat": "Fat (g)",
+    "save": "Add food",
+    "saving": "Adding…",
+    "error": "Couldn't add. Please try again."
+  },
+  "scanner": {
+    "instructions": "Point the camera at the barcode",
+    "cancel": "Cancel",
+    "lookingUp": "Looking up product…",
+    "lookupError": "Couldn't look up this product. Please try again.",
+    "cameraError": "Couldn't access the camera.",
+    "retry": "Try again"
+  },
+  "history": {
+    "title": "History",
+    "subtitle": "Calories per day",
+    "range7": "7 days",
+    "range14": "14 days",
+    "kcal": "kcal",
+    "daysTitle": "Days"
+  },
+  "goal": {
+    "title": "Daily goal",
+    "calories": "Calories",
+    "pctOfCalories": "{{pct}}% of calories",
+    "calculated": "{{kcal}} kcal calculated",
+    "matches": "Matches the calorie goal",
+    "aboveTarget": "{{pct}}% above the calorie goal",
+    "belowTarget": "{{pct}}% below the calorie goal",
+    "save": "Save goal",
+    "saving": "Saving…",
+    "error": "Couldn't save. Please try again."
+  },
+  "savedMeals": {
+    "listTitle": "Saved meals",
+    "newTitle": "New saved meal",
+    "editTitle": "Edit saved meal",
+    "empty": "No saved meals yet.",
+    "noItems": "No foods added yet.",
+    "createNew": "New saved meal",
+    "saveCurrentAsMeal": "Save as a saved meal",
+    "use": "Use",
+    "edit": "Edit",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "deleteConfirm": "Delete this saved meal?",
+    "discard": "Discard",
+    "discardConfirm": "Discard unsaved changes?",
+    "nameLabel": "Name",
+    "namePlaceholder": "e.g. Usual breakfast",
+    "itemsTitle": "Foods",
+    "quantityLabel": "Quantity (g)",
+    "save": "Save",
+    "saving": "Saving…"
+  },
+  "empty": "Nothing logged today.",
+  "deleteEntry": "Delete entry",
+  "attribution": "Nutrition data: Tabela Brasileira de Composição de Alimentos (TACO) — NEPA/UNICAMP. Packaged product data: Open Food Facts (openfoodfacts.org), under ODbL license."
+}

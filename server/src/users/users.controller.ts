@@ -1,11 +1,28 @@
 import { BadRequestException, Body, Controller, Get, Patch, UseGuards } from '@nestjs/common';
-import { UsersService } from './users.service';
+import { UsersService, type UpdateMeInput } from './users.service';
 import { AuthGuard } from '../auth/auth.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
 
 const MIN_MAX_HR = 100;
 const MAX_MAX_HR = 230;
+const MIN_KCAL_GOAL = 800;
+const MAX_KCAL_GOAL = 6000;
+const MIN_MACRO_GOAL = 0;
+const MAX_MACRO_GOAL = 500;
+
+function parseOptionalIntInRange(
+  field: string,
+  value: unknown,
+  min: number,
+  max: number,
+): number | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new BadRequestException(`${field} must be an integer between ${min} and ${max}`);
+  }
+  return value;
+}
 
 @Controller('users')
 @UseGuards(AuthGuard)
@@ -18,18 +35,39 @@ export class UsersController {
   }
 
   @Patch('me')
-  async update(@CurrentUser() user: AuthenticatedUser, @Body() body: { maxHr?: unknown }) {
-    const { maxHr } = body ?? {};
-    if (
-      typeof maxHr !== 'number' ||
-      !Number.isInteger(maxHr) ||
-      maxHr < MIN_MAX_HR ||
-      maxHr > MAX_MAX_HR
-    ) {
-      throw new BadRequestException(
-        `maxHr must be an integer between ${MIN_MAX_HR} and ${MAX_MAX_HR}`,
-      );
+  async update(@CurrentUser() user: AuthenticatedUser, @Body() body: Record<string, unknown>) {
+    const input: UpdateMeInput = {
+      maxHr: parseOptionalIntInRange('maxHr', body?.maxHr, MIN_MAX_HR, MAX_MAX_HR),
+      dailyKcalGoal: parseOptionalIntInRange(
+        'dailyKcalGoal',
+        body?.dailyKcalGoal,
+        MIN_KCAL_GOAL,
+        MAX_KCAL_GOAL,
+      ),
+      dailyProteinGoal: parseOptionalIntInRange(
+        'dailyProteinGoal',
+        body?.dailyProteinGoal,
+        MIN_MACRO_GOAL,
+        MAX_MACRO_GOAL,
+      ),
+      dailyCarbsGoal: parseOptionalIntInRange(
+        'dailyCarbsGoal',
+        body?.dailyCarbsGoal,
+        MIN_MACRO_GOAL,
+        MAX_MACRO_GOAL,
+      ),
+      dailyFatGoal: parseOptionalIntInRange(
+        'dailyFatGoal',
+        body?.dailyFatGoal,
+        MIN_MACRO_GOAL,
+        MAX_MACRO_GOAL,
+      ),
+    };
+
+    if (Object.values(input).every((v) => v === undefined)) {
+      throw new BadRequestException('At least one field must be provided');
     }
-    return this.service.updateMaxHr(user.id, maxHr);
+
+    return this.service.updateMe(user.id, input);
   }
 }

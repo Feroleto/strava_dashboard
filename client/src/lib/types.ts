@@ -292,3 +292,72 @@ export interface PersonalBestRecord {
   /** Strava's rank frozen at upload time — "was a PR back then" */
   prRank: number | null;
 }
+
+// ---- Diet module ----
+
+/** all macro fields are always per-100g, regardless of source */
+export interface FoodListItem {
+  id: string;
+  name: string;
+  brand: string | null;
+  source: 'TACO' | 'OFF' | 'CUSTOM';
+  imageUrl: string | null;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  sodium: number | null;
+}
+
+export type MealType = 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER' | 'SUPPER';
+
+export interface FoodLogItem {
+  id: string;
+  quantity: number;
+  mealType: MealType;
+  loggedAt: string;
+  food: FoodListItem;
+}
+
+export interface DailySummary {
+  totalKcal: number;
+  totalProtein: number;
+  totalCarbs: number;
+  totalFat: number;
+}
+
+export interface DailyHistoryPoint extends DailySummary {
+  date: string;
+}
+
+export interface NutritionGoal {
+  dailyKcalGoal: number;
+  dailyProteinGoal: number;
+  dailyCarbsGoal: number;
+  dailyFatGoal: number;
+}
+
+// ---- Saved meals (reusable food+quantity combos, no fixed MealType — see
+// AddMealPage's "Refeições salvas" flow) ----
+
+export interface SavedMealItemDetail {
+  id: string;
+  quantity: number;
+  order: number;
+  food: FoodListItem;
+}
+
+export interface SavedMealDetail {
+  id: string;
+  name: string;
+  items: SavedMealItemDetail[];
+}
+
+export interface SavedMealSummary {
+  id: string;
+  name: string;
+  itemCount: number;
+  itemPreview: string[];
+  totalKcal: number;
+}

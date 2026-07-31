@@ -1,0 +1,109 @@
+{
+  "overview": {
+    "title": "Dieta",
+    "ofGoal": "de {{kcal}} kcal",
+    "remaining": "{{kcal}} kcal restantes",
+    "editGoal": "Editar meta diária",
+    "mealsTitle": "Refeições de hoje",
+    "items": "{{count}} item",
+    "items_other": "{{count}} itens",
+    "addMeal": "Adicionar à refeição"
+  },
+  "meal": {
+    "BREAKFAST": "Café da manhã",
+    "LUNCH": "Almoço",
+    "SNACK": "Lanche da tarde",
+    "DINNER": "Jantar",
+    "SUPPER": "Ceia"
+  },
+  "macro": {
+    "protein": "Proteína",
+    "carbs": "Carboidrato",
+    "fat": "Gordura"
+  },
+  "addMeal": {
+    "back": "Voltar",
+    "searchPlaceholder": "Buscar alimento…",
+    "scanBarcode": "Escanear código de barras",
+    "inThisMeal": "Nesta refeição",
+    "searchResults": "Resultados da busca",
+    "loading": "Buscando…",
+    "noResults": "Nenhum resultado para «{{query}}»",
+    "manualLink": "Não encontrou? Adicionar manualmente →",
+    "kcal": "kcal",
+    "per100g": "por 100g",
+    "remove": "Remover",
+    "itemsCount": "{{count}} item",
+    "itemsCount_other": "{{count}} itens",
+    "save": "Salvar refeição",
+    "saving": "Salvando…",
+    "error": "Não foi possível salvar. Tente novamente."
+  },
+  "manual": {
+    "title": "Adicionar manualmente",
+    "back": "← Voltar à busca",
+    "name": "Nome do alimento",
+    "portion": "Porção",
+    "portionPlaceholder": "ex. 100 g",
+    "kcal": "Calorias (kcal)",
+    "protein": "Proteína (g)",
+    "carbs": "Carboidrato (g)",
+    "fat": "Gordura (g)",
+    "save": "Adicionar alimento",
+    "saving": "Adicionando…",
+    "error": "Não foi possível adicionar. Tente novamente."
+  },
+  "scanner": {
+    "instructions": "Aponte a câmera para o código de barras",
+    "cancel": "Cancelar",
+    "lookingUp": "Buscando produto…",
+    "lookupError": "Não foi possível buscar esse produto. Tente novamente.",
+    "cameraError": "Não foi possível acessar a câmera.",
+    "retry": "Tentar novamente"
+  },
+  "history": {
+    "title": "Histórico",
+    "subtitle": "Calorias por dia",
+    "range7": "7 dias",
+    "range14": "14 dias",
+    "kcal": "kcal",
+    "daysTitle": "Dias"
+  },
+  "goal": {
+    "title": "Meta diária",
+    "calories": "Calorias",
+    "pctOfCalories": "{{pct}}% das calorias",
+    "calculated": "{{kcal}} kcal calculadas",
+    "matches": "Combina com a meta de calorias",
+    "aboveTarget": "{{pct}}% acima da meta de calorias",
+    "belowTarget": "{{pct}}% abaixo da meta de calorias",
+    "save": "Salvar meta",
+    "saving": "Salvando…",
+    "error": "Não foi possível salvar. Tente novamente."
+  },
+  "savedMeals": {
+    "listTitle": "Refeições salvas",
+    "newTitle": "Nova refeição salva",
+    "editTitle": "Editar refeição salva",
+    "empty": "Nenhuma refeição salva ainda.",
+    "noItems": "Nenhum alimento adicionado ainda.",
+    "createNew": "Nova refeição salva",
+    "saveCurrentAsMeal": "Salvar como refeição salva",
+    "use": "Usar",
+    "edit": "Editar",
+    "delete": "Excluir",
+    "cancel": "Cancelar",
+    "deleteConfirm": "Excluir esta refeição salva?",
+    "discard": "Descartar",
+    "discardConfirm": "Descartar alterações não salvas?",
+    "nameLabel": "Nome",
+    "namePlaceholder": "ex. Café da manhã de sempre",
+    "itemsTitle": "Alimentos",
+    "quantityLabel": "Quantidade (g)",
+    "save": "Salvar",
+    "saving": "Salvando…"
+  },
+  "empty": "Nada registrado hoje.",
+  "deleteEntry": "Excluir registro",
+  "attribution": "Dados nutricionais: Tabela Brasileira de Composição de Alimentos (TACO) — NEPA/UNICAMP. Dados de produtos industrializados: Open Food Facts (openfoodfacts.org), sob licença ODbL."
+}

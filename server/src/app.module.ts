@@ -13,6 +13,9 @@ import { UsersModule } from './users/users.module';
 import { ExercisesModule } from './exercises/exercises.module';
 import { WorkoutsModule } from './workouts/workouts.module';
 import { WorkoutTemplatesModule } from './workout-templates/workout-templates.module';
+import { FoodsModule } from './foods/foods.module';
+import { FoodLogsModule } from './food-logs/food-logs.module';
+import { SavedMealsModule } from './saved-meals/saved-meals.module';
 
 @Module({
   imports: [
@@ -30,6 +33,9 @@ import { WorkoutTemplatesModule } from './workout-templates/workout-templates.mo
     ExercisesModule,
     WorkoutsModule,
     WorkoutTemplatesModule,
+    FoodsModule,
+    FoodLogsModule,
+    SavedMealsModule,
   ],
   controllers: [AppController],
   providers: [AppService, { provide: APP_GUARD, useClass: ThrottlerGuard }],

@@ -9,6 +9,7 @@ import type {
   WorkoutExercise,
   WorkoutSet,
 } from '@/lib/types';
+import { formatRepsRange } from './routineFormat';
 
 // exported so ActiveWorkoutBar can mirror the same "no target → 3 rows"
 // fallback when totaling sets across the whole workout
@@ -277,9 +278,18 @@ export default function WorkoutExerciseCard({
             <GripVertical className="h-4 w-4" strokeWidth={1.8} />
           </button>
         )}
-        <h2 className="min-w-0 flex-1 truncate text-[14.5px] font-semibold text-foreground">
-          {workoutExercise.exerciseName}
-        </h2>
+        <div className="min-w-0 flex-1">
+          <h2 className="truncate text-[14.5px] font-semibold text-foreground">
+            {workoutExercise.exerciseName}
+          </h2>
+          {(workoutExercise.target?.repsMin != null || workoutExercise.target?.repsMax != null) && (
+            <p className="mt-0.5 text-[11.5px] text-muted-foreground">
+              {t('train.targetReps', {
+                reps: formatRepsRange(workoutExercise.target?.repsMin, workoutExercise.target?.repsMax),
+              })}
+            </p>
+          )}
+        </div>
         <button
           type="button"
           onClick={onRemove}

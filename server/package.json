@@ -18,7 +18,8 @@
     "test:cov": "vitest run --coverage",
     "test:e2e": "jest --config test/jest-e2e.json",
     "db:seed:gym": "tsx prisma/seed-gym.ts",
-    "db:seed:gym:pt": "tsx prisma/seed-gym-translations.ts"
+    "db:seed:gym:pt": "tsx prisma/seed-gym-translations.ts",
+    "db:seed:taco": "tsx prisma/seed-taco.ts"
   },
   "dependencies": {
     "@nestjs/common": "^11.0.1",
@@ -49,6 +50,7 @@
     "@types/node": "^24.0.0",
     "@types/supertest": "^7.0.0",
     "@vitest/coverage-v8": "^4.1.9",
+    "csv-parse": "^7.0.1",
     "eslint": "^9.18.0",
     "eslint-config-prettier": "^10.0.1",
     "eslint-plugin-prettier": "^5.2.2",

@@ -44,7 +44,8 @@
     "markDone": "Marcar série como concluída",
     "markUndone": "Desmarcar série",
     "addSet": "+ Adicionar série",
-    "removeSet": "Remover série"
+    "removeSet": "Remover série",
+    "targetReps": "Meta: {{reps}} reps"
   },
   "picker": {
     "searchPlaceholder": "Buscar exercícios…",

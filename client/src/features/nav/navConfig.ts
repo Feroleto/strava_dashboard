@@ -3,6 +3,7 @@ import {
   Bike,
   Dumbbell,
   LayoutGrid,
+  Utensils,
   Waves,
   type LucideIcon,
 } from 'lucide-react';
@@ -15,6 +16,8 @@ export type PageId =
   | 'gym/overview'
   | 'gym/workouts'
   | 'gym/history'
+  | 'diet/overview'
+  | 'diet/history'
   | 'profile';
 
 export const DEFAULT_PAGE: PageId = 'run/activities';
@@ -85,6 +88,16 @@ export const NAV_SECTIONS: NavSection[] = [
         ],
       },
       {
+        id: 'diet',
+        labelKey: 'sections.diet',
+        icon: Utensils,
+        page: 'diet/overview',
+        subs: [
+          { id: 'diet/overview', labelKey: 'sections.dietOverview' },
+          { id: 'diet/history', labelKey: 'sections.dietHistory' },
+        ],
+      },
+      {
         id: 'cycling',
         labelKey: 'sections.cycling',
         icon: Bike,
@@ -111,6 +124,8 @@ export const MOBILE_TITLE_KEYS: Record<PageId, string> = {
   'gym/overview': 'sections.gymOverview',
   'gym/workouts': 'sections.gymWorkouts',
   'gym/history': 'sections.gymHistory',
+  'diet/overview': 'sections.dietOverview',
+  'diet/history': 'sections.dietHistory',
   profile: 'profile.title',
 };
 
@@ -148,6 +163,8 @@ export function isKnownPage(value: string | null): value is PageId {
     value === 'gym/overview' ||
     value === 'gym/workouts' ||
     value === 'gym/history' ||
+    value === 'diet/overview' ||
+    value === 'diet/history' ||
     value === 'profile'
   );
 }

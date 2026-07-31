@@ -30,6 +30,14 @@ vi.mock('@prisma/adapter-pg', () => {
 
 const USER_ID = 'user_test_123';
 
+const FULL_SNAPSHOT = {
+  maxHr: 185,
+  dailyKcalGoal: 2000,
+  dailyProteinGoal: 150,
+  dailyCarbsGoal: 250,
+  dailyFatGoal: 65,
+};
+
 describe('UsersService', () => {
   let service: UsersService;
 
@@ -50,37 +58,55 @@ describe('UsersService', () => {
   });
 
   describe('getMe', () => {
-    it('returns the maxHr from the user row', async () => {
-      mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce({ maxHr: 185 });
+    it('returns the maxHr and nutrition goals from the user row', async () => {
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce(FULL_SNAPSHOT);
 
       const result = await service.getMe(USER_ID);
 
-      expect(result).toEqual({ maxHr: 185 });
+      expect(result).toEqual(FULL_SNAPSHOT);
       expect(mockPrisma.user.findUniqueOrThrow).toHaveBeenCalledWith(
         expect.objectContaining({ where: { id: USER_ID } }),
       );
     });
 
-    it('returns null when maxHr has not been set yet', async () => {
-      mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce({ maxHr: null });
+    it('returns null maxHr when it has not been set yet', async () => {
+      mockPrisma.user.findUniqueOrThrow.mockResolvedValueOnce({ ...FULL_SNAPSHOT, maxHr: null });
 
       const result = await service.getMe(USER_ID);
 
-      expect(result).toEqual({ maxHr: null });
+      expect(result.maxHr).toBeNull();
     });
   });
 
-  describe('updateMaxHr', () => {
+  describe('updateMe', () => {
     it('updates and returns the new maxHr', async () => {
-      mockPrisma.user.update.mockResolvedValueOnce({ maxHr: 190 });
+      mockPrisma.user.update.mockResolvedValueOnce({ ...FULL_SNAPSHOT, maxHr: 190 });
 
-      const result = await service.updateMaxHr(USER_ID, 190);
+      const result = await service.updateMe(USER_ID, { maxHr: 190 });
 
-      expect(result).toEqual({ maxHr: 190 });
+      expect(result.maxHr).toBe(190);
       expect(mockPrisma.user.update).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: USER_ID },
           data: { maxHr: 190 },
+        }),
+      );
+    });
+
+    it('updates and returns the new nutrition goals', async () => {
+      const updated = { ...FULL_SNAPSHOT, dailyKcalGoal: 2500, dailyProteinGoal: 180 };
+      mockPrisma.user.update.mockResolvedValueOnce(updated);
+
+      const result = await service.updateMe(USER_ID, {
+        dailyKcalGoal: 2500,
+        dailyProteinGoal: 180,
+      });
+
+      expect(result).toEqual(updated);
+      expect(mockPrisma.user.update).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: USER_ID },
+          data: { dailyKcalGoal: 2500, dailyProteinGoal: 180 },
         }),
       );
     });

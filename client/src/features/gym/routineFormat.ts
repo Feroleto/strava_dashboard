@@ -7,7 +7,7 @@ export function formatRepsRange(
   max: number | null | undefined,
 ): string {
   if (min == null && max == null) return '—';
-  if (min != null && max != null) return `${min}–${max}`;
+  if (min != null && max != null && min !== max) return `${min}–${max}`;
   return String(min ?? max);
 }
 

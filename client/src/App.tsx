@@ -32,6 +32,8 @@ const RunAnalysisPage = lazy(PAGE_IMPORTERS['run/analysis']!);
 const GymOverviewPage = lazy(PAGE_IMPORTERS['gym/overview']!);
 const GymWorkoutsPage = lazy(PAGE_IMPORTERS['gym/workouts']!);
 const GymHistoryPage = lazy(PAGE_IMPORTERS['gym/history']!);
+const DietOverviewPage = lazy(PAGE_IMPORTERS['diet/overview']!);
+const DietHistoryPage = lazy(PAGE_IMPORTERS['diet/history']!);
 // login/onboarding are dead weight for the recurring logged-in user; boot.ts
 // preloads whichever one the localStorage hints predict will be needed
 const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
@@ -67,6 +69,10 @@ function PageContent({
       );
     case 'gym/history':
       return <GymHistoryPage />;
+    case 'diet/overview':
+      return <DietOverviewPage />;
+    case 'diet/history':
+      return <DietHistoryPage />;
     case 'profile':
       return <ProfilePage themePref={themePref} onThemePref={onThemePref} />;
     case 'run/activities':

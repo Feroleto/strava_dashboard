@@ -1,0 +1,138 @@
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { Prisma, PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import type { CreateCustomFoodInput } from './foods.dto';
+import { OpenFoodFactsService } from './open-food-facts.service';
+
+const MAX_SEARCH_RESULTS = 50;
+
+const FOOD_SELECT = {
+  id: true,
+  name: true,
+  brand: true,
+  source: true,
+  imageUrl: true,
+  kcal: true,
+  protein: true,
+  carbs: true,
+  fat: true,
+  fiber: true,
+  sodium: true,
+} satisfies Prisma.FoodSelect;
+
+export interface FoodListItem {
+  id: string;
+  name: string;
+  brand: string | null;
+  source: string;
+  imageUrl: string | null;
+  kcal: number;
+  protein: number;
+  carbs: number;
+  fat: number;
+  fiber: number | null;
+  sodium: number | null;
+}
+
+@Injectable()
+export class FoodsService {
+  private readonly prisma: PrismaClient;
+
+  constructor(
+    private readonly config: ConfigService,
+    private readonly openFoodFacts: OpenFoodFactsService,
+  ) {
+    const adapter = new PrismaPg({
+      connectionString: this.config.get<string>('DATABASE_URL'),
+    });
+    this.prisma = new PrismaClient({ adapter });
+  }
+
+  // TACO/OFF are shared reference data (visible to everyone, same as SEED
+  // exercises); CUSTOM foods are scoped to their creator, same as USER
+  // exercises — see ExercisesService.visibilityWhere for the precedent
+  private visibilityWhere(userId: string): Prisma.FoodWhereInput {
+    return {
+      OR: [{ source: { in: ['TACO', 'OFF'] } }, { source: 'CUSTOM', createdByUserId: userId }],
+    };
+  }
+
+  // batched visibility check for a set of foodIds coming from client input
+  // (e.g. SavedMealsService.create/update) — single count query rather than
+  // the one-by-one findById loop WorkoutTemplatesService.assertExercisesVisible
+  // uses, since foods have no per-id detail lookup worth reusing here
+  async assertVisible(userId: string, foodIds: string[]): Promise<void> {
+    const uniqueIds = [...new Set(foodIds)];
+    const count = await this.prisma.food.count({
+      where: { id: { in: uniqueIds }, ...this.visibilityWhere(userId) },
+    });
+    if (count !== uniqueIds.length) {
+      throw new BadRequestException('One or more foodId values are invalid or not visible');
+    }
+  }
+
+  // local-only lookup — never calls Open Food Facts here, its docs prohibit
+  // using the product endpoint as search-as-you-type
+  async search(userId: string, query: string): Promise<FoodListItem[]> {
+    return this.prisma.food.findMany({
+      where: {
+        AND: [this.visibilityWhere(userId), { name: { contains: query, mode: 'insensitive' } }],
+      },
+      orderBy: { name: 'asc' },
+      take: MAX_SEARCH_RESULTS,
+      select: FOOD_SELECT,
+    });
+  }
+
+  async createCustom(userId: string, input: CreateCustomFoodInput): Promise<FoodListItem> {
+    return this.prisma.food.create({
+      data: {
+        name: input.name,
+        source: 'CUSTOM',
+        externalId: input.externalId,
+        createdByUserId: userId,
+        kcal: input.kcal,
+        protein: input.protein,
+        carbs: input.carbs,
+        fat: input.fat,
+        fiber: input.fiber,
+        sodium: input.sodium,
+      },
+      select: FOOD_SELECT,
+    });
+  }
+
+  // local cache (source OFF, externalId = barcode) → Open Food Facts →
+  // upsert into the cache → 404 if neither has it, so the frontend can
+  // offer manual cadastro. Never hits OFF for a barcode already cached.
+  async findByBarcode(userId: string, barcode: string): Promise<FoodListItem> {
+    const cached = await this.prisma.food.findUnique({
+      where: { source_externalId: { source: 'OFF', externalId: barcode } },
+      select: FOOD_SELECT,
+    });
+    if (cached) return cached;
+
+    const off = await this.openFoodFacts.lookupByBarcode(barcode);
+    if (!off) {
+      throw new NotFoundException(`No food found for barcode ${barcode}`);
+    }
+
+    return this.prisma.food.create({
+      data: {
+        name: off.name,
+        brand: off.brand,
+        source: 'OFF',
+        externalId: barcode,
+        imageUrl: off.imageUrl,
+        kcal: off.kcal,
+        protein: off.protein,
+        carbs: off.carbs,
+        fat: off.fat,
+        fiber: off.fiber,
+        sodium: off.sodium,
+      },
+      select: FOOD_SELECT,
+    });
+  }
+}

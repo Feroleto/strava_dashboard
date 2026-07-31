@@ -3,6 +3,30 @@ import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
+export interface MeSnapshot {
+  maxHr: number | null;
+  dailyKcalGoal: number;
+  dailyProteinGoal: number;
+  dailyCarbsGoal: number;
+  dailyFatGoal: number;
+}
+
+const ME_SELECT = {
+  maxHr: true,
+  dailyKcalGoal: true,
+  dailyProteinGoal: true,
+  dailyCarbsGoal: true,
+  dailyFatGoal: true,
+};
+
+export interface UpdateMeInput {
+  maxHr?: number;
+  dailyKcalGoal?: number;
+  dailyProteinGoal?: number;
+  dailyCarbsGoal?: number;
+  dailyFatGoal?: number;
+}
+
 @Injectable()
 export class UsersService {
   private readonly prisma: PrismaClient;
@@ -14,23 +38,18 @@ export class UsersService {
     this.prisma = new PrismaClient({ adapter });
   }
 
-  async getMe(userId: string): Promise<{ maxHr: number | null }> {
-    const user = await this.prisma.user.findUniqueOrThrow({
+  async getMe(userId: string): Promise<MeSnapshot> {
+    return this.prisma.user.findUniqueOrThrow({
       where: { id: userId },
-      select: { maxHr: true },
+      select: ME_SELECT,
     });
-    return { maxHr: user.maxHr };
   }
 
-  async updateMaxHr(
-    userId: string,
-    maxHr: number,
-  ): Promise<{ maxHr: number | null }> {
-    const user = await this.prisma.user.update({
+  async updateMe(userId: string, input: UpdateMeInput): Promise<MeSnapshot> {
+    return this.prisma.user.update({
       where: { id: userId },
-      data: { maxHr },
-      select: { maxHr: true },
+      data: input,
+      select: ME_SELECT,
     });
-    return { maxHr: user.maxHr };
   }
 }
