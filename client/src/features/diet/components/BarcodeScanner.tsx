@@ -60,5 +60,5 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
     };
   }, []);
 
-  return <div id={SCANNER_ELEMENT_ID} className="w-full overflow-hidden rounded-[14px]" />;
+  return <div id={SCANNER_ELEMENT_ID} className="h-full w-full overflow-hidden rounded-[14px]" />;
 }
