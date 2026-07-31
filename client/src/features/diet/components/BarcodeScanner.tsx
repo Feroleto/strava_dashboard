@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
 interface BarcodeScannerProps {
   onDetected: (code: string) => void;
@@ -50,15 +50,40 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
       });
 
     return () => {
-      scanner
-        .stop()
-        .then(() => scanner.clear())
-        .catch(() => {
-          // camera may already be stopped/never started (start() rejected) —
-          // nothing to clean up in that case
-        });
+      // stop() throws synchronously (not a rejected Promise) if the scanner
+      // never finished starting — guard with getState() before calling it,
+      // e.g. a fast unmount while getUserMedia() is still pending
+      const state = scanner.getState();
+      if (
+        state !== Html5QrcodeScannerState.SCANNING &&
+        state !== Html5QrcodeScannerState.PAUSED
+      ) {
+        return;
+      }
+      try {
+        scanner
+          .stop()
+          .then(() => scanner.clear())
+          .catch(() => {
+            // camera may already be stopped — nothing to clean up
+          });
+      } catch {
+        // stop() itself can throw synchronously depending on internal state
+      }
     };
   }, []);
 
-  return <div id={SCANNER_ELEMENT_ID} className="w-full overflow-hidden rounded-[14px]" />;
+  return (
+    // absolute inset-0 (not h-full) gives this element a genuinely definite
+    // height, not a percentage depending on an auto-height ancestor — needed
+    // for the [&_video]:h-full below to actually resolve instead of falling
+    // back to 'auto'. html5-qrcode injects a bare <video> here with an inline
+    // width but no height; without object-cover forcing it full-bleed, the
+    // video renders at its own intrinsic aspect ratio, out of sync with the
+    // corner-frame overlay
+    <div
+      id={SCANNER_ELEMENT_ID}
+      className="absolute inset-0 overflow-hidden rounded-[14px] [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+    />
+  );
 }

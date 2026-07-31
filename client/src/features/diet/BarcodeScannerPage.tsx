@@ -77,7 +77,7 @@ export default function BarcodeScannerPage({
       <div className="relative flex flex-1 items-center justify-center overflow-hidden">
         {status === 'scanning' && (
           <>
-            <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            <div className="absolute inset-0">
               <BarcodeScanner
                 onDetected={handleDetected}
                 onError={() => {
