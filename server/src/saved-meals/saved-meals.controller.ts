@@ -16,11 +16,12 @@ import {
   parseUpdateSavedMealInput,
 } from './dto';
 import { AuthGuard } from '../auth/auth.guard';
+import { DietEnabledGuard } from '../auth/diet-enabled.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
 import type { AuthenticatedUser } from '../auth/current-user.decorator';
 
 @Controller('saved-meals')
-@UseGuards(AuthGuard)
+@UseGuards(AuthGuard, DietEnabledGuard)
 export class SavedMealsController {
   constructor(private readonly service: SavedMealsService) {}
 

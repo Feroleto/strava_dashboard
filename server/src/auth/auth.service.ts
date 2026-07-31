@@ -16,6 +16,7 @@ export interface MeResponse {
   maxHr: number | null;
   hasStravaAccount: boolean;
   hasPassword: boolean;
+  dietEnabled: boolean;
 }
 
 @Injectable()
@@ -44,6 +45,7 @@ export class AuthService {
       where: { id: session.userId },
       select: {
         id: true,
+        email: true,
         firstName: true,
         profileImgUrl: true,
         maxHr: true,
@@ -58,12 +60,18 @@ export class AuthService {
       tokenVersion: _tokenVersion,
       passwordHash,
       stravaAccount,
+      email,
       ...rest
     } = user;
+    // temporary beta gate for the Dieta module — email-keyed so it can be
+    // lifted by just unsetting the env var (or removing this check) once
+    // the feature is ready for everyone
+    const betaEmail = this.config.get<string>('DIET_BETA_USER_EMAIL');
     return {
       ...rest,
       hasStravaAccount: !!stravaAccount,
       hasPassword: !!passwordHash,
+      dietEnabled: email != null && email === betaEmail,
     };
   }
 

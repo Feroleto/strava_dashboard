@@ -102,10 +102,58 @@ describe('AuthService', () => {
         maxHr: 185,
         hasStravaAccount: false,
         hasPassword: false,
+        dietEnabled: false,
       });
       expect(result).not.toHaveProperty('tokenVersion');
       expect(result).not.toHaveProperty('stravaAccount');
       expect(result).not.toHaveProperty('passwordHash');
+      expect(result).not.toHaveProperty('email');
+    });
+
+    it('reports dietEnabled: true only when the email matches DIET_BETA_USER_EMAIL', async () => {
+      const configGet = vi.fn((key: string) =>
+        key === 'DIET_BETA_USER_EMAIL' ? 'beta@example.com' : undefined,
+      );
+      const moduleWithBetaEmail: TestingModule = await Test.createTestingModule({
+        providers: [
+          AuthService,
+          { provide: ConfigService, useValue: { get: configGet } },
+          { provide: EmailService, useValue: emailService },
+        ],
+      }).compile();
+      const betaGatedService = moduleWithBetaEmail.get(AuthService);
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: USER_ID,
+        email: 'beta@example.com',
+        firstName: 'Guilherme',
+        profileImgUrl: null,
+        maxHr: null,
+        tokenVersion: 0,
+        passwordHash: null,
+        stravaAccount: null,
+      });
+      const matching = await betaGatedService.authenticate({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
+      expect(matching?.dietEnabled).toBe(true);
+
+      mockPrisma.user.findUnique.mockResolvedValueOnce({
+        id: USER_ID,
+        email: 'someone-else@example.com',
+        firstName: 'Guilherme',
+        profileImgUrl: null,
+        maxHr: null,
+        tokenVersion: 0,
+        passwordHash: null,
+        stravaAccount: null,
+      });
+      const nonMatching = await betaGatedService.authenticate({
+        userId: USER_ID,
+        tokenVersion: 0,
+      });
+      expect(nonMatching?.dietEnabled).toBe(false);
     });
 
     it('reports hasStravaAccount: true when the relation is present, without leaking it', async () => {

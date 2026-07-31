@@ -8,8 +8,8 @@ import SegmentedControl from '@/components/SegmentedControl';
 import { useAuth } from '@/features/auth/AuthContext';
 import { useAppLanguage } from '@/i18n/useAppLanguage';
 import {
-  NAV_SECTIONS,
   activeParentId,
+  getNavSections,
   type NavItem,
   type NavSubItem,
   type PageId,
@@ -213,7 +213,7 @@ export default function Sidebar({
         </div>
 
         <nav className="mt-6 flex flex-col gap-4">
-          {NAV_SECTIONS.map((section, i) => (
+          {getNavSections(user?.dietEnabled ?? false).map((section, i) => (
             <div key={i}>
               {section.titleKey && (
                 <SidebarLabel

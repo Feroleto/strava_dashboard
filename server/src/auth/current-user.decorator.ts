@@ -2,6 +2,7 @@ import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 
 export interface AuthenticatedUser {
   id: string;
+  dietEnabled: boolean;
 }
 
 export const CurrentUser = createParamDecorator(
