@@ -78,12 +78,22 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
     // height, not a percentage depending on an auto-height ancestor — needed
     // for the [&_video]:h-full below to actually resolve instead of falling
     // back to 'auto'. html5-qrcode injects a bare <video> here with an inline
-    // width but no height; without object-cover forcing it full-bleed, the
-    // video renders at its own intrinsic aspect ratio, out of sync with the
-    // corner-frame overlay
+    // width but no height; without forcing it full-bleed, the video renders
+    // at its own intrinsic aspect ratio, out of sync with the corner-frame
+    // overlay.
+    // Deliberately NOT object-cover: foreverScan() in html5-qrcode computes
+    // its decode crop region as videoWidth/clientWidth and
+    // videoHeight/clientHeight independently, which is only a correct
+    // mapping back to native video pixels under object-fit's default 'fill'
+    // (uniform stretch, no cropping). object-cover crops+offsets the visible
+    // image in a way the library has no awareness of, so the small qrbox
+    // region it samples ends up shifted away from what's actually visible
+    // on screen — camera preview looks fine, but nothing ever decodes. A
+    // stretched (non-cover) video still decodes 1D barcodes fine since
+    // uniform scaling preserves bar-width ratios.
     <div
       id={SCANNER_ELEMENT_ID}
-      className="absolute inset-0 overflow-hidden rounded-[14px] [&_video]:h-full [&_video]:w-full [&_video]:object-cover"
+      className="absolute inset-0 overflow-hidden rounded-[14px] [&_video]:h-full [&_video]:w-full"
     />
   );
 }
