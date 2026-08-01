@@ -18,7 +18,10 @@ function CornerFrame() {
   const corner = 'absolute h-7 w-7 border-acc';
   return (
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-      <div className="relative h-[160px] w-[260px]">
+      {/* mirrors the qrbox computed in BarcodeScanner.tsx — the box is the region
+          actually sampled by the decoder, so these must stay in sync or the user
+          aims somewhere other than where the scan happens */}
+      <div className="relative h-[200px] max-h-[60%] w-[90%] max-w-[420px]">
         <div className={`${corner} top-0 left-0 rounded-tl-[6px] border-t-[3px] border-l-[3px]`} />
         <div className={`${corner} top-0 right-0 rounded-tr-[6px] border-t-[3px] border-r-[3px]`} />
         <div

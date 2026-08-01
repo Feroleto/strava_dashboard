@@ -1,3 +1,6 @@
+// must be imported before html5-qrcode is constructed — it decides which decoder
+// to use in the Html5Qrcode constructor, based on `"BarcodeDetector" in window`
+import './barcodeDetectorPolyfill';
 import { useEffect, useRef } from 'react';
 import { Html5Qrcode, Html5QrcodeScannerState, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 
@@ -7,6 +10,26 @@ interface BarcodeScannerProps {
 }
 
 const SCANNER_ELEMENT_ID = 'barcode-scanner-viewport';
+
+/**
+ * Size of the region html5-qrcode samples and feeds to the decoder.
+ *
+ * This is not just an aiming rectangle: setupUi() creates the decode canvas at
+ * exactly these dimensions and foreverScan() downscales the cropped camera frame
+ * into it, so the qrbox size *is* the decoder's input resolution. At the old
+ * 260px an EAN-13 (95 modules) got ~2.7px per module, right at the limit of what
+ * is decodable; near-full-width gives ~4px.
+ *
+ * Height is clamped against the viewfinder because getShadedRegionBounds() throws
+ * outright if the box is taller than the video area (landscape, short viewports).
+ * The corner-frame overlay in BarcodeScannerPage mirrors these numbers in CSS —
+ * they must be kept in sync, or the user aims at a region that is not the one
+ * being sampled.
+ */
+const SCAN_BOX_WIDTH_RATIO = 0.9;
+const SCAN_BOX_MAX_WIDTH = 420;
+const SCAN_BOX_HEIGHT = 200;
+const SCAN_BOX_MAX_HEIGHT_RATIO = 0.6;
 
 export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerProps) {
   // latest callbacks via ref, not effect deps — starting/stopping the camera
@@ -33,8 +56,30 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
 
     scanner
       .start(
+        // ignored while the videoConstraints below are valid, but start() still
+        // requires a truthy value here and falls back to it if they are rejected
         { facingMode: 'environment' },
-        { fps: 10, qrbox: { width: 260, height: 160 } },
+        {
+          fps: 10,
+          qrbox: (viewfinderWidth, viewfinderHeight) => ({
+            width: Math.round(Math.min(viewfinderWidth * SCAN_BOX_WIDTH_RATIO, SCAN_BOX_MAX_WIDTH)),
+            height: Math.round(
+              Math.min(SCAN_BOX_HEIGHT, viewfinderHeight * SCAN_BOX_MAX_HEIGHT_RATIO),
+            ),
+          }),
+          // without this, every frame that fails to decode is retried a second
+          // time against a mirrored canvas. A mirrored EAN-13 is not a valid
+          // EAN-13, so that pass can never succeed — it just halves throughput
+          disableFlip: true,
+          // html5-qrcode's own constraint builder emits nothing but `facingMode`,
+          // and iOS then hands back a 640x480 stream by default. `ideal` (not
+          // `exact`) so devices that cannot honour it degrade instead of failing
+          videoConstraints: {
+            facingMode: 'environment',
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        },
         (decodedText) => {
           if (detectedRef.current) return;
           detectedRef.current = true;
@@ -81,16 +126,15 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
     // width but no height; without forcing it full-bleed, the video renders
     // at its own intrinsic aspect ratio, out of sync with the corner-frame
     // overlay.
-    // Deliberately NOT object-cover: foreverScan() in html5-qrcode computes
-    // its decode crop region as videoWidth/clientWidth and
-    // videoHeight/clientHeight independently, which is only a correct
-    // mapping back to native video pixels under object-fit's default 'fill'
-    // (uniform stretch, no cropping). object-cover crops+offsets the visible
-    // image in a way the library has no awareness of, so the small qrbox
-    // region it samples ends up shifted away from what's actually visible
-    // on screen — camera preview looks fine, but nothing ever decodes. A
-    // stretched (non-cover) video still decodes 1D barcodes fine since
-    // uniform scaling preserves bar-width ratios.
+    // Deliberately NOT object-cover: foreverScan() maps the qrbox back to native
+    // video pixels with videoWidth/clientWidth and videoHeight/clientHeight,
+    // measured per axis against the *element box*. object-cover crops and offsets
+    // the visible image in a way the library has no awareness of, so the region
+    // it samples drifts away from what the user sees. Note the UA stylesheet
+    // still applies `object-fit: contain` to <video>, so the image is letterboxed
+    // inside the stretched box rather than filling it — both stay centred, so
+    // aiming is correct, but the sampled extent and the visible extent are not
+    // identical on the letterboxed axis.
     <div
       id={SCANNER_ELEMENT_ID}
       className="absolute inset-0 overflow-hidden rounded-[14px] [&_video]:h-full [&_video]:w-full"
