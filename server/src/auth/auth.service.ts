@@ -1,4 +1,8 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+} from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -63,16 +67,28 @@ export class AuthService {
       email,
       ...rest
     } = user;
-    // temporary beta gate for the Dieta module — email-keyed so it can be
-    // lifted by just unsetting the env var (or removing this check) once
-    // the feature is ready for everyone
-    const betaEmail = this.config.get<string>('DIET_BETA_USER_EMAIL');
     return {
       ...rest,
       hasStravaAccount: !!stravaAccount,
       hasPassword: !!passwordHash,
-      dietEnabled: email != null && email === betaEmail,
+      dietEnabled: this.isDietBetaEmail(email),
     };
+  }
+
+  // temporary beta gate for the Dieta module — email-keyed so it can be
+  // lifted by just unsetting the env var (or removing this check) once
+  // the feature is ready for everyone. Accepts a comma-separated list, so
+  // adding another beta tester is just editing the env var (no deploy)
+  private isDietBetaEmail(email: string | null): boolean {
+    if (!email) return false;
+    const raw = this.config.get<string>('DIET_BETA_USER_EMAIL');
+    if (!raw) return false;
+    // env var is hand-typed; stored emails are already trim+lowercase (parseEmail)
+    return raw
+      .split(',')
+      .map((e) => e.trim().toLowerCase())
+      .filter(Boolean)
+      .includes(email.toLowerCase());
   }
 
   async invalidateSessions(userId: string): Promise<void> {

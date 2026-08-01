@@ -18,7 +18,9 @@ const { mockPrisma } = vi.hoisted(() => {
         findUnique: vi.fn(),
         update: vi.fn(),
       },
-      $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
+      $transaction: vi.fn((ops: unknown[]) =>
+        Promise.all(ops as Promise<unknown>[]),
+      ),
     },
   };
 });
@@ -55,7 +57,10 @@ describe('AuthService', () => {
 
   beforeEach(async () => {
     vi.clearAllMocks();
-    emailService = { sendWelcomeEmail: vi.fn(), sendPasswordResetEmail: vi.fn() };
+    emailService = {
+      sendWelcomeEmail: vi.fn(),
+      sendPasswordResetEmail: vi.fn(),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -114,13 +119,15 @@ describe('AuthService', () => {
       const configGet = vi.fn((key: string) =>
         key === 'DIET_BETA_USER_EMAIL' ? 'beta@example.com' : undefined,
       );
-      const moduleWithBetaEmail: TestingModule = await Test.createTestingModule({
-        providers: [
-          AuthService,
-          { provide: ConfigService, useValue: { get: configGet } },
-          { provide: EmailService, useValue: emailService },
-        ],
-      }).compile();
+      const moduleWithBetaEmail: TestingModule = await Test.createTestingModule(
+        {
+          providers: [
+            AuthService,
+            { provide: ConfigService, useValue: { get: configGet } },
+            { provide: EmailService, useValue: emailService },
+          ],
+        },
+      ).compile();
       const betaGatedService = moduleWithBetaEmail.get(AuthService);
 
       mockPrisma.user.findUnique.mockResolvedValueOnce({
@@ -154,6 +161,45 @@ describe('AuthService', () => {
         tokenVersion: 0,
       });
       expect(nonMatching?.dietEnabled).toBe(false);
+    });
+
+    it('accepts a comma-separated list of beta emails, ignoring spaces and case', async () => {
+      const configGet = vi.fn((key: string) =>
+        key === 'DIET_BETA_USER_EMAIL'
+          ? 'beta@example.com, Segundo@Example.com '
+          : undefined,
+      );
+      const moduleWithBetaEmails: TestingModule =
+        await Test.createTestingModule({
+          providers: [
+            AuthService,
+            { provide: ConfigService, useValue: { get: configGet } },
+            { provide: EmailService, useValue: emailService },
+          ],
+        }).compile();
+      const betaGatedService = moduleWithBetaEmails.get(AuthService);
+
+      for (const [email, expected] of [
+        ['beta@example.com', true],
+        ['segundo@example.com', true],
+        ['terceiro@example.com', false],
+      ] as const) {
+        mockPrisma.user.findUnique.mockResolvedValueOnce({
+          id: USER_ID,
+          email,
+          firstName: 'Guilherme',
+          profileImgUrl: null,
+          maxHr: null,
+          tokenVersion: 0,
+          passwordHash: null,
+          stravaAccount: null,
+        });
+        const result = await betaGatedService.authenticate({
+          userId: USER_ID,
+          tokenVersion: 0,
+        });
+        expect(result?.dietEnabled).toBe(expected);
+      }
     });
 
     it('reports hasStravaAccount: true when the relation is present, without leaking it', async () => {
