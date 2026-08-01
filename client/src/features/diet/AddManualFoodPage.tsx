@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { apiFetch } from '@/lib/api';
 import type { FoodListItem } from '@/lib/types';
+import { SERVING_UNITS, type ServingUnit } from './constants';
+import { unitLabel } from './quantityFormat';
 
 interface AddManualFoodPageProps {
   onBack: () => void;
@@ -55,6 +57,9 @@ export default function AddManualFoodPage({
   const { t } = useTranslation('diet');
   const [name, setName] = useState('');
   const [portion, setPortion] = useState('');
+  // '' = grams-only food; otherwise the portion above also becomes a household
+  // measure, so the food can later be logged as "2 unidades"
+  const [unit, setUnit] = useState<ServingUnit | ''>('');
   const [kcal, setKcal] = useState('');
   const [protein, setProtein] = useState('');
   const [carbs, setCarbs] = useState('');
@@ -81,6 +86,9 @@ export default function AddManualFoodPage({
           carbs: Number(carbs) * factor,
           fat: Number(fat) * factor,
           externalId: initialExternalId,
+          // the typed portion used to be discarded after normalizing to
+          // per-100g — kept now as the food's household measure
+          ...(unit ? { servingLabel: unit, servingGrams: grams } : {}),
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -106,6 +114,25 @@ export default function AddManualFoodPage({
           placeholder={t('manual.portionPlaceholder')}
           required
         />
+
+        <label className="flex flex-col gap-1">
+          <span className="text-[12.5px] font-medium text-muted-foreground">
+            {t('manual.unitLabel')}
+          </span>
+          <select
+            value={unit}
+            onChange={(e) => setUnit(e.target.value as ServingUnit | '')}
+            className="w-full rounded-[11px] border border-border bg-transparent px-3.5 py-[11px] text-[16px] text-foreground outline-none focus:border-acc md:text-[14px]"
+          >
+            <option value="">{t('manual.unitNone')}</option>
+            {SERVING_UNITS.map((slug) => (
+              <option key={slug} value={slug}>
+                {unitLabel(slug, 1, t)}
+              </option>
+            ))}
+          </select>
+          <span className="text-[11.5px] text-muted-foreground">{t('manual.unitHelp')}</span>
+        </label>
 
         <Field label={t('manual.kcal')} value={kcal} onChange={setKcal} type="number" required />
         <div className="grid grid-cols-3 gap-3">

@@ -71,4 +71,43 @@ describe('parseCreateCustomFoodInput', () => {
       BadRequestException,
     );
   });
+
+  it('leaves the serving pair undefined when neither field is sent', () => {
+    const result = parseCreateCustomFoodInput(validBody);
+
+    expect(result.servingLabel).toBeUndefined();
+    expect(result.servingGrams).toBeUndefined();
+  });
+
+  it('accepts a valid servingLabel/servingGrams pair', () => {
+    const result = parseCreateCustomFoodInput({
+      ...validBody,
+      servingLabel: 'slice',
+      servingGrams: 25,
+    });
+
+    expect(result.servingLabel).toBe('slice');
+    expect(result.servingGrams).toBe(25);
+  });
+
+  it('rejects a servingLabel outside the closed vocabulary', () => {
+    expect(() =>
+      parseCreateCustomFoodInput({ ...validBody, servingLabel: 'punhado', servingGrams: 30 }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('rejects a non-positive servingGrams', () => {
+    expect(() =>
+      parseCreateCustomFoodInput({ ...validBody, servingLabel: 'unit', servingGrams: 0 }),
+    ).toThrow(BadRequestException);
+  });
+
+  it('rejects one half of the pair without the other', () => {
+    expect(() => parseCreateCustomFoodInput({ ...validBody, servingLabel: 'unit' })).toThrow(
+      BadRequestException,
+    );
+    expect(() => parseCreateCustomFoodInput({ ...validBody, servingGrams: 50 })).toThrow(
+      BadRequestException,
+    );
+  });
 });

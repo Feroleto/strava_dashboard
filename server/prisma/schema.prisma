@@ -440,6 +440,12 @@ model Food {
   fat             Float
   fiber           Float?
   sodium          Float?
+  // household measure ("1 unidade", "1 fatia") when known — servingLabel is a
+  // closed slug from serving-units.ts, translated on the client; servingGrams
+  // is how many grams one of those weighs. Both null = grams-only food.
+  // Never changes how nutrition is stored: every value above is still per 100g.
+  servingLabel    String?         @map("serving_label")
+  servingGrams    Float?          @map("serving_grams")
   createdByUserId String?         @map("created_by_user_id")
   createdBy       User?           @relation(fields: [createdByUserId], references: [id])
   createdAt       DateTime        @default(now()) @map("created_at")
@@ -452,15 +458,20 @@ model Food {
 }
 
 model FoodLog {
-  id        String   @id @default(cuid())
-  userId    String   @map("user_id")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  foodId    String   @map("food_id")
-  food      Food     @relation(fields: [foodId], references: [id])
-  quantity  Float
-  mealType  MealType @map("meal_type")
-  loggedAt  DateTime @map("logged_at")
-  createdAt DateTime @default(now()) @map("created_at")
+  id               String   @id @default(cuid())
+  userId           String   @map("user_id")
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  foodId           String   @map("food_id")
+  food             Food     @relation(fields: [foodId], references: [id])
+  // always grams, whatever unit the user picked in the UI — every aggregation
+  // (getDailySummary/getHistory) multiplies by quantity/100 and must stay that way
+  quantity         Float
+  // display hint only: true means the user entered this as N servings, so the
+  // UI renders "2 unidades (100 g)" instead of "100 g". Never affects math.
+  enteredAsServing Boolean  @default(false) @map("entered_as_serving")
+  mealType         MealType @map("meal_type")
+  loggedAt         DateTime @map("logged_at")
+  createdAt        DateTime @default(now()) @map("created_at")
 
   @@index([userId, loggedAt])
   @@map("food_logs")

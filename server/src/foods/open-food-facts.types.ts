@@ -14,6 +14,10 @@ export interface OffProduct {
   product_name?: string;
   brands?: string;
   image_url?: string;
+  /** free text as printed on the package, e.g. "30 g (2 biscoitos)" */
+  serving_size?: string;
+  /** serving_size normalized to grams by OFF — sometimes typed as a string */
+  serving_quantity?: number | string;
   nutriments?: OffNutriments;
 }
 

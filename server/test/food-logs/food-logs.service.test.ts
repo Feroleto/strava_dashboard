@@ -10,6 +10,8 @@ const { mockPrisma } = vi.hoisted(() => {
       foodLog: {
         create: vi.fn(),
         findMany: vi.fn(),
+        findUniqueOrThrow: vi.fn(),
+        updateMany: vi.fn(),
         deleteMany: vi.fn(),
       },
     },
@@ -59,6 +61,7 @@ describe('FoodLogsService', () => {
       await service.create(USER_ID, {
         foodId: 'food1',
         quantity: 150,
+        enteredAsServing: false,
         mealType: 'LUNCH' as any,
         loggedAt: new Date('2026-07-29T12:00:00.000Z'),
       });
@@ -68,6 +71,50 @@ describe('FoodLogsService', () => {
       expect(data.foodId).toBe('food1');
       expect(data.quantity).toBe(150);
       expect(data.mealType).toBe('LUNCH');
+    });
+
+    it('persists the enteredAsServing display hint alongside the grams', async () => {
+      mockPrisma.foodLog.create.mockResolvedValueOnce({ id: 'log1' });
+
+      await service.create(USER_ID, {
+        foodId: 'food1',
+        // 2 eggs of 50g — stored as grams, flagged as entered in servings
+        quantity: 100,
+        enteredAsServing: true,
+        mealType: 'BREAKFAST' as any,
+        loggedAt: new Date('2026-07-29T09:00:00.000Z'),
+      });
+
+      const data = mockPrisma.foodLog.create.mock.calls[0][0].data;
+      expect(data.quantity).toBe(100);
+      expect(data.enteredAsServing).toBe(true);
+    });
+  });
+
+  describe('update', () => {
+    it('updates scoped by id and userId together, then reads the row back', async () => {
+      mockPrisma.foodLog.updateMany.mockResolvedValueOnce({ count: 1 });
+      mockPrisma.foodLog.findUniqueOrThrow.mockResolvedValueOnce({ id: 'log1', quantity: 150 });
+
+      const result = await service.update(USER_ID, 'log1', {
+        quantity: 150,
+        enteredAsServing: false,
+      });
+
+      expect(mockPrisma.foodLog.updateMany).toHaveBeenCalledWith({
+        where: { id: 'log1', userId: USER_ID },
+        data: { quantity: 150, enteredAsServing: false },
+      });
+      expect(result).toEqual({ id: 'log1', quantity: 150 });
+    });
+
+    it('throws NotFoundException for another user’s log, without reading it back', async () => {
+      mockPrisma.foodLog.updateMany.mockResolvedValueOnce({ count: 0 });
+
+      await expect(
+        service.update(USER_ID, 'log1', { quantity: 150, enteredAsServing: false }),
+      ).rejects.toThrow();
+      expect(mockPrisma.foodLog.findUniqueOrThrow).not.toHaveBeenCalled();
     });
   });
 

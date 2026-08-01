@@ -1,6 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { FoodLogsService } from './food-logs.service';
-import { parseCreateFoodLogInput, parseDateQuery, parseDaysQuery } from './food-logs.dto';
+import {
+  parseCreateFoodLogInput,
+  parseDateQuery,
+  parseDaysQuery,
+  parseUpdateFoodLogInput,
+} from './food-logs.dto';
 import { AuthGuard } from '../auth/auth.guard';
 import { DietEnabledGuard } from '../auth/diet-enabled.guard';
 import { CurrentUser } from '../auth/current-user.decorator';
@@ -33,6 +38,16 @@ export class FoodLogsController {
   async findByDate(@CurrentUser() user: AuthenticatedUser, @Query('date') date?: string) {
     const parsedDate = parseDateQuery(date);
     return this.service.findByDate(user.id, parsedDate);
+  }
+
+  @Patch(':id')
+  async update(
+    @CurrentUser() user: AuthenticatedUser,
+    @Param('id') id: string,
+    @Body() body: unknown,
+  ) {
+    const input = parseUpdateFoodLogInput(body);
+    return this.service.update(user.id, id, input);
   }
 
   @Delete(':id')

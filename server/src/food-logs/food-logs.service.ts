@@ -2,12 +2,13 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import type { CreateFoodLogInput } from './food-logs.dto';
+import type { CreateFoodLogInput, UpdateFoodLogInput } from './food-logs.dto';
 import type { FoodListItem } from '../foods/foods.service';
 
 export interface FoodLogItem {
   id: string;
   quantity: number;
+  enteredAsServing: boolean;
   mealType: string;
   loggedAt: Date;
   food: FoodListItem;
@@ -27,6 +28,7 @@ export interface DailyHistoryPoint extends DailySummary {
 const FOOD_LOG_SELECT = {
   id: true,
   quantity: true,
+  enteredAsServing: true,
   mealType: true,
   loggedAt: true,
   food: {
@@ -42,6 +44,8 @@ const FOOD_LOG_SELECT = {
       fat: true,
       fiber: true,
       sodium: true,
+      servingLabel: true,
+      servingGrams: true,
     },
   },
 } satisfies Prisma.FoodLogSelect;
@@ -69,11 +73,30 @@ export class FoodLogsService {
         userId,
         foodId: input.foodId,
         quantity: input.quantity,
+        enteredAsServing: input.enteredAsServing,
         mealType: input.mealType,
         loggedAt: input.loggedAt,
       },
       select: FOOD_LOG_SELECT,
     });
+  }
+
+  // updateMany (not update) for the same reason as remove() below: ownership
+  // lives in the where clause, so another user's log is a 404, never a 403
+  async update(userId: string, id: string, input: UpdateFoodLogInput): Promise<FoodLogItem> {
+    const result = await this.prisma.foodLog.updateMany({
+      where: { id, userId },
+      data: { quantity: input.quantity, enteredAsServing: input.enteredAsServing },
+    });
+    if (result.count === 0) {
+      throw new NotFoundException(`Food log ${id} not found`);
+    }
+    // updateMany can't select, so read the row back in the shape callers expect
+    const updated = await this.prisma.foodLog.findUniqueOrThrow({
+      where: { id },
+      select: FOOD_LOG_SELECT,
+    });
+    return updated;
   }
 
   async findByDate(userId: string, date: string): Promise<FoodLogItem[]> {

@@ -4,6 +4,7 @@ import {
   parseCreateFoodLogInput,
   parseDateQuery,
   parseDaysQuery,
+  parseUpdateFoodLogInput,
 } from 'src/food-logs/food-logs.dto';
 
 describe('parseCreateFoodLogInput', () => {
@@ -21,6 +22,22 @@ describe('parseCreateFoodLogInput', () => {
     expect(result.quantity).toBe(150);
     expect(result.mealType).toBe('LUNCH');
     expect(result.loggedAt).toEqual(new Date('2026-07-29T12:00:00.000Z'));
+  });
+
+  it('defaults enteredAsServing to false when the client omits it', () => {
+    expect(parseCreateFoodLogInput(validBody).enteredAsServing).toBe(false);
+  });
+
+  it('accepts an explicit enteredAsServing flag', () => {
+    expect(parseCreateFoodLogInput({ ...validBody, enteredAsServing: true }).enteredAsServing).toBe(
+      true,
+    );
+  });
+
+  it('rejects a non-boolean enteredAsServing', () => {
+    expect(() => parseCreateFoodLogInput({ ...validBody, enteredAsServing: 'yes' })).toThrow(
+      BadRequestException,
+    );
   });
 
   it('rejects a non-object body', () => {
@@ -55,6 +72,39 @@ describe('parseDateQuery', () => {
     expect(() => parseDateQuery(undefined)).toThrow(BadRequestException);
     expect(() => parseDateQuery('07/29/2026')).toThrow(BadRequestException);
     expect(() => parseDateQuery('2026-7-29')).toThrow(BadRequestException);
+  });
+});
+
+describe('parseUpdateFoodLogInput', () => {
+  it('accepts a quantity and defaults enteredAsServing to false', () => {
+    expect(parseUpdateFoodLogInput({ quantity: 150 })).toEqual({
+      quantity: 150,
+      enteredAsServing: false,
+    });
+  });
+
+  it('accepts an explicit enteredAsServing flag', () => {
+    expect(parseUpdateFoodLogInput({ quantity: 100, enteredAsServing: true })).toEqual({
+      quantity: 100,
+      enteredAsServing: true,
+    });
+  });
+
+  it('rejects a missing or non-positive quantity', () => {
+    expect(() => parseUpdateFoodLogInput({})).toThrow(BadRequestException);
+    expect(() => parseUpdateFoodLogInput({ quantity: 0 })).toThrow(BadRequestException);
+    expect(() => parseUpdateFoodLogInput({ quantity: -10 })).toThrow(BadRequestException);
+  });
+
+  it('ignores fields it does not own (foodId/mealType are not editable)', () => {
+    expect(parseUpdateFoodLogInput({ quantity: 80, foodId: 'other', mealType: 'DINNER' })).toEqual({
+      quantity: 80,
+      enteredAsServing: false,
+    });
+  });
+
+  it('rejects a non-object body', () => {
+    expect(() => parseUpdateFoodLogInput(null)).toThrow(BadRequestException);
   });
 });
 

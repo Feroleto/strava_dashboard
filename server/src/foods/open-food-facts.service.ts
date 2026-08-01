@@ -15,6 +15,17 @@ export interface OffFoodResult {
   fat: number;
   fiber: number | null;
   sodium: number | null;
+  /** grams in one serving as printed on the package, null when OFF has none */
+  servingGrams: number | null;
+}
+
+// OFF types serving_quantity inconsistently (number on some products, string
+// on others) and occasionally reports 0 for products it couldn't parse —
+// anything not strictly positive degrades to "no serving info"
+export function parseOffServingGrams(raw: number | string | undefined): number | null {
+  if (raw === undefined || raw === null || raw === '') return null;
+  const grams = typeof raw === 'number' ? raw : Number(raw);
+  return Number.isFinite(grams) && grams > 0 ? grams : null;
 }
 
 @Injectable()
@@ -52,6 +63,7 @@ export class OpenFoodFactsService {
         fiber: n.fiber_100g ?? null,
         // OFF reports sodium in grams; the rest of the app (TACO) uses mg
         sodium: typeof n.sodium_100g === 'number' ? n.sodium_100g * 1000 : null,
+        servingGrams: parseOffServingGrams(body.product.serving_quantity),
       };
     } catch (err) {
       this.logger.warn(`Open Food Facts lookup failed for barcode ${barcode}: ${err}`);

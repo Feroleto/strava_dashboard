@@ -40,6 +40,8 @@ const FOOD_SELECT = {
   fat: true,
   fiber: true,
   sodium: true,
+  servingLabel: true,
+  servingGrams: true,
 } satisfies Prisma.FoodSelect;
 
 const SAVED_MEAL_DETAIL_SELECT = {
@@ -65,6 +67,7 @@ const SAVED_MEAL_DETAIL_SELECT = {
 const FOOD_LOG_ITEM_SELECT = {
   id: true,
   quantity: true,
+  enteredAsServing: true,
   mealType: true,
   loggedAt: true,
   food: { select: FOOD_SELECT },

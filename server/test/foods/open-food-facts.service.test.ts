@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { OpenFoodFactsService } from 'src/foods/open-food-facts.service';
+import { OpenFoodFactsService, parseOffServingGrams } from 'src/foods/open-food-facts.service';
 
 function offResponse(body: unknown, status = 200) {
   return {
@@ -67,7 +67,60 @@ describe('OpenFoodFactsService', () => {
       fat: 30.9,
       fiber: null,
       sodium: 42.8,
+      servingGrams: null,
     });
+  });
+
+  it('reads serving_quantity into servingGrams when the product declares one', async () => {
+    fetchMock.mockResolvedValueOnce(
+      offResponse({
+        status: 1,
+        product: {
+          product_name: 'Biscoito',
+          serving_size: '30 g (2 biscoitos)',
+          serving_quantity: 30,
+          nutriments: { 'energy-kcal_100g': 470 },
+        },
+      }),
+    );
+
+    const result = await service.lookupByBarcode('7891000000000');
+
+    expect(result?.servingGrams).toBe(30);
+  });
+
+  it('accepts serving_quantity typed as a string (OFF is inconsistent about it)', async () => {
+    fetchMock.mockResolvedValueOnce(
+      offResponse({
+        status: 1,
+        product: {
+          product_name: 'Iogurte',
+          serving_quantity: '170',
+          nutriments: { 'energy-kcal_100g': 60 },
+        },
+      }),
+    );
+
+    const result = await service.lookupByBarcode('7891000000001');
+
+    expect(result?.servingGrams).toBe(170);
+  });
+
+  describe('parseOffServingGrams', () => {
+    it('keeps a positive number', () => {
+      expect(parseOffServingGrams(30)).toBe(30);
+    });
+
+    it('parses a numeric string', () => {
+      expect(parseOffServingGrams('25.5')).toBe(25.5);
+    });
+
+    it.each([undefined, '', 0, -5, 'não informado'])(
+      'degrades %p to null (no usable serving info)',
+      (raw) => {
+        expect(parseOffServingGrams(raw as number | string | undefined)).toBeNull();
+      },
+    );
   });
 
   it('returns null when the product has no energy-kcal_100g (Food.kcal is required)', async () => {

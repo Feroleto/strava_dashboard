@@ -3,7 +3,10 @@ import { useTranslation } from 'react-i18next';
 import { ChevronLeft, Plus, Search, X } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import type { FoodListItem } from '@/lib/types';
+import { currentIntlLocale } from '@/lib/dateLocale';
 import { useSavedMealEditor, type WorkingMealItem } from './useSavedMealEditor';
+import QuantitySheet from './components/QuantitySheet';
+import { defaultPortion, formatQuantity, kcalForQuantity } from './quantityFormat';
 
 const SEARCH_DEBOUNCE_MS = 250;
 
@@ -21,11 +24,16 @@ export default function SavedMealEditPage({
   onSaved,
 }: SavedMealEditPageProps) {
   const { t } = useTranslation('diet');
+  const locale = currentIntlLocale();
   const editor = useSavedMealEditor(mealId, initialItems);
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<FoodListItem[]>([]);
   const [searching, setSearching] = useState(false);
   const [confirmingBack, setConfirmingBack] = useState(false);
+  // key of the item whose quantity is being edited — the sheet is input-only
+  // here, since SavedMealItem stores grams with no unit column
+  const [editingKey, setEditingKey] = useState<string | null>(null);
+  const editingItem = editor.items.find((i) => i.key === editingKey) ?? null;
 
   useEffect(() => {
     if (!search.trim()) {
@@ -70,10 +78,7 @@ export default function SavedMealEditPage({
     if (saved) onSaved();
   };
 
-  const totalKcal = editor.items.reduce(
-    (sum, i) => sum + (i.kcalPer100 * i.quantity) / 100,
-    0,
-  );
+  const totalKcal = editor.items.reduce((sum, i) => sum + kcalForQuantity(i.food, i.quantity), 0);
 
   if (editor.loading) {
     return (
@@ -150,26 +155,20 @@ export default function SavedMealEditPage({
                   key={item.key}
                   className="flex min-h-[52px] items-center gap-2 rounded-[10px] px-3 py-2 hover:bg-chip"
                 >
-                  <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setEditingKey(item.key)}
+                    aria-label={t('savedMeals.quantityLabel')}
+                    className="min-w-0 flex-1 cursor-pointer text-left"
+                  >
                     <div className="truncate text-[14px] font-medium text-foreground">
-                      {item.foodName}
+                      {item.food.name}
                     </div>
                     <div className="text-[11.5px] text-muted-foreground">
-                      {Math.round((item.kcalPer100 * item.quantity) / 100)} {t('addMeal.kcal')}
+                      {formatQuantity(item.food, item.quantity, false, t, locale)} ·{' '}
+                      {Math.round(kcalForQuantity(item.food, item.quantity))} {t('addMeal.kcal')}
                     </div>
-                  </div>
-                  <input
-                    type="number"
-                    min={1}
-                    step="1"
-                    value={item.quantity}
-                    onChange={(e) =>
-                      editor.updateQuantity(item.key, Math.max(1, Number(e.target.value) || 1))
-                    }
-                    aria-label={t('savedMeals.quantityLabel')}
-                    className="h-9 w-[64px] flex-none rounded-[8px] border border-border bg-transparent px-2 text-right text-[14px] text-foreground outline-none focus:border-acc"
-                  />
-                  <span className="flex-none text-[12px] text-muted-foreground">g</span>
+                  </button>
                   <button
                     type="button"
                     onClick={() => editor.removeFood(item.key)}
@@ -219,7 +218,12 @@ export default function SavedMealEditPage({
                     {food.name}
                   </div>
                   <div className="text-[11.5px] text-muted-foreground">
-                    {t('addMeal.per100g')} · {Math.round(food.kcal)} {t('addMeal.kcal')}
+                    {(() => {
+                      const preview = defaultPortion(food);
+                      return `${formatQuantity(food, preview.quantity, preview.enteredAsServing, t, locale)} · ${Math.round(
+                        kcalForQuantity(food, preview.quantity),
+                      )} ${t('addMeal.kcal')}`;
+                    })()}
                   </div>
                 </div>
                 <button
@@ -250,6 +254,20 @@ export default function SavedMealEditPage({
           {editor.saving ? t('savedMeals.saving') : t('savedMeals.save')}
         </button>
       </div>
+
+      {editingItem && (
+        <QuantitySheet
+          food={editingItem.food}
+          initialQuantity={editingItem.quantity}
+          initialAsServing={false}
+          confirmLabel={t('quantity.update')}
+          onCancel={() => setEditingKey(null)}
+          onConfirm={({ quantity }) => {
+            editor.updateQuantity(editingItem.key, quantity);
+            setEditingKey(null);
+          }}
+        />
+      )}
     </div>
   );
 }

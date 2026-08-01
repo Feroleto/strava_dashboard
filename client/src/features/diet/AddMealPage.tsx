@@ -7,6 +7,8 @@ import type { FoodListItem, FoodLogItem, MealType, SavedMealSummary } from '@/li
 import AddManualFoodPage from './AddManualFoodPage';
 import SavedMealsListPage from './SavedMealsListPage';
 import SavedMealEditPage from './SavedMealEditPage';
+import QuantitySheet from './components/QuantitySheet';
+import { defaultPortion, formatQuantity, kcalForQuantity, type Portion } from './quantityFormat';
 import type { WorkingMealItem } from './useSavedMealEditor';
 
 // html5-qrcode's decoder is a heavy dependency (~100kB gzipped) — split out
@@ -14,9 +16,6 @@ import type { WorkingMealItem } from './useSavedMealEditor';
 const BarcodeScannerPage = lazy(() => import('./BarcodeScannerPage'));
 
 const SEARCH_DEBOUNCE_MS = 250;
-// no quantity step in this screen — every search/scan add lands at a fixed
-// 100g portion; precise quantities are only available via manual entry
-const DEFAULT_PORTION_G = 100;
 
 interface AddMealPageProps {
   mealType: MealType;
@@ -27,6 +26,20 @@ interface AddMealPageProps {
 
 type View = 'search' | 'scanner' | 'manual' | 'savedMeals' | 'editSavedMeal';
 
+/** a food staged for saving — quantity lives per item, not globally */
+interface CartItem extends Portion {
+  /** stable React key: the same food can be added twice via scan/manual */
+  key: string;
+  food: FoodListItem;
+}
+
+// what the quantity sheet is currently editing: a brand new addition, an item
+// already in the cart, or a FoodLog that was saved on an earlier visit
+type SheetTarget =
+  | { kind: 'new'; food: FoodListItem }
+  | { kind: 'cart'; item: CartItem }
+  | { kind: 'existing'; log: FoodLogItem };
+
 function todayShort(): string {
   return new Date().toLocaleDateString(currentIntlLocale(), {
     day: 'numeric',
@@ -34,14 +47,22 @@ function todayShort(): string {
   });
 }
 
+let cartKeySeq = 0;
+function nextCartKey(): string {
+  cartKeySeq += 1;
+  return `cart-${cartKeySeq}`;
+}
+
 export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }: AddMealPageProps) {
   const { t } = useTranslation('diet');
+  const locale = currentIntlLocale();
   const [view, setView] = useState<View>('search');
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<FoodListItem[]>([]);
   const [searching, setSearching] = useState(false);
-  const [cart, setCart] = useState<FoodListItem[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [existing, setExisting] = useState(existingLogs);
+  const [sheet, setSheet] = useState<SheetTarget | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   // set only when reached via a barcode scan that found no match — links the
@@ -84,17 +105,52 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
     };
   }, [search]);
 
-  const toggleCart = (food: FoodListItem) => {
-    setCart((c) => (c.some((f) => f.id === food.id) ? c.filter((f) => f.id !== food.id) : [...c, food]));
-  };
-
   const removeExisting = (id: string) => {
     setExisting((e) => e.filter((l) => l.id !== id));
     void apiFetch(`/food-logs/${id}`, { method: 'DELETE' });
   };
 
-  const removeCartItem = (index: number) => {
-    setCart((c) => c.filter((_, i) => i !== index));
+  const removeCartItem = (key: string) => {
+    setCart((c) => c.filter((i) => i.key !== key));
+  };
+
+  // untoggling from the search result row: drops every staged entry of that
+  // food, since the row only knows the food, not which cart entries it spawned
+  const removeFoodFromCart = (foodId: string) => {
+    setCart((c) => c.filter((i) => i.food.id !== foodId));
+  };
+
+  // every path into the cart goes through the sheet, so a quantity is always
+  // chosen deliberately — search, barcode scan and manual entry alike
+  const confirmSheet = (portion: Portion) => {
+    if (!sheet) return;
+    if (sheet.kind === 'new') {
+      const food = sheet.food;
+      setCart((c) => [...c, { key: nextCartKey(), food, ...portion }]);
+    } else if (sheet.kind === 'cart') {
+      const key = sheet.item.key;
+      setCart((c) => c.map((i) => (i.key === key ? { ...i, ...portion } : i)));
+    } else {
+      void updateExisting(sheet.log, portion);
+    }
+    setSheet(null);
+  };
+
+  const updateExisting = async (log: FoodLogItem, portion: Portion) => {
+    // optimistic: the row already shows the new amount while the PATCH flies
+    setExisting((e) => e.map((l) => (l.id === log.id ? { ...l, ...portion } : l)));
+    setError(null);
+    try {
+      const res = await apiFetch(`/food-logs/${log.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(portion),
+      });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    } catch {
+      setExisting((e) => e.map((l) => (l.id === log.id ? log : l)));
+      setError(t('addMeal.error'));
+    }
   };
 
   const handleSave = async () => {
@@ -106,13 +162,14 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
     setError(null);
     try {
       const loggedAt = new Date().toISOString();
-      for (const food of cart) {
+      for (const item of cart) {
         const res = await apiFetch('/food-logs', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            foodId: food.id,
-            quantity: DEFAULT_PORTION_G,
+            foodId: item.food.id,
+            quantity: item.quantity,
+            enteredAsServing: item.enteredAsServing,
             mealType,
             loggedAt,
           }),
@@ -188,7 +245,7 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
         }}
         onCreated={(food) => {
           setPendingExternalId(undefined);
-          setCart((c) => [...c, food]);
+          setSheet({ kind: 'new', food });
           setView('search');
         }}
       />
@@ -201,7 +258,7 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
         <BarcodeScannerPage
           onBack={() => setView('search')}
           onFound={(food) => {
-            setCart((c) => [...c, food]);
+            setSheet({ kind: 'new', food });
             setView('search');
           }}
           onNotFound={(barcode) => {
@@ -213,11 +270,19 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
     );
   }
 
-  const kcalOf = (food: FoodListItem) => Math.round((food.kcal * DEFAULT_PORTION_G) / 100);
   const totalItems = existing.length + cart.length;
   const totalKcal =
-    existing.reduce((sum, l) => sum + (l.food.kcal * l.quantity) / 100, 0) +
-    cart.reduce((sum, f) => sum + (f.kcal * DEFAULT_PORTION_G) / 100, 0);
+    existing.reduce((sum, l) => sum + kcalForQuantity(l.food, l.quantity), 0) +
+    cart.reduce((sum, i) => sum + kcalForQuantity(i.food, i.quantity), 0);
+
+  const sheetInitial: Portion | null =
+    sheet === null
+      ? null
+      : sheet.kind === 'new'
+        ? defaultPortion(sheet.food)
+        : sheet.kind === 'cart'
+          ? { quantity: sheet.item.quantity, enteredAsServing: sheet.item.enteredAsServing }
+          : { quantity: sheet.log.quantity, enteredAsServing: sheet.log.enteredAsServing };
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -279,15 +344,19 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
                   key={log.id}
                   className="flex min-h-[52px] items-center gap-2 rounded-[10px] px-3 py-2 hover:bg-chip"
                 >
-                  <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setSheet({ kind: 'existing', log })}
+                    className="min-w-0 flex-1 cursor-pointer text-left"
+                  >
                     <div className="truncate text-[14px] font-medium text-foreground">
                       {log.food.name}
                     </div>
                     <div className="text-[11.5px] text-muted-foreground">
-                      {Math.round(log.quantity)}g ·{' '}
-                      {Math.round((log.food.kcal * log.quantity) / 100)} {t('addMeal.kcal')}
+                      {formatQuantity(log.food, log.quantity, log.enteredAsServing, t, locale)} ·{' '}
+                      {Math.round(kcalForQuantity(log.food, log.quantity))} {t('addMeal.kcal')}
                     </div>
-                  </div>
+                  </button>
                   <button
                     type="button"
                     onClick={() => removeExisting(log.id)}
@@ -298,22 +367,27 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
                   </button>
                 </div>
               ))}
-              {cart.map((food, i) => (
+              {cart.map((item) => (
                 <div
-                  key={`cart-${food.id}-${i}`}
+                  key={item.key}
                   className="flex min-h-[52px] items-center gap-2 rounded-[10px] px-3 py-2 hover:bg-chip"
                 >
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-[14px] font-medium text-foreground">
-                      {food.name}
-                    </div>
-                    <div className="text-[11.5px] text-muted-foreground">
-                      {DEFAULT_PORTION_G}g · {kcalOf(food)} {t('addMeal.kcal')}
-                    </div>
-                  </div>
                   <button
                     type="button"
-                    onClick={() => removeCartItem(i)}
+                    onClick={() => setSheet({ kind: 'cart', item })}
+                    className="min-w-0 flex-1 cursor-pointer text-left"
+                  >
+                    <div className="truncate text-[14px] font-medium text-foreground">
+                      {item.food.name}
+                    </div>
+                    <div className="text-[11.5px] text-muted-foreground">
+                      {formatQuantity(item.food, item.quantity, item.enteredAsServing, t, locale)} ·{' '}
+                      {Math.round(kcalForQuantity(item.food, item.quantity))} {t('addMeal.kcal')}
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeCartItem(item.key)}
                     aria-label={t('addMeal.remove')}
                     className="flex h-7 w-7 flex-none cursor-pointer items-center justify-center rounded-[7px] text-muted-foreground hover:bg-grid-ax hover:text-foreground"
                   >
@@ -327,12 +401,11 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
                 type="button"
                 onClick={() => {
                   setEditorInitialItems(
-                    cart.map((food, i) => ({
-                      key: `cart-${food.id}-${i}`,
-                      foodId: food.id,
-                      foodName: food.name,
-                      quantity: DEFAULT_PORTION_G,
-                      kcalPer100: food.kcal,
+                    cart.map((item) => ({
+                      key: item.key,
+                      foodId: item.food.id,
+                      quantity: item.quantity,
+                      food: item.food,
                     })),
                   );
                   setEditingSavedMealId(null);
@@ -366,25 +439,34 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
           )}
           {!searching &&
             results.map((food) => {
-              const inCart = cart.some((f) => f.id === food.id);
+              const inCart = cart.some((i) => i.food.id === food.id);
+              // the subtitle previews the portion the sheet will open on
+              const preview = defaultPortion(food);
               return (
                 <div
                   key={food.id}
                   className="flex min-h-[56px] items-center gap-2 rounded-[10px] px-3 py-2 hover:bg-chip"
                 >
-                  <div className="min-w-0 flex-1">
+                  <button
+                    type="button"
+                    onClick={() => setSheet({ kind: 'new', food })}
+                    className="min-w-0 flex-1 cursor-pointer text-left"
+                  >
                     <div className="truncate text-[14px] font-medium text-foreground">
                       {food.name}
                     </div>
                     <div className="text-[11.5px] text-muted-foreground">
-                      {DEFAULT_PORTION_G}g · {kcalOf(food)} {t('addMeal.kcal')} · P{' '}
-                      {Math.round(food.protein)}g · C {Math.round(food.carbs)}g · G{' '}
-                      {Math.round(food.fat)}g
+                      {formatQuantity(food, preview.quantity, preview.enteredAsServing, t, locale)} ·{' '}
+                      {Math.round(kcalForQuantity(food, preview.quantity))} {t('addMeal.kcal')}
                     </div>
-                  </div>
+                  </button>
                   <button
                     type="button"
-                    onClick={() => toggleCart(food)}
+                    // already staged: one tap clears it, same as before the
+                    // sheet existed. Otherwise it's the shortcut into the sheet.
+                    onClick={() =>
+                      inCart ? removeFoodFromCart(food.id) : setSheet({ kind: 'new', food })
+                    }
                     aria-label={food.name}
                     className={`flex h-8 w-8 flex-none cursor-pointer items-center justify-center rounded-full ${
                       inCart ? 'bg-acc-bg text-acc-tx' : 'bg-chip text-acc hover:bg-grid-ax'
@@ -426,6 +508,17 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
           {saving ? t('addMeal.saving') : t('addMeal.save')}
         </button>
       </div>
+
+      {sheet && sheetInitial && (
+        <QuantitySheet
+          food={sheet.kind === 'new' ? sheet.food : sheet.kind === 'cart' ? sheet.item.food : sheet.log.food}
+          initialQuantity={sheetInitial.quantity}
+          initialAsServing={sheetInitial.enteredAsServing}
+          confirmLabel={sheet.kind === 'new' ? t('quantity.add') : t('quantity.update')}
+          onCancel={() => setSheet(null)}
+          onConfirm={confirmSheet}
+        />
+      )}
     </div>
   );
 }

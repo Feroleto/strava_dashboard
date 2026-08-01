@@ -308,13 +308,20 @@ export interface FoodListItem {
   fat: number;
   fiber: number | null;
   sodium: number | null;
+  /** closed slug (see SERVING_UNITS in constants.ts), null for grams-only foods */
+  servingLabel: string | null;
+  /** grams in one serving — how "2 unidades" becomes 100g */
+  servingGrams: number | null;
 }
 
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER' | 'SUPPER';
 
 export interface FoodLogItem {
   id: string;
+  /** always grams, whatever unit was picked in the UI */
   quantity: number;
+  /** display hint: render as N servings instead of raw grams */
+  enteredAsServing: boolean;
   mealType: MealType;
   loggedAt: string;
   food: FoodListItem;

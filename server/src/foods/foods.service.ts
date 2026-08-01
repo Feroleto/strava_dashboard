@@ -19,6 +19,8 @@ const FOOD_SELECT = {
   fat: true,
   fiber: true,
   sodium: true,
+  servingLabel: true,
+  servingGrams: true,
 } satisfies Prisma.FoodSelect;
 
 export interface FoodListItem {
@@ -33,6 +35,10 @@ export interface FoodListItem {
   fat: number;
   fiber: number | null;
   sodium: number | null;
+  /** closed slug from serving-units.ts, or null for grams-only foods */
+  servingLabel: string | null;
+  /** grams in one serving — the client converts units → grams with it */
+  servingGrams: number | null;
 }
 
 @Injectable()
@@ -98,6 +104,8 @@ export class FoodsService {
         fat: input.fat,
         fiber: input.fiber,
         sodium: input.sodium,
+        servingLabel: input.servingLabel,
+        servingGrams: input.servingGrams,
       },
       select: FOOD_SELECT,
     });
@@ -131,6 +139,8 @@ export class FoodsService {
         fat: off.fat,
         fiber: off.fiber,
         sodium: off.sodium,
+        servingLabel: off.servingGrams === null ? null : 'serving',
+        servingGrams: off.servingGrams,
       },
       select: FOOD_SELECT,
     });

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import type { FoodListItem, SavedMealDetail } from '@/lib/types';
+import { defaultPortion } from './quantityFormat';
 
 export interface WorkingMealItem {
   // server savedMealItem id for rows loaded from an existing saved meal, a
@@ -9,11 +10,12 @@ export interface WorkingMealItem {
   // below, which always POSTs/PATCHes the foodId/quantity list)
   key: string;
   foodId: string;
-  foodName: string;
+  /** grams — SavedMealItem has no unit column, units are input-only here */
   quantity: number;
-  // display-only (kcal preview per row/total) — never sent to the server,
-  // same spirit as WorkingExercise's exerciseName in useRoutineEditor.ts
-  kcalPer100: number;
+  // display-only (name, kcal preview, serving info for the quantity sheet) —
+  // never sent to the server, same spirit as WorkingExercise's exerciseName in
+  // useRoutineEditor.ts
+  food: FoodListItem;
 }
 
 let localKeySeq = 0;
@@ -29,9 +31,8 @@ function toWorking(meal: SavedMealDetail): WorkingMealItem[] {
     .map((i) => ({
       key: i.id,
       foodId: i.food.id,
-      foodName: i.food.name,
       quantity: i.quantity,
-      kcalPer100: i.food.kcal,
+      food: i.food,
     }));
 }
 
@@ -86,10 +87,17 @@ export function useSavedMealEditor(mealId: string | null, initialItems: WorkingM
     };
   }, [isEdit, mealId]);
 
-  const addFood = useCallback((food: FoodListItem, quantity = 100) => {
+  // no explicit quantity means "one of whatever this food is normally measured
+  // in" — 1 fatia, 1 unidade, or the flat 100g fallback
+  const addFood = useCallback((food: FoodListItem, quantity?: number) => {
     setItems((prev) => [
       ...prev,
-      { key: nextLocalKey(), foodId: food.id, foodName: food.name, quantity, kcalPer100: food.kcal },
+      {
+        key: nextLocalKey(),
+        foodId: food.id,
+        quantity: quantity ?? defaultPortion(food).quantity,
+        food,
+      },
     ]);
   }, []);
 

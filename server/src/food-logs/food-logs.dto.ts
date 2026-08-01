@@ -5,9 +5,17 @@ import { MealType } from '@prisma/client';
 
 export interface CreateFoodLogInput {
   foodId: string;
+  /** always grams, whatever unit the UI offered */
   quantity: number;
+  /** display hint only — see FoodLog.enteredAsServing in schema.prisma */
+  enteredAsServing: boolean;
   mealType: MealType;
   loggedAt: Date;
+}
+
+export interface UpdateFoodLogInput {
+  quantity: number;
+  enteredAsServing: boolean;
 }
 
 export function parseCreateFoodLogInput(body: unknown): CreateFoodLogInput {
@@ -15,14 +23,16 @@ export function parseCreateFoodLogInput(body: unknown): CreateFoodLogInput {
     throw new BadRequestException('Request body must be an object');
   }
 
-  const { foodId, quantity, mealType, loggedAt } = body as Record<string, unknown>;
+  const { foodId, quantity, enteredAsServing, mealType, loggedAt } = body as Record<
+    string,
+    unknown
+  >;
 
   if (typeof foodId !== 'string' || foodId.trim().length === 0) {
     throw new BadRequestException('foodId is required');
   }
-  if (typeof quantity !== 'number' || !Number.isFinite(quantity) || quantity <= 0) {
-    throw new BadRequestException('quantity must be a positive number');
-  }
+  const parsedQuantity = parseQuantity(quantity);
+  const parsedEnteredAsServing = parseEnteredAsServing(enteredAsServing);
   if (typeof mealType !== 'string' || !Object.values(MealType).includes(mealType as MealType)) {
     throw new BadRequestException(
       `Invalid mealType. Expected one of: ${Object.values(MealType).join(', ')}`,
@@ -36,7 +46,43 @@ export function parseCreateFoodLogInput(body: unknown): CreateFoodLogInput {
     throw new BadRequestException('loggedAt must be a valid ISO date string');
   }
 
-  return { foodId: foodId.trim(), quantity, mealType: mealType as MealType, loggedAt: parsedLoggedAt };
+  return {
+    foodId: foodId.trim(),
+    quantity: parsedQuantity,
+    enteredAsServing: parsedEnteredAsServing,
+    mealType: mealType as MealType,
+    loggedAt: parsedLoggedAt,
+  };
+}
+
+// PATCH only ever changes how much was eaten — foodId/mealType/loggedAt are
+// not editable (moving a log to another meal would be a different feature)
+export function parseUpdateFoodLogInput(body: unknown): UpdateFoodLogInput {
+  if (typeof body !== 'object' || body === null) {
+    throw new BadRequestException('Request body must be an object');
+  }
+
+  const { quantity, enteredAsServing } = body as Record<string, unknown>;
+
+  return {
+    quantity: parseQuantity(quantity),
+    enteredAsServing: parseEnteredAsServing(enteredAsServing),
+  };
+}
+
+function parseQuantity(value: unknown): number {
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) {
+    throw new BadRequestException('quantity must be a positive number');
+  }
+  return value;
+}
+
+function parseEnteredAsServing(value: unknown): boolean {
+  if (value === undefined || value === null) return false;
+  if (typeof value !== 'boolean') {
+    throw new BadRequestException('enteredAsServing must be a boolean');
+  }
+  return value;
 }
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;

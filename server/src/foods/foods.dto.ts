@@ -1,4 +1,5 @@
 import { BadRequestException } from '@nestjs/common';
+import { SERVING_UNITS, isServingUnit, type ServingUnit } from './serving-units';
 
 // Manual validation, no class-validator — same convention as exercises/dto.ts
 
@@ -22,6 +23,9 @@ export interface CreateCustomFoodInput {
   // Facts) and the user cadastra manually while still linking it to the
   // scanned code — future scans of the same barcode resolve locally
   externalId?: string;
+  // optional household measure, always as a pair (see parseServingPair)
+  servingLabel?: ServingUnit;
+  servingGrams?: number;
 }
 
 // source/createdByUserId are deliberately not accepted here — the controller
@@ -31,12 +35,14 @@ export function parseCreateCustomFoodInput(body: unknown): CreateCustomFoodInput
     throw new BadRequestException('Request body must be an object');
   }
 
-  const { name, kcal, protein, carbs, fat, fiber, sodium, externalId } =
+  const { name, kcal, protein, carbs, fat, fiber, sodium, externalId, servingLabel, servingGrams } =
     body as Record<string, unknown>;
 
   if (typeof name !== 'string' || name.trim().length === 0) {
     throw new BadRequestException('name is required');
   }
+
+  const serving = parseServingPair(servingLabel, servingGrams);
 
   return {
     name: name.trim(),
@@ -47,7 +53,34 @@ export function parseCreateCustomFoodInput(body: unknown): CreateCustomFoodInput
     fiber: parseOptionalNonNegativeNumber('fiber', fiber),
     sodium: parseOptionalNonNegativeNumber('sodium', sodium),
     externalId: parseOptionalString('externalId', externalId),
+    servingLabel: serving.label,
+    servingGrams: serving.grams,
   };
+}
+
+// servingLabel/servingGrams only make sense together — a label with no weight
+// can't be converted to grams, and a weight with no label has nothing to
+// render. Either both are present or neither is.
+export function parseServingPair(
+  label: unknown,
+  grams: unknown,
+): { label?: ServingUnit; grams?: number } {
+  const hasLabel = label !== undefined && label !== null;
+  const hasGrams = grams !== undefined && grams !== null;
+
+  if (!hasLabel && !hasGrams) return {};
+  if (hasLabel !== hasGrams) {
+    throw new BadRequestException('servingLabel and servingGrams must be provided together');
+  }
+  if (!isServingUnit(label)) {
+    throw new BadRequestException(
+      `Invalid servingLabel. Expected one of: ${SERVING_UNITS.join(', ')}`,
+    );
+  }
+  if (typeof grams !== 'number' || !Number.isFinite(grams) || grams <= 0) {
+    throw new BadRequestException('servingGrams must be a positive number');
+  }
+  return { label, grams };
 }
 
 function parseNonNegativeNumber(field: string, value: unknown): number {
