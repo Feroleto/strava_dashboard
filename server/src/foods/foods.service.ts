@@ -113,13 +113,14 @@ export class FoodsService {
 
   // local cache (source OFF, externalId = barcode) → Open Food Facts →
   // upsert into the cache → 404 if neither has it, so the frontend can
-  // offer manual cadastro. Never hits OFF for a barcode already cached.
+  // offer manual cadastro. Never hits OFF for a barcode already cached,
+  // except to fill in a serving size the cache predates (see below).
   async findByBarcode(userId: string, barcode: string): Promise<FoodListItem> {
     const cached = await this.prisma.food.findUnique({
       where: { source_externalId: { source: 'OFF', externalId: barcode } },
       select: FOOD_SELECT,
     });
-    if (cached) return cached;
+    if (cached) return this.backfillCachedServing(cached, barcode);
 
     const off = await this.openFoodFacts.lookupByBarcode(barcode);
     if (!off) {
@@ -142,6 +143,28 @@ export class FoodsService {
         servingLabel: off.servingGrams === null ? null : 'serving',
         servingGrams: off.servingGrams,
       },
+      select: FOOD_SELECT,
+    });
+  }
+
+  // Rows cached before serving sizes existed have servingGrams null, and a
+  // plain cache hit would keep them grams-only forever. One re-lookup fills
+  // them in; best-effort, so a null result (network, or OFF genuinely has no
+  // serving for this product) just returns the cached row untouched — never
+  // downgrades a hit we already have into a 404. Only fires while the value
+  // is missing, so it's a one-shot cost per stale product, not per scan.
+  private async backfillCachedServing(
+    cached: FoodListItem,
+    barcode: string,
+  ): Promise<FoodListItem> {
+    if (cached.servingGrams !== null) return cached;
+
+    const off = await this.openFoodFacts.lookupByBarcode(barcode);
+    if (!off || off.servingGrams === null) return cached;
+
+    return this.prisma.food.update({
+      where: { id: cached.id },
+      data: { servingLabel: 'serving', servingGrams: off.servingGrams },
       select: FOOD_SELECT,
     });
   }

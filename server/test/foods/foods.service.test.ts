@@ -11,6 +11,7 @@ const { mockPrisma } = vi.hoisted(() => {
         findMany: vi.fn(),
         create: vi.fn(),
         findUnique: vi.fn(),
+        update: vi.fn(),
         count: vi.fn(),
       },
     },
@@ -145,13 +146,39 @@ describe('FoodsService', () => {
     const BARCODE = '7891234567890';
 
     it('returns the local cache hit without calling Open Food Facts', async () => {
-      mockPrisma.food.findUnique.mockResolvedValueOnce({ id: 'cached-food' });
+      mockPrisma.food.findUnique.mockResolvedValueOnce({ id: 'cached-food', servingGrams: 30 });
 
       const result = await service.findByBarcode(USER_ID, BARCODE);
 
-      expect(result).toEqual({ id: 'cached-food' });
+      expect(result).toEqual({ id: 'cached-food', servingGrams: 30 });
       expect(mockOpenFoodFacts.lookupByBarcode).not.toHaveBeenCalled();
       expect(mockPrisma.food.create).not.toHaveBeenCalled();
+    });
+
+    // rows cached before serving sizes existed would otherwise stay grams-only forever
+    it('re-queries Open Food Facts for a cache hit missing the serving size', async () => {
+      mockPrisma.food.findUnique.mockResolvedValueOnce({ id: 'stale-food', servingGrams: null });
+      mockOpenFoodFacts.lookupByBarcode.mockResolvedValueOnce({ servingGrams: 30 });
+      mockPrisma.food.update.mockResolvedValueOnce({ id: 'stale-food', servingGrams: 30 });
+
+      const result = await service.findByBarcode(USER_ID, BARCODE);
+
+      expect(mockOpenFoodFacts.lookupByBarcode).toHaveBeenCalledWith(BARCODE);
+      expect(mockPrisma.food.update.mock.calls[0][0]).toMatchObject({
+        where: { id: 'stale-food' },
+        data: { servingLabel: 'serving', servingGrams: 30 },
+      });
+      expect(result).toEqual({ id: 'stale-food', servingGrams: 30 });
+    });
+
+    it('keeps the cached row when Open Food Facts has no serving size either', async () => {
+      mockPrisma.food.findUnique.mockResolvedValueOnce({ id: 'stale-food', servingGrams: null });
+      mockOpenFoodFacts.lookupByBarcode.mockResolvedValueOnce({ servingGrams: null });
+
+      const result = await service.findByBarcode(USER_ID, BARCODE);
+
+      expect(result).toEqual({ id: 'stale-food', servingGrams: null });
+      expect(mockPrisma.food.update).not.toHaveBeenCalled();
     });
 
     it('falls back to Open Food Facts and caches the result locally on a miss', async () => {
