@@ -20,8 +20,12 @@ function CornerFrame() {
     <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
       {/* mirrors the qrbox computed in BarcodeScanner.tsx — the box is the region
           actually sampled by the decoder, so these must stay in sync or the user
-          aims somewhere other than where the scan happens */}
-      <div className="relative h-[200px] max-h-[60%] w-[90%] max-w-[420px]">
+          aims somewhere other than where the scan happens.
+          The outsized box-shadow dims everything around the box: html5-qrcode used
+          to draw that surround itself, but its frame is hidden (see BarcodeScanner)
+          because it could not be kept aligned with this one. Doing it here means the
+          dimming and the corners are the same element and cannot drift apart. */}
+      <div className="relative h-[200px] max-h-[60%] w-[90%] max-w-[420px] shadow-[0_0_0_9999px_rgba(0,0,0,0.48)]">
         <div className={`${corner} top-0 left-0 rounded-tl-[6px] border-t-[3px] border-l-[3px]`} />
         <div className={`${corner} top-0 right-0 rounded-tr-[6px] border-t-[3px] border-r-[3px]`} />
         <div

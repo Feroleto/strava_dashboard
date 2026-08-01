@@ -135,9 +135,17 @@ export default function BarcodeScanner({ onDetected, onError }: BarcodeScannerPr
     // inside the stretched box rather than filling it — both stay centred, so
     // aiming is correct, but the sampled extent and the visible extent are not
     // identical on the letterboxed axis.
+    // #qr-shaded-region is html5-qrcode's own viewfinder chrome (a dark surround
+    // plus white L-corner shaders). CornerFrame in BarcodeScannerPage replaces it
+    // with the app's own dark camera UI, so drawing both gave two competing
+    // rectangles. They also cannot be aligned reliably: the library sizes that
+    // element's borders from the viewfinder height captured once, on the `playing`
+    // event, while the element itself stretches with top:0/bottom:0 — if the
+    // container shrinks afterwards (iOS toolbar, safe-area settling) the hole ends
+    // up shorter than the qrbox we asked for, and sits visibly off from ours.
     <div
       id={SCANNER_ELEMENT_ID}
-      className="absolute inset-0 overflow-hidden rounded-[14px] [&_video]:h-full [&_video]:w-full"
+      className="absolute inset-0 overflow-hidden rounded-[14px] [&_#qr-shaded-region]:hidden [&_video]:h-full [&_video]:w-full"
     />
   );
 }
