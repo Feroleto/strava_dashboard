@@ -314,7 +314,19 @@ export interface FoodListItem {
   servingGrams: number | null;
 }
 
+/** closed vocabulary of meal *names* — the day's actual slots are Meal rows */
 export type MealType = 'BREAKFAST' | 'LUNCH' | 'SNACK' | 'DINNER' | 'SUPPER';
+
+// One slot in the user's day, configured once and applying to every date.
+// Two slots may share a type (two "Lanche"), so `id` — not `type` — is what
+// a FoodLog points at.
+export interface Meal {
+  id: string;
+  type: MealType;
+  order: number;
+  /** logs attached to this meal across every day — drives the delete confirmation */
+  logCount: number;
+}
 
 export interface FoodLogItem {
   id: string;
@@ -322,7 +334,7 @@ export interface FoodLogItem {
   quantity: number;
   /** display hint: render as N servings instead of raw grams */
   enteredAsServing: boolean;
-  mealType: MealType;
+  mealId: string;
   loggedAt: string;
   food: FoodListItem;
 }
@@ -345,7 +357,7 @@ export interface NutritionGoal {
   dailyFatGoal: number;
 }
 
-// ---- Saved meals (reusable food+quantity combos, no fixed MealType — see
+// ---- Saved meals (reusable food+quantity combos, no fixed Meal — see
 // AddMealPage's "Refeições salvas" flow) ----
 
 export interface SavedMealItemDetail {

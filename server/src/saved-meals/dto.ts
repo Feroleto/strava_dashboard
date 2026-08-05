@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import { MealType } from '@prisma/client';
 
 // Manual validation, no class-validator — same convention as foods/dto.ts,
 // food-logs/dto.ts, workout-templates/dto.ts
@@ -80,21 +79,20 @@ export function parseUpdateSavedMealInput(body: unknown): UpdateSavedMealInput {
 }
 
 export interface ApplySavedMealInput {
-  mealType: MealType;
+  /** id of one of the user's Meal rows — ownership asserted in applyToLog */
+  mealId: string;
   loggedAt: Date;
 }
 
-// same mealType/loggedAt validation as food-logs/dto.ts parseCreateFoodLogInput
+// same mealId/loggedAt validation as food-logs/dto.ts parseCreateFoodLogInput
 export function parseApplySavedMealInput(body: unknown): ApplySavedMealInput {
   if (typeof body !== 'object' || body === null) {
     throw new BadRequestException('Request body must be an object');
   }
-  const { mealType, loggedAt } = body as Record<string, unknown>;
+  const { mealId, loggedAt } = body as Record<string, unknown>;
 
-  if (typeof mealType !== 'string' || !Object.values(MealType).includes(mealType as MealType)) {
-    throw new BadRequestException(
-      `Invalid mealType. Expected one of: ${Object.values(MealType).join(', ')}`,
-    );
+  if (typeof mealId !== 'string' || mealId.trim().length === 0) {
+    throw new BadRequestException('mealId is required');
   }
   if (typeof loggedAt !== 'string') {
     throw new BadRequestException('loggedAt is required');
@@ -104,5 +102,5 @@ export function parseApplySavedMealInput(body: unknown): ApplySavedMealInput {
     throw new BadRequestException('loggedAt must be a valid ISO date string');
   }
 
-  return { mealType: mealType as MealType, loggedAt: parsedLoggedAt };
+  return { mealId: mealId.trim(), loggedAt: parsedLoggedAt };
 }

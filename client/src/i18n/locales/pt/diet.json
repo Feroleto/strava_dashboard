@@ -12,9 +12,25 @@
   "meal": {
     "BREAKFAST": "Café da manhã",
     "LUNCH": "Almoço",
-    "SNACK": "Lanche da tarde",
+    "SNACK": "Lanche",
     "DINNER": "Jantar",
     "SUPPER": "Ceia"
+  },
+  "meals": {
+    "editMeals": "Editar refeições",
+    "done": "Concluir",
+    "add": "Adicionar refeição",
+    "addTitle": "Nova refeição",
+    "renameTitle": "Renomear refeição",
+    "save": "Salvar",
+    "moveUp": "Mover para cima",
+    "moveDown": "Mover para baixo",
+    "remove": "Excluir",
+    "empty": "Nenhuma refeição configurada.",
+    "lastMealHint": "O dia precisa de pelo menos uma refeição.",
+    "deleteConfirmEmpty": "Excluir esta refeição?",
+    "deleteConfirm_one": "Excluir esta refeição e {{count}} alimento registrado, de todos os dias?",
+    "deleteConfirm_other": "Excluir esta refeição e {{count}} alimentos registrados, de todos os dias?"
   },
   "macro": {
     "protein": "Proteína",

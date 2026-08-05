@@ -14,6 +14,7 @@ import { ExercisesModule } from './exercises/exercises.module';
 import { WorkoutsModule } from './workouts/workouts.module';
 import { WorkoutTemplatesModule } from './workout-templates/workout-templates.module';
 import { FoodsModule } from './foods/foods.module';
+import { MealsModule } from './meals/meals.module';
 import { FoodLogsModule } from './food-logs/food-logs.module';
 import { SavedMealsModule } from './saved-meals/saved-meals.module';
 
@@ -34,6 +35,7 @@ import { SavedMealsModule } from './saved-meals/saved-meals.module';
     WorkoutsModule,
     WorkoutTemplatesModule,
     FoodsModule,
+    MealsModule,
     FoodLogsModule,
     SavedMealsModule,
   ],

@@ -2,6 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
+import { MealsService } from '../meals/meals.service';
 import type { CreateFoodLogInput, UpdateFoodLogInput } from './food-logs.dto';
 import type { FoodListItem } from '../foods/foods.service';
 
@@ -9,7 +10,7 @@ export interface FoodLogItem {
   id: string;
   quantity: number;
   enteredAsServing: boolean;
-  mealType: string;
+  mealId: string;
   loggedAt: Date;
   food: FoodListItem;
 }
@@ -29,7 +30,7 @@ const FOOD_LOG_SELECT = {
   id: true,
   quantity: true,
   enteredAsServing: true,
-  mealType: true,
+  mealId: true,
   loggedAt: true,
   food: {
     select: {
@@ -60,7 +61,10 @@ function dayBoundaries(date: string): { start: Date; end: Date } {
 export class FoodLogsService {
   private readonly prisma: PrismaClient;
 
-  constructor(private readonly config: ConfigService) {
+  constructor(
+    private readonly config: ConfigService,
+    private readonly mealsService: MealsService,
+  ) {
     const adapter = new PrismaPg({
       connectionString: this.config.get<string>('DATABASE_URL'),
     });
@@ -68,13 +72,17 @@ export class FoodLogsService {
   }
 
   async create(userId: string, input: CreateFoodLogInput): Promise<FoodLogItem> {
+    // a mealId off the wire is a guessable string, unlike the closed enum it
+    // replaced — without this, a log could be attached to another user's meal
+    await this.mealsService.assertOwned(userId, input.mealId);
+
     return this.prisma.foodLog.create({
       data: {
         userId,
         foodId: input.foodId,
         quantity: input.quantity,
         enteredAsServing: input.enteredAsServing,
-        mealType: input.mealType,
+        mealId: input.mealId,
         loggedAt: input.loggedAt,
       },
       select: FOOD_LOG_SELECT,

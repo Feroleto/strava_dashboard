@@ -1,5 +1,4 @@
 import { BadRequestException } from '@nestjs/common';
-import { MealType } from '@prisma/client';
 
 // Manual validation, no class-validator — same convention as foods/dto.ts
 
@@ -9,7 +8,12 @@ export interface CreateFoodLogInput {
   quantity: number;
   /** display hint only — see FoodLog.enteredAsServing in schema.prisma */
   enteredAsServing: boolean;
-  mealType: MealType;
+  /**
+   * id of one of the user's Meal rows. Unlike the closed MealType enum this
+   * replaced, shape validation proves nothing here — FoodLogsService.create
+   * asserts ownership before writing.
+   */
+  mealId: string;
   loggedAt: Date;
 }
 
@@ -23,20 +27,15 @@ export function parseCreateFoodLogInput(body: unknown): CreateFoodLogInput {
     throw new BadRequestException('Request body must be an object');
   }
 
-  const { foodId, quantity, enteredAsServing, mealType, loggedAt } = body as Record<
-    string,
-    unknown
-  >;
+  const { foodId, quantity, enteredAsServing, mealId, loggedAt } = body as Record<string, unknown>;
 
   if (typeof foodId !== 'string' || foodId.trim().length === 0) {
     throw new BadRequestException('foodId is required');
   }
   const parsedQuantity = parseQuantity(quantity);
   const parsedEnteredAsServing = parseEnteredAsServing(enteredAsServing);
-  if (typeof mealType !== 'string' || !Object.values(MealType).includes(mealType as MealType)) {
-    throw new BadRequestException(
-      `Invalid mealType. Expected one of: ${Object.values(MealType).join(', ')}`,
-    );
+  if (typeof mealId !== 'string' || mealId.trim().length === 0) {
+    throw new BadRequestException('mealId is required');
   }
   if (typeof loggedAt !== 'string') {
     throw new BadRequestException('loggedAt is required');
@@ -50,12 +49,12 @@ export function parseCreateFoodLogInput(body: unknown): CreateFoodLogInput {
     foodId: foodId.trim(),
     quantity: parsedQuantity,
     enteredAsServing: parsedEnteredAsServing,
-    mealType: mealType as MealType,
+    mealId: mealId.trim(),
     loggedAt: parsedLoggedAt,
   };
 }
 
-// PATCH only ever changes how much was eaten — foodId/mealType/loggedAt are
+// PATCH only ever changes how much was eaten — foodId/mealId/loggedAt are
 // not editable (moving a log to another meal would be a different feature)
 export function parseUpdateFoodLogInput(body: unknown): UpdateFoodLogInput {
   if (typeof body !== 'object' || body === null) {

@@ -29,6 +29,7 @@ model User {
   workoutTemplates    WorkoutTemplate[]
   passwordResetTokens PasswordResetToken[]
   createdFoods        Food[]
+  meals               Meal[]
   foodLogs            FoodLog[]
   savedMeals          SavedMeal[]
 
@@ -417,6 +418,10 @@ enum FoodSource {
   @@map("food_source")
 }
 
+// Closed vocabulary of meal *names*, not the day's slots — those live in the
+// Meal table below, one row per slot the user configured. Two slots may share
+// a type (two "Lanche"), which is exactly why FoodLog points at a Meal id
+// instead of carrying this enum directly.
 enum MealType {
   BREAKFAST
   LUNCH
@@ -425,6 +430,22 @@ enum MealType {
   SUPPER
 
   @@map("meal_type")
+}
+
+// One row per meal slot in the user's day, applying to every date (the
+// structure is a per-user configuration, not per-day). `order` is always
+// derived server-side from array position, never trusted from the client.
+model Meal {
+  id        String    @id @default(cuid())
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      MealType
+  order     Int
+  createdAt DateTime  @default(now()) @map("created_at")
+  foodLogs  FoodLog[]
+
+  @@index([userId, order])
+  @@map("meals")
 }
 
 model Food {
@@ -469,15 +490,20 @@ model FoodLog {
   // display hint only: true means the user entered this as N servings, so the
   // UI renders "2 unidades (100 g)" instead of "100 g". Never affects math.
   enteredAsServing Boolean  @default(false) @map("entered_as_serving")
-  mealType         MealType @map("meal_type")
+  // deleting a meal deletes its logs across every day — deliberate, and the
+  // opposite of Workout.templateId (SET NULL). The UI confirms with a count
+  // before it happens; pinned by meals-migration.test.ts
+  mealId           String   @map("meal_id")
+  meal             Meal     @relation(fields: [mealId], references: [id], onDelete: Cascade)
   loggedAt         DateTime @map("logged_at")
   createdAt        DateTime @default(now()) @map("created_at")
 
   @@index([userId, loggedAt])
+  @@index([mealId])
   @@map("food_logs")
 }
 
-// A saved meal has no fixed MealType — it's just a named list of
+// A saved meal has no fixed Meal — it's just a named list of
 // food+quantity, applied to whichever meal slot the user is in at the time
 // (mirrors WorkoutTemplate having no fixed "day", applied to any Workout)
 model SavedMeal {

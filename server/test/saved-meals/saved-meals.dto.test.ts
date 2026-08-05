@@ -72,16 +72,20 @@ describe('parseUpdateSavedMealInput', () => {
 });
 
 describe('parseApplySavedMealInput', () => {
-  const validBody = { mealType: 'BREAKFAST', loggedAt: '2026-07-30T12:00:00.000Z' };
+  const validBody = { mealId: 'meal1', loggedAt: '2026-07-30T12:00:00.000Z' };
 
   it('accepts a valid body and parses loggedAt into a Date', () => {
     const result = parseApplySavedMealInput(validBody);
-    expect(result.mealType).toBe('BREAKFAST');
+    expect(result.mealId).toBe('meal1');
     expect(result.loggedAt).toEqual(new Date('2026-07-30T12:00:00.000Z'));
   });
 
-  it('rejects an invalid mealType', () => {
-    expect(() => parseApplySavedMealInput({ ...validBody, mealType: 'BRUNCH' })).toThrow(
+  // shape only — ownership of the target meal is asserted in applyToLog
+  it('rejects a missing or blank mealId', () => {
+    expect(() => parseApplySavedMealInput({ ...validBody, mealId: undefined })).toThrow(
+      BadRequestException,
+    );
+    expect(() => parseApplySavedMealInput({ ...validBody, mealId: '  ' })).toThrow(
       BadRequestException,
     );
   });

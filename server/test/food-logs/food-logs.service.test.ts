@@ -1,7 +1,9 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ConfigService } from '@nestjs/config';
+import { NotFoundException } from '@nestjs/common';
 import { FoodLogsService } from 'src/food-logs/food-logs.service';
+import { MealsService } from 'src/meals/meals.service';
 
 const { mockPrisma } = vi.hoisted(() => {
   return {
@@ -37,9 +39,11 @@ const USER_ID = 'user_test_123';
 
 describe('FoodLogsService', () => {
   let service: FoodLogsService;
+  let assertOwned: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.clearAllMocks();
+    assertOwned = vi.fn().mockResolvedValue(undefined);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -48,6 +52,7 @@ describe('FoodLogsService', () => {
           provide: ConfigService,
           useValue: { get: vi.fn(() => 'postgresql://test') },
         },
+        { provide: MealsService, useValue: { assertOwned } },
       ],
     }).compile();
 
@@ -62,7 +67,7 @@ describe('FoodLogsService', () => {
         foodId: 'food1',
         quantity: 150,
         enteredAsServing: false,
-        mealType: 'LUNCH' as any,
+        mealId: 'meal1',
         loggedAt: new Date('2026-07-29T12:00:00.000Z'),
       });
 
@@ -70,7 +75,27 @@ describe('FoodLogsService', () => {
       expect(data.userId).toBe(USER_ID);
       expect(data.foodId).toBe('food1');
       expect(data.quantity).toBe(150);
-      expect(data.mealType).toBe('LUNCH');
+      expect(data.mealId).toBe('meal1');
+      expect(assertOwned).toHaveBeenCalledWith(USER_ID, 'meal1');
+    });
+
+    // a mealId is guessable in a way the closed MealType enum it replaced
+    // never was — the ownership assert is the only thing standing between a
+    // forged body and a log attached to someone else's meal
+    it('refuses to write when the meal is not the caller’s', async () => {
+      assertOwned.mockRejectedValueOnce(new NotFoundException());
+
+      await expect(
+        service.create(USER_ID, {
+          foodId: 'food1',
+          quantity: 150,
+          enteredAsServing: false,
+          mealId: 'someone_elses_meal',
+          loggedAt: new Date('2026-07-29T12:00:00.000Z'),
+        }),
+      ).rejects.toThrow(NotFoundException);
+
+      expect(mockPrisma.foodLog.create).not.toHaveBeenCalled();
     });
 
     it('persists the enteredAsServing display hint alongside the grams', async () => {
@@ -81,7 +106,7 @@ describe('FoodLogsService', () => {
         // 2 eggs of 50g — stored as grams, flagged as entered in servings
         quantity: 100,
         enteredAsServing: true,
-        mealType: 'BREAKFAST' as any,
+        mealId: 'meal1',
         loggedAt: new Date('2026-07-29T09:00:00.000Z'),
       });
 

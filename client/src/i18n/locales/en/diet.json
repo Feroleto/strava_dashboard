@@ -12,9 +12,25 @@
   "meal": {
     "BREAKFAST": "Breakfast",
     "LUNCH": "Lunch",
-    "SNACK": "Afternoon snack",
+    "SNACK": "Snack",
     "DINNER": "Dinner",
     "SUPPER": "Supper"
+  },
+  "meals": {
+    "editMeals": "Edit meals",
+    "done": "Done",
+    "add": "Add meal",
+    "addTitle": "New meal",
+    "renameTitle": "Rename meal",
+    "save": "Save",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "remove": "Delete",
+    "empty": "No meals configured.",
+    "lastMealHint": "A day needs at least one meal.",
+    "deleteConfirmEmpty": "Delete this meal?",
+    "deleteConfirm_one": "Delete this meal and {{count}} logged food, on every day?",
+    "deleteConfirm_other": "Delete this meal and {{count}} logged foods, on every day?"
   },
   "macro": {
     "protein": "Protein",

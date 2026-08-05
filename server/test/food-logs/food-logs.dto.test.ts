@@ -11,7 +11,7 @@ describe('parseCreateFoodLogInput', () => {
   const validBody = {
     foodId: 'food1',
     quantity: 150,
-    mealType: 'LUNCH',
+    mealId: 'meal1',
     loggedAt: '2026-07-29T12:00:00.000Z',
   };
 
@@ -20,7 +20,7 @@ describe('parseCreateFoodLogInput', () => {
 
     expect(result.foodId).toBe('food1');
     expect(result.quantity).toBe(150);
-    expect(result.mealType).toBe('LUNCH');
+    expect(result.mealId).toBe('meal1');
     expect(result.loggedAt).toEqual(new Date('2026-07-29T12:00:00.000Z'));
   });
 
@@ -50,8 +50,13 @@ describe('parseCreateFoodLogInput', () => {
     );
   });
 
-  it('rejects an invalid mealType', () => {
-    expect(() => parseCreateFoodLogInput({ ...validBody, mealType: 'BRUNCH' })).toThrow(
+  // the mealId can only be shape-checked here — it names a row, so the real
+  // guard is the ownership assert in FoodLogsService.create
+  it('rejects a missing or blank mealId', () => {
+    expect(() => parseCreateFoodLogInput({ ...validBody, mealId: undefined })).toThrow(
+      BadRequestException,
+    );
+    expect(() => parseCreateFoodLogInput({ ...validBody, mealId: '   ' })).toThrow(
       BadRequestException,
     );
   });
@@ -96,8 +101,8 @@ describe('parseUpdateFoodLogInput', () => {
     expect(() => parseUpdateFoodLogInput({ quantity: -10 })).toThrow(BadRequestException);
   });
 
-  it('ignores fields it does not own (foodId/mealType are not editable)', () => {
-    expect(parseUpdateFoodLogInput({ quantity: 80, foodId: 'other', mealType: 'DINNER' })).toEqual({
+  it('ignores fields it does not own (foodId/mealId are not editable)', () => {
+    expect(parseUpdateFoodLogInput({ quantity: 80, foodId: 'other', mealId: 'meal2' })).toEqual({
       quantity: 80,
       enteredAsServing: false,
     });

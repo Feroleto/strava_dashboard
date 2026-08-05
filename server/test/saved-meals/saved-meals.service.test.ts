@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { SavedMealsService } from 'src/saved-meals/saved-meals.service';
 import { FoodsService } from 'src/foods/foods.service';
+import { MealsService } from 'src/meals/meals.service';
 
 const { mockPrisma } = vi.hoisted(() => {
   return {
@@ -74,10 +75,12 @@ function foodItem(id: string, name: string, kcal: number) {
 describe('SavedMealsService', () => {
   let service: SavedMealsService;
   let foodsService: { assertVisible: ReturnType<typeof vi.fn> };
+  let mealsService: { assertOwned: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     vi.clearAllMocks();
     foodsService = { assertVisible: vi.fn().mockResolvedValue(undefined) };
+    mealsService = { assertOwned: vi.fn().mockResolvedValue(undefined) };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -87,6 +90,7 @@ describe('SavedMealsService', () => {
           useValue: { get: vi.fn(() => 'postgresql://test') },
         },
         { provide: FoodsService, useValue: foodsService },
+        { provide: MealsService, useValue: mealsService },
       ],
     }).compile();
 
@@ -254,7 +258,7 @@ describe('SavedMealsService', () => {
 
       await expect(
         service.applyToLog(USER_ID, 'm1', {
-          mealType: 'BREAKFAST' as any,
+          mealId: 'meal1',
           loggedAt: new Date(),
         }),
       ).rejects.toBeInstanceOf(NotFoundException);
@@ -266,14 +270,32 @@ describe('SavedMealsService', () => {
 
       await expect(
         service.applyToLog(USER_ID, 'm1', {
-          mealType: 'BREAKFAST' as any,
+          mealId: 'meal1',
           loggedAt: new Date(),
         }),
       ).rejects.toBeInstanceOf(BadRequestException);
       expect(mockPrisma.$transaction).not.toHaveBeenCalled();
     });
 
-    it('creates one FoodLog per item in a single transaction, sharing mealType/loggedAt', async () => {
+    // the saved meal may be the caller's while the *target* meal slot isn't
+    it('404s when the target meal belongs to another user', async () => {
+      mockPrisma.savedMeal.findFirst.mockResolvedValueOnce({
+        id: 'm1',
+        name: 'Café da manhã',
+        items: [{ id: 'i1', quantity: 100, order: 1, food: foodItem('food1', 'Pão', 300) }],
+      });
+      mealsService.assertOwned.mockRejectedValueOnce(new NotFoundException());
+
+      await expect(
+        service.applyToLog(USER_ID, 'm1', {
+          mealId: 'someone_elses_meal',
+          loggedAt: new Date(),
+        }),
+      ).rejects.toBeInstanceOf(NotFoundException);
+      expect(mockPrisma.$transaction).not.toHaveBeenCalled();
+    });
+
+    it('creates one FoodLog per item in a single transaction, sharing mealId/loggedAt', async () => {
       const loggedAt = new Date('2026-07-30T12:00:00.000Z');
       mockPrisma.savedMeal.findFirst.mockResolvedValueOnce({
         id: 'm1',
@@ -287,7 +309,7 @@ describe('SavedMealsService', () => {
       mockPrisma.foodLog.create.mockResolvedValueOnce({ id: 'log2' });
 
       const result = await service.applyToLog(USER_ID, 'm1', {
-        mealType: 'BREAKFAST' as any,
+        mealId: 'meal1',
         loggedAt,
       });
 
@@ -296,14 +318,14 @@ describe('SavedMealsService', () => {
         userId: USER_ID,
         foodId: 'food1',
         quantity: 100,
-        mealType: 'BREAKFAST',
+        mealId: 'meal1',
         loggedAt,
       });
       expect(mockPrisma.foodLog.create.mock.calls[1][0].data).toEqual({
         userId: USER_ID,
         foodId: 'food2',
         quantity: 50,
-        mealType: 'BREAKFAST',
+        mealId: 'meal1',
         loggedAt,
       });
       expect(mockPrisma.$transaction).toHaveBeenCalledTimes(1);

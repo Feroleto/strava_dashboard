@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Prisma, PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { FoodsService } from '../foods/foods.service';
+import { MealsService } from '../meals/meals.service';
 import type { FoodListItem } from '../foods/foods.service';
 import type { FoodLogItem } from '../food-logs/food-logs.service';
 import type { ApplySavedMealInput, CreateSavedMealInput, UpdateSavedMealInput } from './dto';
@@ -68,7 +69,7 @@ const FOOD_LOG_ITEM_SELECT = {
   id: true,
   quantity: true,
   enteredAsServing: true,
-  mealType: true,
+  mealId: true,
   loggedAt: true,
   food: { select: FOOD_SELECT },
 } satisfies Prisma.FoodLogSelect;
@@ -90,6 +91,7 @@ export class SavedMealsService {
   constructor(
     private readonly config: ConfigService,
     private readonly foodsService: FoodsService,
+    private readonly mealsService: MealsService,
   ) {
     const adapter = new PrismaPg({
       connectionString: this.config.get<string>('DATABASE_URL'),
@@ -212,6 +214,9 @@ export class SavedMealsService {
     if (meal.items.length === 0) {
       throw new BadRequestException('Saved meal has no items to apply');
     }
+    // same reason as FoodLogsService.create — the target meal id arrives from
+    // the client and only ownership makes it safe to write
+    await this.mealsService.assertOwned(userId, input.mealId);
 
     return this.prisma.$transaction(
       meal.items.map((item) =>
@@ -220,7 +225,7 @@ export class SavedMealsService {
             userId,
             foodId: item.food.id,
             quantity: item.quantity,
-            mealType: input.mealType,
+            mealId: input.mealId,
             loggedAt: input.loggedAt,
           },
           select: FOOD_LOG_ITEM_SELECT,

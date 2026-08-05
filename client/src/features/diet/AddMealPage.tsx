@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { Search, ScanBarcode, ChevronLeft, X, Check, Plus, BookmarkPlus } from 'lucide-react';
 import { apiFetch } from '@/lib/api';
 import { currentIntlLocale } from '@/lib/dateLocale';
-import type { FoodListItem, FoodLogItem, MealType, SavedMealSummary } from '@/lib/types';
+import type { FoodListItem, FoodLogItem, Meal, SavedMealSummary } from '@/lib/types';
 import AddManualFoodPage from './AddManualFoodPage';
 import SavedMealsListPage from './SavedMealsListPage';
 import SavedMealEditPage from './SavedMealEditPage';
@@ -18,7 +18,8 @@ const BarcodeScannerPage = lazy(() => import('./BarcodeScannerPage'));
 const SEARCH_DEBOUNCE_MS = 250;
 
 interface AddMealPageProps {
-  mealType: MealType;
+  /** the day's slot being filled — id, not name, since names can repeat */
+  meal: Meal;
   existingLogs: FoodLogItem[];
   onBack: () => void;
   onSaved: () => void;
@@ -53,7 +54,7 @@ function nextCartKey(): string {
   return `cart-${cartKeySeq}`;
 }
 
-export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }: AddMealPageProps) {
+export default function AddMealPage({ meal, existingLogs, onBack, onSaved }: AddMealPageProps) {
   const { t } = useTranslation('diet');
   const locale = currentIntlLocale();
   const [view, setView] = useState<View>('search');
@@ -170,7 +171,7 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
             foodId: item.food.id,
             quantity: item.quantity,
             enteredAsServing: item.enteredAsServing,
-            mealType,
+            mealId: meal.id,
             loggedAt,
           }),
         });
@@ -194,7 +195,7 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
       const res = await apiFetch(`/saved-meals/${meal.id}/apply`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mealType, loggedAt: new Date().toISOString() }),
+        body: JSON.stringify({ mealId: meal.id, loggedAt: new Date().toISOString() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       onSaved();
@@ -297,7 +298,7 @@ export default function AddMealPage({ mealType, existingLogs, onBack, onSaved }:
         </button>
         <div className="min-w-0 flex-1">
           <div className="truncate text-[15px] font-semibold text-foreground">
-            {t(`meal.${mealType}`)}
+            {t(`meal.${meal.type}`)}
           </div>
           <div className="text-[11.5px] text-muted-foreground">{todayShort()}</div>
         </div>

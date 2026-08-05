@@ -1,7 +1,8 @@
 import type { MealType } from '@/lib/types';
 
-// fixed display order for the day's 5 meal slots — Café da manhã, Almoço,
-// Lanche da tarde, Jantar, Ceia
+// The closed vocabulary MealTypePicker offers when naming a meal — NOT the
+// day's slots, which come from GET /meals and can repeat a name or leave one
+// out. Order here is just the order the picker lists them in.
 export const MEAL_TYPES: MealType[] = ['BREAKFAST', 'LUNCH', 'SNACK', 'DINNER', 'SUPPER'];
 
 // no --protein/--carbs/--fat tokens exist in index.css — these are the
